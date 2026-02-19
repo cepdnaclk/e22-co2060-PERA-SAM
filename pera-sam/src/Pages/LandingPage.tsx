@@ -16,6 +16,7 @@ import {
   User
 } from 'lucide-react';
 
+
 const features = [
   {
     icon: Waves,
