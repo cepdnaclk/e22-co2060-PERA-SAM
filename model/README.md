@@ -45,4 +45,4 @@ You can now test the analysis by specifying a machine ID (e.g., 04):
 - [inference.py](file:///d:/test/Model/server/inference.py): Implemented a model registry and standardized preprocessing.
 
 > [!WARNING]
-> Please ensure that all your `.h5` models in `assets/` are trained with the same architecture (e.g., Dense Autoencoder with 320 inputs). If some are Convolutional (128x128), you will need to standardize them to one architecture.
+> Please ensure that all  `.h5` models in `assets/` are trained with the same architecture (e.g., Dense Autoencoder with 320 inputs). If some are Convolutional (128x128), you will need to standardize them to one architecture.
