@@ -7,18 +7,9 @@ export const WelcomePage = () => {
   const [showWelcome, setShowWelcome] = useState(true);
 
   useEffect(() => {
-    // Check if user has seen welcome screen recently
-    const lastWelcome = localStorage.getItem('pera-sam-last-welcome');
-    const now = Date.now();
-    
-    if (lastWelcome && now - parseInt(lastWelcome) < 3600000) {
-      // Skip welcome if seen within last hour
-      navigate('/dashboard');
-      return;
-    }
-    
-    localStorage.setItem('pera-sam-last-welcome', now.toString());
-  }, [navigate]);
+    // Ensuring the welcome screen plays for the user during this session
+    localStorage.setItem('pera-sam-last-welcome', Date.now().toString());
+  }, []);
 
   const handleComplete = () => {
     setShowWelcome(false);

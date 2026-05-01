@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -57,6 +57,14 @@ export const RegisterPage = () => {
   const [userType, setUserType] = useState<'normal' | 'company'>(
     (searchParams.get('type') as 'normal' | 'company') || 'normal'
   );
+
+  useEffect(() => {
+    const type = searchParams.get('type');
+    if (type === 'normal' || type === 'company') {
+      setUserType(type);
+    }
+  }, [searchParams]);
+
   const [showPassword, setShowPassword] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const { register: registerUser, isLoading } = useAuth();
@@ -91,6 +99,23 @@ export const RegisterPage = () => {
 
   const handleCompanySubmit = async (data: CompanyUserForm) => {
     try {
+      // Fetch current location for the company
+      let location_lat: number | undefined;
+      let location_lng: number | undefined;
+
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
+        location_lat = position.coords.latitude;
+        location_lng = position.coords.longitude;
+      } catch (err) {
+        console.warn('Geolocation failed, registering without specific coordinates', err);
+        // Fallback to default Peradeniya coordinates if geocoding/location fails
+        location_lat = 7.2525;
+        location_lng = 80.5925;
+      }
+
       await registerUser({
         email: data.email,
         password: data.password,
@@ -101,6 +126,8 @@ export const RegisterPage = () => {
         address: data.address,
         serviceCategories: selectedCategories,
         contactNumbers: [data.phone, data.phone2].filter(Boolean) as string[],
+        location_lat,
+        location_lng,
       });
       toast.success('Company account created successfully!');
       navigate('/welcome');
@@ -111,73 +138,112 @@ export const RegisterPage = () => {
   };
 
   const toggleCategory = (id: string) => {
-    setSelectedCategories(prev =>
-      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
-    );
-    companyForm.setValue('serviceCategories', 
-      selectedCategories.includes(id) 
-        ? selectedCategories.filter(c => c !== id) 
-        : [...selectedCategories, id]
-    );
+    const nextCategories = selectedCategories.includes(id)
+      ? selectedCategories.filter(c => c !== id)
+      : [...selectedCategories, id];
+
+    setSelectedCategories(nextCategories);
+    companyForm.setValue('serviceCategories', nextCategories, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
   };
 
   return (
     <div className="min-h-screen bg-background flex">
       {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary p-12 flex-col justify-between relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0 flex items-center justify-center">
-            {[...Array(30)].map((_, i) => (
+      <div className="hidden lg:flex lg:w-1/2 bg-[#0f172a] p-12 flex-col justify-between relative overflow-hidden">
+        {/* Animated Background Particles */}
+        <div className="absolute inset-0">
+          {[...Array(40)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute bg-accent/20 rounded-full"
+              initial={{
+                x: Math.random() * 100 + "%",
+                y: Math.random() * 100 + "%",
+                scale: Math.random() * 1 + 0.5
+              }}
+              animate={{
+                y: [null, Math.random() * 100 + "%"],
+                opacity: [0.1, 0.4, 0.1],
+              }}
+              transition={{
+                duration: Math.random() * 10 + 10,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              style={{
+                width: Math.random() * 3 + 1 + "px",
+                height: Math.random() * 3 + 1 + "px",
+              }}
+            />
+          ))}
+
+          {/* Central Pulse Ring Effect */}
+          <motion.div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent/5"
+            animate={{ scale: [1, 2], opacity: [0.5, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeOut" }}
+            style={{ width: '400px', height: '400px' }}
+          />
+
+          {/* Moving Sound Waves */}
+          <div className="absolute bottom-0 left-0 right-0 h-48 flex items-end gap-1 px-4 opacity-10">
+            {[...Array(60)].map((_, i) => (
               <motion.div
                 key={i}
-                className="absolute w-1 bg-accent"
-                animate={{
-                  height: [20, Math.random() * 150 + 50, 20],
-                  opacity: [0.3, 0.6, 0.3],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  delay: i * 0.1,
-                }}
-                style={{
-                  left: `${(i / 30) * 100}%`,
-                }}
+                className="flex-1 bg-accent rounded-t-full"
+                animate={{ height: [20, Math.random() * 150 + 40, 20] }}
+                transition={{ duration: 1, repeat: Infinity, delay: i * 0.05 }}
               />
             ))}
           </div>
         </div>
-        
+
         <div className="relative z-10">
-          <Link to="/" className="flex items-center gap-3">
-            <Logo size="lg" showText={false} />
+          <Link to="/" className="flex items-center gap-4 group">
+            <div className="bg-accent p-2 rounded-xl group-hover:scale-110 transition-transform">
+              <Logo size="lg" showText={false} />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold text-primary-foreground">PERA-SAM</h1>
-              <p className="text-sm text-primary-foreground/70">Sound Analysis Manager</p>
+              <h1 className="text-3xl font-black text-white tracking-tighter uppercase italic">
+                PERA<span className="text-accent">-</span>SAM
+              </h1>
+              <p className="text-xs text-accent font-mono tracking-widest uppercase opacity-70">Acoustic Intelligence</p>
             </div>
           </Link>
         </div>
-        
-        <div className="relative z-10">
-          <h2 className="text-4xl font-bold text-primary-foreground mb-4">
-            Join the Future of
-            <br />Sound Diagnostics
-          </h2>
-          <p className="text-primary-foreground/70 text-lg">
-            Create your account and start analyzing mechanical sounds 
-            with AI-powered precision.
-          </p>
+
+        <div className="relative z-10 max-w-md">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <h2 className="text-5xl font-bold text-white mb-6 leading-tight">
+              Unlock the Power
+              <br />
+              <span className="text-accent">of Precision Sound.</span>
+            </h2>
+            <p className="text-white/60 text-lg leading-relaxed">
+              Experience the next generation of sound analysis. Our ML-driven engine detects
+              faults with best accuracy.
+            </p>
+          </motion.div>
         </div>
-        
-        <div className="relative z-10 text-primary-foreground/50 text-sm">
-          Already have an account?{' '}
-          <Link to="/login" className="text-accent hover:underline">Sign in</Link>
+
+        <div className="relative z-10 flex items-center gap-6">
+          <div className="h-px w-12 bg-white/20" />
+          <p className="text-white/40 text-sm uppercase tracking-widest">
+            Trusted by Engineering Teams Globally
+          </p>
         </div>
       </div>
 
       {/* Right Panel - Form */}
       <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
-        <motion.div 
+        <motion.div
           className="w-full max-w-md"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -202,11 +268,10 @@ export const RegisterPage = () => {
           <div className="flex gap-3 mb-8">
             <button
               onClick={() => setUserType('normal')}
-              className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${
-                userType === 'normal'
-                  ? 'border-accent bg-accent/5'
-                  : 'border-border hover:border-accent/50'
-              }`}
+              className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${userType === 'normal'
+                ? 'border-accent bg-accent/5'
+                : 'border-border hover:border-accent/50'
+                }`}
             >
               <User className={`h-6 w-6 mx-auto mb-2 ${userType === 'normal' ? 'text-accent' : 'text-muted-foreground'}`} />
               <p className={`text-sm font-medium ${userType === 'normal' ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -215,11 +280,10 @@ export const RegisterPage = () => {
             </button>
             <button
               onClick={() => setUserType('company')}
-              className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${
-                userType === 'company'
-                  ? 'border-accent bg-accent/5'
-                  : 'border-border hover:border-accent/50'
-              }`}
+              className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${userType === 'company'
+                ? 'border-accent bg-accent/5'
+                : 'border-border hover:border-accent/50'
+                }`}
             >
               <Building2 className={`h-6 w-6 mx-auto mb-2 ${userType === 'company' ? 'text-accent' : 'text-muted-foreground'}`} />
               <p className={`text-sm font-medium ${userType === 'company' ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -233,7 +297,7 @@ export const RegisterPage = () => {
             <form onSubmit={normalForm.handleSubmit(handleNormalSubmit)} className="space-y-4">
               <div>
                 <Label htmlFor="name">Full Name</Label>
-                <Input id="name" placeholder="John Smith" {...normalForm.register('name')} />
+                <Input id="name" placeholder="Bhagya Karunanayake" {...normalForm.register('name')} />
                 {normalForm.formState.errors.name && (
                   <p className="text-destructive text-sm mt-1">{normalForm.formState.errors.name.message}</p>
                 )}
@@ -241,7 +305,7 @@ export const RegisterPage = () => {
 
               <div>
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="john@example.com" {...normalForm.register('email')} />
+                <Input id="email" type="email" placeholder="invictus2026@gmail.com" {...normalForm.register('email')} />
                 {normalForm.formState.errors.email && (
                   <p className="text-destructive text-sm mt-1">{normalForm.formState.errors.email.message}</p>
                 )}
@@ -250,14 +314,14 @@ export const RegisterPage = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="age">Age</Label>
-                  <Input id="age" type="number" placeholder="25" {...normalForm.register('age')} />
+                  <Input id="age" type="number" placeholder="23" {...normalForm.register('age')} />
                   {normalForm.formState.errors.age && (
                     <p className="text-destructive text-sm mt-1">{normalForm.formState.errors.age.message}</p>
                   )}
                 </div>
                 <div>
                   <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" placeholder="+1 555-0123" {...normalForm.register('phone')} />
+                  <Input id="phone" placeholder="+94 xx xxx xxxx" {...normalForm.register('phone')} />
                   {normalForm.formState.errors.phone && (
                     <p className="text-destructive text-sm mt-1">{normalForm.formState.errors.phone.message}</p>
                   )}
@@ -266,7 +330,7 @@ export const RegisterPage = () => {
 
               <div>
                 <Label htmlFor="address">Address</Label>
-                <Input id="address" placeholder="123 Main St, City, State" {...normalForm.register('address')} />
+                <Input id="address" placeholder="Faculty of Engineering, University of Peradeniya." {...normalForm.register('address')} />
                 {normalForm.formState.errors.address && (
                   <p className="text-destructive text-sm mt-1">{normalForm.formState.errors.address.message}</p>
                 )}
@@ -275,11 +339,11 @@ export const RegisterPage = () => {
               <div>
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
-                  <Input 
-                    id="password" 
-                    type={showPassword ? 'text' : 'password'} 
-                    placeholder="••••••••" 
-                    {...normalForm.register('password')} 
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    {...normalForm.register('password')}
                   />
                   <button
                     type="button"
@@ -296,11 +360,11 @@ export const RegisterPage = () => {
 
               <div>
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input 
-                  id="confirmPassword" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  {...normalForm.register('confirmPassword')} 
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  {...normalForm.register('confirmPassword')}
                 />
                 {normalForm.formState.errors.confirmPassword && (
                   <p className="text-destructive text-sm mt-1">{normalForm.formState.errors.confirmPassword.message}</p>
@@ -318,7 +382,7 @@ export const RegisterPage = () => {
             <form onSubmit={companyForm.handleSubmit(handleCompanySubmit)} className="space-y-4">
               <div>
                 <Label htmlFor="companyName">Company/Service Station Name</Label>
-                <Input id="companyName" placeholder="TechRepair Pro" {...companyForm.register('companyName')} />
+                <Input id="companyName" placeholder="Invictus" {...companyForm.register('companyName')} />
                 {companyForm.formState.errors.companyName && (
                   <p className="text-destructive text-sm mt-1">{companyForm.formState.errors.companyName.message}</p>
                 )}
@@ -326,7 +390,7 @@ export const RegisterPage = () => {
 
               <div>
                 <Label htmlFor="technicianName">Technician Name</Label>
-                <Input id="technicianName" placeholder="Mike Johnson" {...companyForm.register('technicianName')} />
+                <Input id="technicianName" placeholder="Dileka Sandaruwan" {...companyForm.register('technicianName')} />
                 {companyForm.formState.errors.technicianName && (
                   <p className="text-destructive text-sm mt-1">{companyForm.formState.errors.technicianName.message}</p>
                 )}
@@ -334,7 +398,7 @@ export const RegisterPage = () => {
 
               <div>
                 <Label htmlFor="companyEmail">Email</Label>
-                <Input id="companyEmail" type="email" placeholder="contact@company.com" {...companyForm.register('email')} />
+                <Input id="companyEmail" type="email" placeholder="invictus2026@gmail.com" {...companyForm.register('email')} />
                 {companyForm.formState.errors.email && (
                   <p className="text-destructive text-sm mt-1">{companyForm.formState.errors.email.message}</p>
                 )}
@@ -342,7 +406,7 @@ export const RegisterPage = () => {
 
               <div>
                 <Label htmlFor="companyAddress">Address</Label>
-                <Input id="companyAddress" placeholder="456 Service Ave, City, State" {...companyForm.register('address')} />
+                <Input id="companyAddress" placeholder="No:x Street, City, State" {...companyForm.register('address')} />
                 {companyForm.formState.errors.address && (
                   <p className="text-destructive text-sm mt-1">{companyForm.formState.errors.address.message}</p>
                 )}
@@ -351,14 +415,14 @@ export const RegisterPage = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="companyPhone">Primary Contact</Label>
-                  <Input id="companyPhone" placeholder="+1 555-0456" {...companyForm.register('phone')} />
+                  <Input id="companyPhone" placeholder="+94 xx xxx xxxx" {...companyForm.register('phone')} />
                   {companyForm.formState.errors.phone && (
                     <p className="text-destructive text-sm mt-1">{companyForm.formState.errors.phone.message}</p>
                   )}
                 </div>
                 <div>
                   <Label htmlFor="phone2">Secondary Contact</Label>
-                  <Input id="phone2" placeholder="+1 555-0789" {...companyForm.register('phone2')} />
+                  <Input id="phone2" placeholder="+94 xx xxx xxxx" {...companyForm.register('phone2')} />
                 </div>
               </div>
 
@@ -370,11 +434,10 @@ export const RegisterPage = () => {
                       key={category.id}
                       type="button"
                       onClick={() => toggleCategory(category.id)}
-                      className={`p-3 rounded-lg border text-left text-sm transition-all ${
-                        selectedCategories.includes(category.id)
-                          ? 'border-accent bg-accent/10 text-foreground'
-                          : 'border-border text-muted-foreground hover:border-accent/50'
-                      }`}
+                      className={`p-3 rounded-lg border text-left text-sm transition-all ${selectedCategories.includes(category.id)
+                        ? 'border-accent bg-accent/10 text-foreground'
+                        : 'border-border text-muted-foreground hover:border-accent/50'
+                        }`}
                     >
                       {category.label}
                     </button>
@@ -388,11 +451,11 @@ export const RegisterPage = () => {
               <div>
                 <Label htmlFor="companyPassword">Password</Label>
                 <div className="relative">
-                  <Input 
-                    id="companyPassword" 
-                    type={showPassword ? 'text' : 'password'} 
-                    placeholder="••••••••" 
-                    {...companyForm.register('password')} 
+                  <Input
+                    id="companyPassword"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    {...companyForm.register('password')}
                   />
                   <button
                     type="button"
@@ -409,11 +472,11 @@ export const RegisterPage = () => {
 
               <div>
                 <Label htmlFor="companyConfirmPassword">Confirm Password</Label>
-                <Input 
-                  id="companyConfirmPassword" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  {...companyForm.register('confirmPassword')} 
+                <Input
+                  id="companyConfirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  {...companyForm.register('confirmPassword')}
                 />
                 {companyForm.formState.errors.confirmPassword && (
                   <p className="text-destructive text-sm mt-1">{companyForm.formState.errors.confirmPassword.message}</p>

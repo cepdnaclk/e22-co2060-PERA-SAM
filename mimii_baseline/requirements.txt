@@ -1,0 +1,13 @@
+# Minimal package to use MIMII dataset baseline.
+# Updated: loosened version pins for Python 3.14 compatibility.
+keras
+keras-applications
+keras-preprocessing
+matplotlib
+numpy
+PyYAML
+scikit-learn
+librosa
+audioread
+setuptools
+tensorflow

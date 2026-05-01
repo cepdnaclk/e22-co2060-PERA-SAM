@@ -1,0 +1,38 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PERA-SAM ML Backend Configuration
+# Run: python main.py  →  everything is handled automatically
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Dataset ──────────────────────────────────────────────────────────────────
+dataset:
+  # Path to the MIMII dataset root (contains folders like 0dB/0_dB_fan/fan/id_00/...)
+  # Use relative path from Model/server/ or absolute path
+  base_directory: ../../mimii_baseline/dataset
+  # Noise level subfolder to use
+  noise_level: 0dB
+  # Cache directory for preprocessed training vectors (speeds up re-training)
+  pickle_directory: ../../mimii_baseline/pickle
+
+# ── Feature Extraction (must match MIMII baseline.py exactly) ─────────────────
+feature:
+  n_mels: 64
+  frames: 5
+  n_fft: 1024
+  hop_length: 512
+  power: 2.0
+
+# ── Model Training ────────────────────────────────────────────────────────────
+training:
+  epochs: 50
+  batch_size: 512
+  shuffle: true
+  validation_split: 0.1
+  # How many normal + abnormal files to use for threshold calibration after training
+  calibration_files: 30
+
+# ── Server ────────────────────────────────────────────────────────────────────
+server:
+  host: "0.0.0.0"
+  port: 8000
+  # Set to true to auto-train missing models on startup (set false in production)
+  auto_train: true

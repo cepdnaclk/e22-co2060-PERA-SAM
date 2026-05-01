@@ -1,10 +1,12 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+if (typeof window !== 'undefined') {
+  (window as any).L = L;
+}
+
+import "./index.css";
+
+createRoot(document.getElementById("root")!).render(<App />);

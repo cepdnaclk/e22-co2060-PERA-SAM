@@ -42,60 +42,98 @@ export const LoginPage = () => {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary p-12 flex-col justify-between relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0 flex items-center justify-center">
-            {[...Array(30)].map((_, i) => (
+      <div className="hidden lg:flex lg:w-1/2 bg-[#0f172a] p-12 flex-col justify-between relative overflow-hidden">
+        {/* Animated Background Particles */}
+        <div className="absolute inset-0">
+          {[...Array(40)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute bg-accent/20 rounded-full"
+              initial={{
+                x: Math.random() * 100 + "%",
+                y: Math.random() * 100 + "%",
+                scale: Math.random() * 1 + 0.5
+              }}
+              animate={{
+                y: [null, Math.random() * 100 + "%"],
+                opacity: [0.1, 0.4, 0.1],
+              }}
+              transition={{
+                duration: Math.random() * 10 + 10,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              style={{
+                width: Math.random() * 3 + 1 + "px",
+                height: Math.random() * 3 + 1 + "px",
+              }}
+            />
+          ))}
+
+          {/* Central Pulse Ring Effect */}
+          <motion.div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent/5"
+            animate={{ scale: [1, 2], opacity: [0.5, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeOut" }}
+            style={{ width: '400px', height: '400px' }}
+          />
+
+          {/* Moving Sound Waves */}
+          <div className="absolute bottom-0 left-0 right-0 h-48 flex items-end gap-1 px-4 opacity-10">
+            {[...Array(60)].map((_, i) => (
               <motion.div
                 key={i}
-                className="absolute w-1 bg-accent"
-                animate={{
-                  height: [20, Math.random() * 150 + 50, 20],
-                  opacity: [0.3, 0.6, 0.3],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  delay: i * 0.1,
-                }}
-                style={{
-                  left: `${(i / 30) * 100}%`,
-                }}
+                className="flex-1 bg-accent rounded-t-full"
+                animate={{ height: [20, Math.random() * 150 + 40, 20] }}
+                transition={{ duration: 1, repeat: Infinity, delay: i * 0.05 }}
               />
             ))}
           </div>
         </div>
-        
+
         <div className="relative z-10">
-          <Link to="/" className="flex items-center gap-3">
-            <Logo size="lg" showText={false} />
+          <Link to="/" className="flex items-center gap-4 group">
+            <div className="bg-accent p-2 rounded-xl group-hover:scale-110 transition-transform">
+              <Logo size="lg" showText={false} />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold text-primary-foreground">PERA-SAM</h1>
-              <p className="text-sm text-primary-foreground/70">Sound Analysis Manager</p>
+              <h1 className="text-3xl font-black text-white tracking-tighter uppercase italic">
+                PERA<span className="text-accent">-</span>SAM
+              </h1>
+              <p className="text-xs text-accent font-mono tracking-widest uppercase opacity-70">Acoustic Intelligence</p>
             </div>
           </Link>
         </div>
-        
-        <div className="relative z-10">
-          <h2 className="text-4xl font-bold text-primary-foreground mb-4">
-            Welcome Back to
-            <br />PERA-SAM
-          </h2>
-          <p className="text-primary-foreground/70 text-lg">
-            Sign in to access your dashboard and continue analyzing 
-            mechanical sounds with AI-powered precision.
-          </p>
+
+        <div className="relative z-10 max-w-md">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <h2 className="text-5xl font-bold text-white mb-6 leading-tight">
+              Welcome Back
+              <br />
+              <span className="text-accent">to Precision.</span>
+            </h2>
+            <p className="text-white/60 text-lg leading-relaxed">
+              Sign in to access your dashboard and continue analyzing
+              mechanical sounds with ML-powered precision.
+            </p>
+          </motion.div>
         </div>
-        
-        <div className="relative z-10 text-primary-foreground/50 text-sm">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-accent hover:underline">Create one</Link>
+
+        <div className="relative z-10 flex items-center gap-6">
+          <div className="h-px w-12 bg-white/20" />
+          <p className="text-white/40 text-sm uppercase tracking-widest">
+            Acoustic Diagnostics for Industry 4.0
+          </p>
         </div>
       </div>
 
       {/* Right Panel - Form */}
       <div className="flex-1 flex items-center justify-center p-8">
-        <motion.div 
+        <motion.div
           className="w-full max-w-md"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -119,11 +157,11 @@ export const LoginPage = () => {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="john@example.com" 
-                {...register('email')} 
+              <Input
+                id="email"
+                type="email"
+                placeholder="xxxx@gmail.com"
+                {...register('email')}
               />
               {errors.email && (
                 <p className="text-destructive text-sm mt-1">{errors.email.message}</p>
@@ -133,11 +171,11 @@ export const LoginPage = () => {
             <div>
               <Label htmlFor="password">Password</Label>
               <div className="relative">
-                <Input 
-                  id="password" 
-                  type={showPassword ? 'text' : 'password'} 
-                  placeholder="••••••••" 
-                  {...register('password')} 
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  {...register('password')}
                 />
                 <button
                   type="button"
@@ -174,7 +212,7 @@ export const LoginPage = () => {
 
           <div className="mt-8 p-4 bg-muted rounded-lg">
             <p className="text-sm text-muted-foreground text-center">
-              New to PERA-SAM? Create an account to start analyzing mechanical sounds with AI-powered diagnostics.
+              New to PERA-SAM? Create an account to start analyzing mechanical sounds with ML-powered diagnostics.
             </p>
           </div>
         </motion.div>

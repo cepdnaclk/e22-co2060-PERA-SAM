@@ -1,0 +1,46 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+.env
+.env.local
+dist/
+dist_electron/
+build/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Large binaries and model files
+mimii_baseline/pickle/
+*.pickle
+*.h5
+*.h5py
+*.pt
+*.pth
+*.onnx
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo

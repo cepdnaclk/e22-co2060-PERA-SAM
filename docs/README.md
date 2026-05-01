@@ -19,8 +19,12 @@ If your followed all the given instructions correctly, your repository will be a
 
 A HTML template integrated with the given GitHub repository templates, based on github.com/cepdnaclk/eYY-project-theme . If you like to remove this default theme and make your own web page, you can remove the file, docs/_config.yml and create the site using HTML. -->
 
-# PERA-SAM 🔧
-### 🩺 AI Sound Analyst & Health Manager for Industrial Assets
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:3a8296,50:1a5276,100:091519&height=200&text=PERA%20SAM&fontSize=48&fontColor=61DAFB&fontAlignY=35&animation=twinkling&section=header&desc=Computer%20Engineering%20Department%20%7C%20Team%20Invictus&descSize=16&descColor=88C0D0&descAlignY=55" width="100%" />
+</p>
+
+
+## 🩺 AI Sound Analyst & Health Manager for Industrial Assets
 
 ---
 
@@ -54,9 +58,49 @@ Currently prototyped for laptop cooling fans, server fans, engine fans, this sys
 
 ## Solution Architecture
 
-<!--High level diagram + description -->
+<img width="978" height="95" alt="image" src="https://github.com/user-attachments/assets/c03a0a87-2f82-4012-aa4e-4578de1de60f" />
 
-## Software Designs
+
+| Folder | Role | Tech Stack |
+|--------|------|------------|
+| `mimii_baseline/` | Original Hitachi research code + raw dataset storage | Python, Keras, librosa |
+| `model/server/` | Production ML API — trains models, serves predictions | Python, FastAPI, TensorFlow, uvicorn |
+| `pera-sam/` | Web dashboard — user login, upload audio, view results | React, Vite, TypeScript, TailwindCSS, Supabase |
+
+>### Step-by-Step: What happens when run the system
+<img width="970" height="959" alt="image" src="https://github.com/user-attachments/assets/59f0e80b-5309-4bbb-b9c6-727026f9b887" />
+
+
+
+## 🎨 Software Design
+
+### 1. Frontend Design Patterns (React & TypeScript)
+The client application follows a strict **Component-Based Architecture** and utilizes several React-specific design patterns to ensure the UI is maintainable and scalable.
+
+*   **Atomic Design Principles:** UI elements are built using foundational, reusable primitive components (via Radix UI / Shadcn). These atomic components (like buttons and inputs) are combined into more complex organisms (like the `UploadForm` and `DashboardLayout`).
+*   **Provider Pattern:** Global state, such as User Authentication and Theme Settings, is injected into the component tree using React Context (`AuthProvider`, `ThemeProvider`). This prevents prop-drilling across deeply nested pages.
+*   **Container/Presenter Pattern:** Data fetching and asynchronous state management are completely decoupled from UI rendering using `@tanstack/react-query`. It handles the "Container" logic (caching, loading states, error handling), allowing the UI components to remain pure "Presenters."
+*   **Wrapper Components (HOCs):** Security and routing are handled via wrapper components. For example, the `<ProtectedRoute>` component wraps dashboard routes, automatically redirecting unauthenticated users before the route even mounts.
+
+### 2. Backend Design Patterns (Python & FastAPI)
+The backend ML API is highly modularized, strictly separating the heavy Machine Learning logic from the HTTP routing layer.
+
+*   **Modular Separation of Concerns:** 
+    *   `main.py`: Handles the HTTP lifecycle, API routing, and CORS middleware.
+    *   `trainer.py`: Encapsulates all logic for loading datasets, extracting features, and training models.
+    *   `inference.py`: Contains the `SoundAnalyzer` logic dedicated purely to predicting anomalies.
+*   **Singleton Pattern (Model Loading):** Machine learning models (`.h5` files) are large and slow to load. The `SoundAnalyzer` acts as a Singleton during the FastAPI `lifespan`. Models are loaded into memory *once* at server startup, enabling extremely fast, sub-second responses for subsequent `/analyze` requests.
+### 3. API & Machine Learning Design Strategy
+
+*   **Façade Pattern (API):** The `/analyze` API endpoint acts as a Façade. The client simply sends an audio file, completely unaware of the complex pipeline beneath (Librosa Mel-spectrogram extraction, MSE calculation, and threshold comparison).
+*   **Dynamic Thresholding:** Rather than hardcoding what constitutes an "anomaly," the system dynamically calculates thresholds based on the 90th percentile of reconstruction errors during training.
+*   **Auto-Initialization Strategy:** To ensure a smooth developer experience, the system implements an auto-bootstrap mechanism. If the server boots and detects no trained models, it automatically scans the raw dataset, extracts features, trains the autoencoders, and calibrates thresholds before opening the port for traffic.
+<img width="1401" height="481" alt="Untitled Diagram drawio (3)" src="https://github.com/user-attachments/assets/21f29925-884b-457f-b2fd-d5f1cd1b95ba" />
+
+
+
+
+
 
 
 
