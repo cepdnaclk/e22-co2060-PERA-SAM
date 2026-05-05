@@ -20,6 +20,7 @@ import {
     Calendar,
     PanelLeftClose,
     PanelLeftOpen,
+    History,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -36,6 +37,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     const normalUserNav = [
         { icon: Home, label: 'Home', path: '/dashboard' },
         { icon: LayoutDashboard, label: 'Analysis', path: '/dashboard/analysis' },
+        { icon: History, label: 'History', path: '/dashboard/history' },
         { icon: Map, label: 'Find Services', path: '/dashboard/map' },
         { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
         { icon: Info, label: 'About', path: '/dashboard/about' },
@@ -44,6 +46,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     const companyUserNav = [
         { icon: Home, label: 'Home', path: '/dashboard' },
         { icon: LayoutDashboard, label: 'Analysis', path: '/dashboard/analysis' },
+        { icon: History, label: 'History', path: '/dashboard/history' },
         { icon: MessageSquare, label: 'Requests', path: '/dashboard/requests' },
         { icon: Calendar, label: 'Appointments', path: '/dashboard/appointments' },
         { icon: Map, label: 'Service Map', path: '/dashboard/map' },

@@ -14,7 +14,7 @@ import {
   Waves
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface AnalysisRecord {
   id: string;
@@ -27,6 +27,7 @@ interface AnalysisRecord {
 
 export const DashboardHome = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [analyses, setAnalyses] = useState<AnalysisRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -130,7 +131,7 @@ export const DashboardHome = () => {
         <div className="lg:col-span-2 glass-card rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-foreground">Recent Analyses</h2>
-            <Link to="/dashboard/analysis" className="text-accent hover:underline text-sm flex items-center gap-1">
+            <Link to="/dashboard/history" className="text-accent hover:underline text-sm flex items-center gap-1">
               View all <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
@@ -143,6 +144,7 @@ export const DashboardHome = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.4, delay: index * 0.1 }}
                 className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer"
+                onClick={() => navigate('/dashboard/history', { state: { openId: analysis.id } })}
               >
                 <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
                   <Waves className="h-6 w-6 text-muted-foreground" />
