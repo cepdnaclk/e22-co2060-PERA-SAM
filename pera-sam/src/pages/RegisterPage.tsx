@@ -99,21 +99,38 @@ export const RegisterPage = () => {
 
   const handleCompanySubmit = async (data: CompanyUserForm) => {
     try {
-      // Fetch current location for the company
-      let location_lat: number | undefined;
-      let location_lng: number | undefined;
+      // Geocode the typed address to get accurate lat/lng for the map
+      let location_lat: number = 7.2525;  // Default: Peradeniya, Sri Lanka
+      let location_lng: number = 80.5925;
 
       try {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject);
+        // Use OpenStreetMap Nominatim to convert the address text to coordinates
+        // Append ", Sri Lanka" to bias results toward Sri Lanka
+        const query = encodeURIComponent(`${data.address}, Sri Lanka`);
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1&countrycodes=lk`;
+
+        const response = await fetch(nominatimUrl, {
+          headers: {
+            // Nominatim requires a User-Agent identifying your app
+            'Accept-Language': 'en',
+          },
         });
-        location_lat = position.coords.latitude;
-        location_lng = position.coords.longitude;
-      } catch (err) {
-        console.warn('Geolocation failed, registering without specific coordinates', err);
-        // Fallback to default Peradeniya coordinates if geocoding/location fails
-        location_lat = 7.2525;
-        location_lng = 80.5925;
+
+        if (response.ok) {
+          const results = await response.json();
+          if (results && results.length > 0) {
+            location_lat = parseFloat(results[0].lat);
+            location_lng = parseFloat(results[0].lon);
+            console.log(`Geocoded address "${data.address}" to:`, location_lat, location_lng);
+          } else {
+            console.warn('Nominatim returned no results for address:', data.address, '- using default location.');
+            toast.info('Could not find exact coordinates for the address. Using a default location — you can update it later in Settings.');
+          }
+        } else {
+          console.warn('Nominatim geocoding failed with status:', response.status);
+        }
+      } catch (geoErr) {
+        console.warn('Address geocoding failed, using default Peradeniya coordinates.', geoErr);
       }
 
       await registerUser({

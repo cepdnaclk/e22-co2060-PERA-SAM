@@ -114,6 +114,7 @@ interface ServiceProvider {
   available: boolean;
   lat: number;
   lng: number;
+  locationApproximate: boolean;
 }
 
 // Routing component for path visualization (Temporarily disabled for debugging)
@@ -162,6 +163,23 @@ export const MapPage = () => {
 
 
   // Fetch providers from Supabase
+  // Helper: geocode an address string using OpenStreetMap Nominatim
+  const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
+    try {
+      const query = encodeURIComponent(`${address}, Sri Lanka`);
+      const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1&countrycodes=lk`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      if (!res.ok) return null;
+      const results = await res.json();
+      if (results && results.length > 0) {
+        return { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
+      }
+    } catch {
+      // silently ignore network errors for individual geocoding
+    }
+    return null;
+  };
+
   useEffect(() => {
     const fetchProviders = async () => {
       setLoading(true);
@@ -177,33 +195,58 @@ export const MapPage = () => {
           throw error;
         }
 
-
         // Filter for companies in JS - more robust than DB-level filtering with Enums
         const companyProfiles = (data || []).filter(p => String(p.role).toLowerCase() === 'company');
 
         // Filter out current company user if applicable
         const filteredData = companyProfiles.filter(p => !user || p.id !== user.id);
 
-        // Map data with fallbacks
-        const mappedProviders: ServiceProvider[] = filteredData.map(p => {
-          // If they are a company but missing lat/lng, provide a default so they show up!
-          const lat = p.location_lat || 7.2525;
-          const lng = p.location_lng || 80.5925;
+        // The old registration code stored the registrar's GPS (not address-based).
+        // Detect companies that still have the exact Peradeniya default (7.2525, 80.5925)
+        // and try to geocode their address to get a real location.
+        const DEFAULT_LAT = 7.2525;
+        const DEFAULT_LNG = 80.5925;
+        const EPSILON = 0.0001;
+        const isDefaultCoord = (lat: number, lng: number) =>
+          Math.abs(lat - DEFAULT_LAT) < EPSILON && Math.abs(lng - DEFAULT_LNG) < EPSILON;
 
-          return {
-            id: p.id,
-            name: p.company_name || p.name || 'Service Provider',
-            address: p.address || 'Address not listed',
-            rating: 4.5 + (p.id.charCodeAt(0) % 10) / 20, // Deterministic random-looking rating
-            reviews: (p.id.charCodeAt(1) % 100) + 10,
-            phone: p.contact_numbers?.[0] || p.phone || 'N/A',
-            categories: p.service_categories || ['Equipment'],
-            distance: '---',
-            available: true,
-            lat,
-            lng,
-          };
-        });
+        const mappedProviders: ServiceProvider[] = await Promise.all(
+          filteredData.map(async p => {
+            let lat: number = p.location_lat || DEFAULT_LAT;
+            let lng: number = p.location_lng || DEFAULT_LNG;
+            let locationApproximate = false;
+
+            // If coordinates are missing or are still the old Peradeniya placeholder,
+            // attempt to geocode the address to get the real location.
+            const needsGeocode = !p.location_lat || !p.location_lng || isDefaultCoord(lat, lng);
+            if (needsGeocode && p.address && p.address !== 'Address not listed') {
+              const geocoded = await geocodeAddress(p.address);
+              if (geocoded) {
+                lat = geocoded.lat;
+                lng = geocoded.lng;
+              } else {
+                locationApproximate = true; // Could not resolve address
+              }
+            } else if (!p.location_lat || !p.location_lng) {
+              locationApproximate = true; // No address and no coords
+            }
+
+            return {
+              id: p.id,
+              name: p.company_name || p.name || 'Service Provider',
+              address: p.address || 'Address not listed',
+              rating: 4.5 + (p.id.charCodeAt(0) % 10) / 20,
+              reviews: (p.id.charCodeAt(1) % 100) + 10,
+              phone: p.contact_numbers?.[0] || p.phone || 'N/A',
+              categories: p.service_categories || ['Equipment'],
+              distance: '---',
+              available: true,
+              lat,
+              lng,
+              locationApproximate,
+            };
+          })
+        );
 
         setProviders(mappedProviders);
       } catch (err) {
@@ -238,16 +281,20 @@ export const MapPage = () => {
     }
   }, []);
 
-  // Calculate distances if user location is available
+  // Calculate distances using Haversine formula (km)
+  const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
   const providersWithDistance = providers.map(p => {
     if (!userLocation) return p;
-
-    // Simple Euclidean distance for demo (actually should use Haversine)
-    const d = Math.sqrt(Math.pow(p.lat - userLocation[0], 2) + Math.pow(p.lng - userLocation[1], 2)) * 69; // rough mi conversion
-    return {
-      ...p,
-      distance: `${d.toFixed(1)} mi`
-    };
+    const d = haversineKm(userLocation[0], userLocation[1], p.lat, p.lng);
+    return { ...p, distance: `${d.toFixed(1)} km` };
   });
 
   const filteredProviders = providersWithDistance.filter(provider => {
@@ -264,21 +311,19 @@ export const MapPage = () => {
 
   const selectedProviderData = providers.find(p => p.id === selectedProvider);
 
-  console.log("MapPage: Final Render Check", {
-    hasProviders: providers.length > 0,
-    hasFiltered: filteredProviders.length > 0,
-    hasLocation: !!userLocation,
-    selectedProvider
-  });
 
   return (
     <div className="space-y-6 min-h-[500px]">
       <div id="debug-map-page" style={{ display: 'none' }}>Map page reached render phase</div>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Find Service Providers</h1>
+          <h1 className="text-3xl font-bold text-foreground">
+            {user?.role === 'company' ? 'Service Provider Map' : 'Find Service Providers'}
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Locate certified technicians and repair services near you
+            {user?.role === 'company'
+              ? 'View other registered service providers across Sri Lanka'
+              : 'Locate certified technicians and repair services near you'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -408,6 +453,9 @@ export const MapPage = () => {
                     <div className="p-1">
                       <h4 className="font-bold text-accent">{provider.name}</h4>
                       <p className="text-xs text-muted-foreground mt-1">{provider.address}</p>
+                      {provider.locationApproximate && (
+                        <p className="text-[9px] text-orange-400 mt-1 font-medium">⚠ Approx. location (address not resolved)</p>
+                      )}
                       <div className="flex flex-wrap gap-1 mt-2">
                         {provider.categories.map(cat => (
                           <span key={cat} className="px-1.5 py-0.5 bg-accent/10 text-accent text-[8px] rounded uppercase font-bold">
@@ -502,6 +550,9 @@ export const MapPage = () => {
                           <span className="text-xs font-bold">{provider.rating.toFixed(1)}</span>
                         </div>
                       </div>
+                      {provider.locationApproximate && (
+                        <p className="text-[9px] text-orange-400 mt-0.5 font-medium">⚠ Approx. location</p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{provider.address}</p>
 
                       <div className="flex flex-wrap gap-1.5 mt-3">

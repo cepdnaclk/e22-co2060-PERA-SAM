@@ -195,9 +195,9 @@ export const LoginPage = () => {
                 <input type="checkbox" className="rounded border-border" />
                 Remember me
               </label>
-              <a href="#" className="text-sm text-accent hover:underline">
+              <Link to="/forgot-password" className="text-sm text-accent hover:underline">
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             <Button type="submit" variant="accent" className="w-full" size="lg" disabled={isLoading}>
