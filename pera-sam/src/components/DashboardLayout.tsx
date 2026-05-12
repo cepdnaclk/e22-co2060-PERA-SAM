@@ -101,11 +101,21 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                     {/* User Info */}
                     <div className="px-4 mb-6">
                         <div className={`flex items-center gap-3 p-2 bg-sidebar-accent/50 rounded-xl overflow-hidden ${isMinimized ? 'justify-center' : ''}`}>
-                            <div className="w-10 h-10 bg-sidebar-primary rounded-lg flex-shrink-0 flex items-center justify-center">
-                                {user?.role === 'company' ? (
-                                    <Building2 className="h-5 w-5 text-sidebar-primary-foreground" />
+                            <div className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                {user?.avatarUrl ? (
+                                    <img
+                                        src={user.avatarUrl}
+                                        alt={user.name}
+                                        className="w-full h-full object-cover rounded-lg"
+                                    />
                                 ) : (
-                                    <User className="h-5 w-5 text-sidebar-primary-foreground" />
+                                    <div className="w-full h-full bg-sidebar-primary flex items-center justify-center rounded-lg">
+                                        {user?.role === 'company' ? (
+                                            <Building2 className="h-5 w-5 text-sidebar-primary-foreground" />
+                                        ) : (
+                                            <User className="h-5 w-5 text-sidebar-primary-foreground" />
+                                        )}
+                                    </div>
                                 )}
                             </div>
                             {!isMinimized && (

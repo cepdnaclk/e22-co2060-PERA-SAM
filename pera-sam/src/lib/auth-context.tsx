@@ -9,6 +9,7 @@ export interface User {
   email: string;
   role: UserRole;
   name: string;
+  avatarUrl?: string;
   // Normal user fields
   age?: number;
   address?: string;
@@ -79,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: data.email,
         role: data.role as UserRole,
         name: data.name,
+        avatarUrl: (data as any).avatar_url ?? undefined,
         age: data.age ?? undefined,
         address: data.address ?? undefined,
         phone: data.phone ?? undefined,
@@ -240,6 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (updates.address !== undefined) dbUpdates.address = updates.address;
       if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
       if (updates.age !== undefined) dbUpdates.age = updates.age;
+      if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
       // Company-specific fields
       if (updates.companyName !== undefined) dbUpdates.company_name = updates.companyName;
       if (updates.technicianName !== undefined) dbUpdates.technician_name = updates.technicianName;

@@ -19,9 +19,11 @@ import {
   Eye,
   EyeOff,
   CheckCircle2,
+  Camera,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { ProfileImageCropper } from '@/components/ProfileImageCropper';
 
 const SERVICE_CATEGORIES = [
   { id: 'laptop',     label: 'Laptop / PC Fans' },
@@ -68,6 +70,9 @@ export const SettingsPage = () => {
     user?.serviceCategories || []
   );
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // ── Profile image state ────────────────────────────────────────────────────
+  const [showCropper, setShowCropper] = useState(false);
 
   // ── Password change state ──────────────────────────────────────────────────
   const [passwords, setPasswords] = useState({ current: '', newPwd: '', confirm: '' });
@@ -147,6 +152,43 @@ export const SettingsPage = () => {
     }
   };
 
+  // ── Upload profile picture ─────────────────────────────────────────────────
+  const handleAvatarUpload = async (croppedBlob: Blob) => {
+    if (!user) return;
+
+    try {
+      const fileExt = 'webp';
+      const fileName = `${user.id}/avatar.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, croppedBlob, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: 'image/webp',
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      // Add cache-busting query param
+      const avatarUrl = `${publicUrl}?t=${Date.now()}`;
+
+      // Update the profile with avatar URL
+      await updateProfile({ avatarUrl } as any);
+
+      toast.success('Profile picture updated!');
+    } catch (err: any) {
+      console.error('Avatar upload error:', err);
+      toast.error(err.message || 'Failed to upload profile picture.');
+    }
+  };
+
   // ── Change password ────────────────────────────────────────────────────────
   const handleChangePassword = async () => {
     if (passwords.newPwd !== passwords.confirm) {
@@ -203,6 +245,60 @@ export const SettingsPage = () => {
           icon={isCompany ? Building2 : User}
           title={isCompany ? 'Company Profile' : 'Profile Information'}
           subtitle={isCompany ? 'Update your company and technician details' : 'Update your personal details'}
+        />
+
+        {/* ── Profile Picture Section ── */}
+        <div className="flex flex-col sm:flex-row items-center gap-5 mb-6 p-4 bg-muted/30 rounded-xl border border-border/50">
+          <div className="relative group">
+            <div className="w-24 h-24 rounded-full overflow-hidden border-3 border-accent/30 bg-sidebar-primary flex items-center justify-center flex-shrink-0 shadow-lg">
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center">
+                  {isCompany ? (
+                    <Building2 className="h-10 w-10 text-accent/60" />
+                  ) : (
+                    <User className="h-10 w-10 text-accent/60" />
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Camera overlay */}
+            <button
+              onClick={() => setShowCropper(true)}
+              className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+            >
+              <Camera className="h-6 w-6 text-white" />
+            </button>
+          </div>
+          <div className="flex flex-col items-center sm:items-start gap-2">
+            <div>
+              <p className="text-sm font-semibold text-foreground">{user?.name || 'Your Name'}</p>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCropper(true)}
+              className="gap-2"
+            >
+              <Camera className="h-3.5 w-3.5" />
+              {user?.avatarUrl ? 'Change Photo' : 'Upload Photo'}
+            </Button>
+            <p className="text-[10px] text-muted-foreground">Recommended: 400×400px • JPG, PNG, WebP</p>
+          </div>
+        </div>
+
+        {/* Image Cropper Dialog */}
+        <ProfileImageCropper
+          open={showCropper}
+          onOpenChange={setShowCropper}
+          onCropComplete={handleAvatarUpload}
+          currentImageUrl={user?.avatarUrl}
         />
 
         <div className="grid gap-5">

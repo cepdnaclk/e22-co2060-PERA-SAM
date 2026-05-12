@@ -11,7 +11,8 @@ import {
   AlertTriangle,
   Upload,
   ChevronRight,
-  Waves
+  Waves,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
@@ -83,13 +84,29 @@ export const DashboardHome = () => {
     <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Welcome back, {user?.name?.split(' ')[0]}!
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Here's an overview of your sound analysis activity
-          </p>
+        <div className="flex items-center gap-4">
+          {/* Profile picture circle */}
+          <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-accent/30 flex-shrink-0 shadow-lg">
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user?.name || 'User'}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center">
+                <User className="h-7 w-7 text-accent/60" />
+              </div>
+            )}
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              Welcome back, {user?.name?.split(' ')[0]}!
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Here's an overview of your sound analysis activity
+            </p>
+          </div>
         </div>
         <Link to="/dashboard/analysis">
           <Button variant="accent" size="lg">
