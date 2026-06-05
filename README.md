@@ -86,7 +86,6 @@ sequenceDiagram
 </p>
 
 ## Links
-
 - [Project Repository](https://github.com/cepdnaclk/e22-co2060-PERA-SAM)
 - [Project Page](https://cepdnaclk.github.io/e22-co2060-PERA-SAM)
 - [Department of Computer Engineering](http://www.ce.pdn.ac.lk/)
