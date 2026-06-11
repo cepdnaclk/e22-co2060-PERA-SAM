@@ -407,7 +407,8 @@ export const LandingPage = () => {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-20">
+          {/* Zig-zag single-row team layout */}
+          <div className="flex flex-wrap justify-center gap-4 max-w-7xl mx-auto mb-20">
             {[
               {
                 name: 'Mr. Bhagya Karunanayake',
@@ -454,42 +455,55 @@ export const LandingPage = () => {
             ].map((member, index) => (
               <motion.div
                 key={index}
-                className="glass-card rounded-2xl overflow-hidden group hover:shadow-card-hover transition-all duration-300"
+                className="group transition-all duration-300 flex flex-col items-center p-5 w-[160px]"
+                style={{ marginTop: index % 2 === 1 ? '48px' : '0px' }}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <div className="aspect-square relative overflow-hidden">
-                  <img src={member.image} alt={member.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                {/* Circular avatar */}
+                <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-accent/40 ring-2 ring-accent/20 mb-3 flex-shrink-0 relative group-hover:ring-accent/60 transition-all duration-300">
+                  {member.image === '#' ? (
+                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                      <UserCircle className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <img
+                      src={member.image}
+                      alt={member.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                  )}
                 </div>
-                <div className="p-6 text-center">
-                  <h3 className="text-xl font-bold text-foreground mb-1">{member.name}</h3>
-                  <div className="flex flex-col gap-1 items-center mb-4">
-                    <p className="text-accent text-sm font-medium uppercase tracking-wider">{member.role}</p>
-                    <p className="text-[14px] text-muted-foreground font-mono tracking-widest">{member.regNo}</p>
-                  </div>
 
-                  <div className="flex items-center justify-center gap-3">
+                {/* Info */}
+                <div className="text-center">
+                  <h3 className="text-xs font-bold text-foreground leading-tight mb-1">
+                    {member.name === '#' ? 'Project Supervisor' : member.name}
+                  </h3>
+                  <p className="text-accent text-[10px] font-semibold uppercase tracking-wider mb-0.5">{member.role}</p>
+                  <p className="text-[9px] text-muted-foreground font-mono tracking-wide mb-3">{member.regNo}</p>
+
+                  <div className="flex items-center justify-center gap-1.5">
                     {member.links.github && (
-                      <a href={member.links.github} className="p-2 bg-muted hover:bg-accent/10 text-muted-foreground hover:text-accent rounded-lg transition-colors border border-transparent hover:border-accent/20">
-                        <Github className="h-4 w-4" />
+                      <a href={member.links.github} target="_blank" rel="noopener noreferrer" className="p-1.5 bg-muted hover:bg-accent/10 text-muted-foreground hover:text-accent rounded-md transition-colors border border-transparent hover:border-accent/20">
+                        <Github className="h-3 w-3" />
                       </a>
                     )}
                     {member.links.linkedin && (
-                      <a href={member.links.linkedin} className="p-2 bg-muted hover:bg-accent/10 text-muted-foreground hover:text-accent rounded-lg transition-colors border border-transparent hover:border-accent/20">
-                        <Linkedin className="h-4 w-4" />
+                      <a href={member.links.linkedin} target="_blank" rel="noopener noreferrer" className="p-1.5 bg-muted hover:bg-accent/10 text-muted-foreground hover:text-accent rounded-md transition-colors border border-transparent hover:border-accent/20">
+                        <Linkedin className="h-3 w-3" />
                       </a>
                     )}
                     {member.links.email && (
-                      <a href={`mailto:${member.links.email}`} className="p-2 bg-muted hover:bg-accent/10 text-muted-foreground hover:text-accent rounded-lg transition-colors border border-transparent hover:border-accent/20">
-                        <Mail className="h-4 w-4" />
+                      <a href={`mailto:${member.links.email}`} className="p-1.5 bg-muted hover:bg-accent/10 text-muted-foreground hover:text-accent rounded-md transition-colors border border-transparent hover:border-accent/20">
+                        <Mail className="h-3 w-3" />
                       </a>
                     )}
                     {member.links.portfolio && (
-                      <a href={member.links.portfolio} className="p-2 bg-muted hover:bg-accent/10 text-muted-foreground hover:text-accent rounded-lg transition-colors border border-transparent hover:border-accent/20">
-                        <UserCircle className="h-4 w-4" />
+                      <a href={member.links.portfolio} target="_blank" rel="noopener noreferrer" className="p-1.5 bg-muted hover:bg-accent/10 text-muted-foreground hover:text-accent rounded-md transition-colors border border-transparent hover:border-accent/20">
+                        <UserCircle className="h-3 w-3" />
                       </a>
                     )}
                   </div>
