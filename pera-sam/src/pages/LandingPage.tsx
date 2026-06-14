@@ -34,7 +34,215 @@ import member4Img from '@/assets/team/member4.png';
 import qrCodeImg from '@/assets/qr_code.png';
 import heroBackground from '@/assets/hero-bg-industrial.png';
 import ctaBackground from '@/assets/cta-bg.png';
+import invictusBanner from '@/assets/invictus-banner.png';
 import { enableGlobalCursorStyles } from 'react-resizable-panels';
+
+// ─── Tech Stack for Marquee ──────────────────────────────────────────────────
+const techItems = [
+  { name: 'React', color: '#61DAFB', letter: '⚛' },
+  { name: 'TypeScript', color: '#3178C6', letter: 'TS' },
+  { name: 'JavaScript', color: '#F7DF1E', letter: 'JS' },
+  { name: 'Python', color: '#FFD845', letter: '🐍' },
+  { name: 'Supabase', color: '#3ECF8E', letter: '⚡' },
+  { name: 'Azure', color: '#0078D4', letter: '☁' },
+  { name: 'Docker', color: '#2496ED', letter: '🐳' },
+  { name: 'Node.js', color: '#339933', letter: '⬡' },
+  { name: 'FastAPI', color: '#009688', letter: '🚀' },
+  { name: 'PostgreSQL', color: '#336791', letter: '🐘' },
+  { name: 'Vite', color: '#646CFF', letter: '⚡' },
+  { name: 'TailwindCSS', color: '#06B6D4', letter: '🌊' },
+  { name: 'Git', color: '#F05032', letter: '⎇' },
+  { name: 'Nginx', color: '#009900', letter: 'N' },
+];
+const marqueeItems = [...techItems, ...techItems, ...techItems];
+
+// ─── Contact Section Component ───────────────────────────────────────────────
+const ContactSection = () => {
+  return (
+    <section
+      id="contact"
+      className="py-24 px-4 relative overflow-hidden"
+      style={{ background: 'linear-gradient(135deg, hsla(0, 0%, 0%, 0.00) 0%, hsla(0, 0%, 0%, 0.00) 100%)' }}
+    >
+      {/* ── MARQUEE STRIP: behind everything at z-0 ── */}
+      <div
+        className="absolute inset-0 flex items-center overflow-hidden pointer-events-none"
+        style={{ zIndex: 0 }}
+      >
+        <motion.div
+          className="flex items-center gap-10 whitespace-nowrap"
+          style={{ width: 'max-content' }}
+          animate={{ x: ['-33.333%', '0%'] }}
+          transition={{ duration: 38, repeat: Infinity, ease: 'linear', repeatType: 'loop' }}
+        >
+          {marqueeItems.map((tech, i) => (
+            <div
+              key={i}
+              className="flex flex-col items-center gap-1.5"
+              style={{ minWidth: 60, opacity: 1.00 }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 10,
+                  background: `${tech.color}15`,
+                  border: `1px solid ${tech.color}28`,
+                  boxShadow: `0 0 14px ${tech.color}22`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: tech.letter.length <= 2 ? 15 : 22,
+                  fontWeight: 800,
+                  color: tech.color,
+                  fontFamily: 'monospace',
+                }}
+              >
+                {tech.letter}
+              </div>
+              <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.07em', color: tech.color, textTransform: 'uppercase' }}>
+                {tech.name}
+              </span>
+            </div>
+          ))}
+        </motion.div>
+      </div>
+
+      {/* ── MAIN CONTENT: above marquee ── */}
+      <div className="container mx-auto relative" style={{ zIndex: 1 }}>
+        {/* Section heading */}
+        <motion.div
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="text-4xl font-bold text-foreground mb-4">Get In Touch</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Have questions or need support? Our team is here to help you.
+          </p>
+        </motion.div>
+
+        {/* Two-column layout */}
+        <div className="flex flex-col lg:flex-row items-end justify-center gap-14 max-w-5xl mx-auto">
+
+          {/* ── LEFT: Invictus banner image ── */}
+          <motion.div
+            className="flex-shrink-0 flex items-center justify-center relative"
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+            style={{ zIndex: 2 }}
+          >
+            {/* Spinning ring + circle frame */}
+            <div className="relative flex items-center justify-center" style={{ width: 320, height: 320 }}>
+              {/* Animated rotating gradient ring */}
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: 'conic-gradient(from 0deg, #06b6d4, #3ecf8e, #0078d4, #61dafb, #06b6d4)',
+                  padding: 3,
+                  borderRadius: '50%',
+                }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+              />
+              {/* Blur glow ring underneath */}
+              <div
+                className="absolute inset-0 rounded-full opacity-50 blur-md"
+                style={{ background: 'conic-gradient(from 0deg, #06b6d4, #3ecf8e, #0078d4, #61dafb, #06b6d4)' }}
+              />
+              {/* White separator ring */}
+              <div
+                className="absolute rounded-full"
+                style={{ inset: 3, background: 'hsl(220,20%,8%)', borderRadius: '50%' }}
+              />
+              {/* Image inside circle */}
+              <div
+                className="absolute overflow-hidden group"
+                style={{ inset: 5, borderRadius: '50%' }}
+              >
+                <img
+                  src={invictusBanner}
+                  alt="Invictus – Future is here"
+                  className="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-700"
+                  style={{ borderRadius: '50%' }}
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* ── RIGHT: Contact info – no box borders, tight spacing ── */}
+          <motion.div
+            className="flex flex-col gap-3 w-full lg:w-auto pt-12"
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+            style={{ zIndex: 2 }}
+          >
+            {/* Email */}
+            <motion.a
+              href="mailto:invictus2026sam@gmail.com"
+              className="group flex items-center gap-4 py-2 transition-all duration-300"
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0 }}
+            >
+              <div className="w-9 h-9 flex items-center justify-center rounded-lg flex-shrink-0" style={{ background: 'rgba(20,184,166,0.10)' }}>
+                <Mail className="h-4 w-4 text-muted-foreground group-hover:text-accent transition-colors duration-300" />
+              </div>
+              <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300 text-sm">
+                invictus2026sam@gmail.com
+              </span>
+            </motion.a>
+
+            {/* Phone – both numbers in one row */}
+            <motion.div
+              className="group flex items-center gap-4 py-2"
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <div className="w-9 h-9 flex items-center justify-center rounded-lg flex-shrink-0" style={{ background: 'rgba(20,184,166,0.10)' }}>
+                <Phone className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+                <a href="tel:+94763263100" className="hover:text-foreground transition-colors duration-200">+94 76 326 3100</a>
+                <span className="text-muted-foreground/30">|</span>
+                <a href="tel:+94702618587" className="hover:text-foreground transition-colors duration-200">+94 70 261 8587</a>
+              </div>
+            </motion.div>
+
+            {/* Location */}
+            <motion.a
+              href="https://eng.pdn.ac.lk/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-4 py-2 transition-all duration-300"
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="w-9 h-9 flex items-center justify-center rounded-lg flex-shrink-0" style={{ background: 'rgba(20,184,166,0.10)' }}>
+                <MapPin className="h-4 w-4 text-muted-foreground group-hover:text-accent transition-colors duration-300" />
+              </div>
+              <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300 text-sm leading-relaxed">
+                Faculty of Engineering, University of Peradeniya, Sri Lanka.
+              </span>
+            </motion.a>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 const features = [
   {
@@ -463,7 +671,7 @@ export const LandingPage = () => {
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
                 {/* Circular avatar */}
-                <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-accent/40 ring-2 ring-accent/20 mb-3 flex-shrink-0 relative group-hover:ring-accent/60 transition-all duration-300">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-accent/40 ring-2 ring-accent/20 mb-3 flex-shrink-0 relative group-hover:ring-accent/60 transition-all duration-300">
                   {member.image === '#' ? (
                     <div className="w-full h-full bg-muted flex items-center justify-center">
                       <UserCircle className="h-10 w-10 text-muted-foreground" />
@@ -540,67 +748,7 @@ export const LandingPage = () => {
       </section>
 
       {/* Contact Us Section */}
-      <section id="contact" className="py-20 px-4">
-        <div className="container mx-auto">
-          <motion.div
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-4xl font-bold text-foreground mb-4">
-              Get In Touch
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Have questions or need support? Our team is here to help you.
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {[
-              {
-                icon: Mail,
-                title: 'Email Us',
-                content: 'invictus2026sam@gmail.com',
-                link: 'mailto:invictus2026@gmail.com'
-              },
-              {
-                icon: Phone,
-                title: 'Call Us',
-                content: '+94 76 326 3100      /      +94 70 261 8587',
-                link: 'tel:+94763263100'
-              },
-              {
-                icon: MapPin,
-                title: 'Visit Us',
-                content: 'Faculty of Engineering, University of Peradeniya, Sri Lanka.',
-                link: '#'
-              },
-            ].map((item, index) => (
-              <motion.div
-                key={index}
-                className="glass-card rounded-2xl p-8 text-center hover:border-accent/40 transition-colors duration-300"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-              >
-                <div className="w-14 h-14 bg-accent/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
-                  <item.icon className="h-7 w-7 text-accent" />
-                </div>
-                <h3 className="text-xl font-bold text-foreground mb-3">{item.title}</h3>
-                <a
-                  href={item.link}
-                  className="text-muted-foreground hover:text-accent transition-colors block"
-                >
-                  {item.content}
-                </a>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ContactSection />
 
       {/* CTA Section */}
       <section className="py-24 px-4 relative overflow-hidden">
