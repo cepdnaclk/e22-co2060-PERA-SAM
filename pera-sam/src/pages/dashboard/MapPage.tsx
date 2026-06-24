@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { RequestRepairModal } from '@/components/RequestRepairModal';
+import { motion } from 'framer-motion';
 import {
   MapPin,
   Filter,
@@ -160,6 +162,7 @@ export const MapPage = () => {
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [repairModalProvider, setRepairModalProvider] = useState<ServiceProvider | null>(null);
 
 
   // Fetch providers from Supabase
@@ -588,33 +591,14 @@ export const MapPage = () => {
                             variant="accent"
                             size="sm"
                             className="w-full"
-                            onClick={async (e) => {
+                            id={`request-repair-${provider.id}`}
+                            onClick={(e) => {
                               e.stopPropagation();
-                              if (!supabase.auth.getUser()) {
+                              if (!user) {
                                 toast.error("Please login to request repair");
                                 return;
                               }
-                              try {
-                                const { data: { user } } = await supabase.auth.getUser();
-                                if (!user) throw new Error("No user");
-
-                                const { error } = await (supabase as any)
-                                  .from('repair_requests')
-                                  .insert({
-                                    user_id: user.id,
-                                    company_id: provider.id,
-                                    machine_type: provider.categories[0] || 'Equipment',
-                                    brand: 'Inquiry',
-                                    description: `Repair request via Map for ${provider.name}`,
-                                    status: 'pending'
-                                  });
-
-                                if (error) throw error;
-                                toast.success("Repair request sent successfully!");
-                              } catch (err) {
-                                console.error("Error creating request:", err);
-                                toast.error("Failed to send request");
-                              }
+                              setRepairModalProvider(provider);
                             }}
                           >
                             <Calendar className="h-3.5 w-3.5 mr-2" />
@@ -638,6 +622,17 @@ export const MapPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Repair Request Modal */}
+      <AnimatePresence>
+        {repairModalProvider && (
+          <RequestRepairModal
+            provider={repairModalProvider}
+            onClose={() => setRepairModalProvider(null)}
+            onSuccess={() => setRepairModalProvider(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

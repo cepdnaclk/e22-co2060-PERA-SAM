@@ -9,7 +9,11 @@ import {
   ChevronRight,
   Waves,
   MapPin,
-  Loader2
+  Loader2,
+  Image as ImageIcon,
+  Phone,
+  FileText,
+  Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,12 +29,35 @@ interface RepairRequest {
   status: 'pending' | 'accepted' | 'completed' | 'declined';
   description: string;
   analysis_id: string | null;
+  photo_urls?: string[];
   created_at: string;
   profiles: {
     name: string;
     phone: string;
   };
 }
+
+/** Parse the multi-line description into labelled key-value pairs */
+const parseDescription = (desc: string): Record<string, string> => {
+  const result: Record<string, string> = {};
+  if (!desc) return result;
+  desc.split('\n').forEach(line => {
+    const colonIdx = line.indexOf(':');
+    if (colonIdx > -1) {
+      const key = line.slice(0, colonIdx).trim();
+      const val = line.slice(colonIdx + 1).trim();
+      if (key && val) result[key] = val;
+    }
+  });
+  return result;
+};
+
+/** Extract photo URLs embedded in description as a fallback */
+const extractPhotosFromDescription = (desc: string): string[] => {
+  const match = desc?.match(/Photos:\s*(.+)/);
+  if (!match) return [];
+  return match[1].split(',').map(u => u.trim()).filter(u => u.startsWith('http'));
+};
 
 export const RequestsPage = () => {
   const { user } = useAuth();
@@ -198,63 +225,137 @@ export const RequestsPage = () => {
                 animate={{ opacity: 1, height: 'auto' }}
                 className="mt-4 pt-4 border-t border-border"
               >
-                <div className="grid md:grid-cols-2 gap-4 mb-4">
-                  <div className="p-3 bg-muted/50 rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Full Description</p>
-                    <p className="text-sm text-foreground">{request.description}</p>
-                  </div>
-                  <div className="p-3 bg-muted/50 rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Contact (Mobile)</p>
-                    <p className="text-sm font-bold text-accent">{request.profiles?.phone || 'No phone provided'}</p>
-                  </div>
-                </div>
-                {request.status === 'pending' && (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="accent"
-                      className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        updateRequestStatus(request.id, 'accepted');
-                      }}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Accept Request
-                    </Button>
-                    <Button variant="outline" className="flex-1">
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Message User
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        updateRequestStatus(request.id, 'declined');
-                      }}
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-                {request.status === 'accepted' && (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="accent"
-                      className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        updateRequestStatus(request.id, 'completed');
-                      }}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Mark Complete
-                    </Button>
-                    <Button variant="outline" className="flex-1">
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Chat
-                    </Button>
-                  </div>
-                )}
+                {(() => {
+                  const parsed = parseDescription(request.description);
+                  const photoUrls: string[] = (request as any).photo_urls?.length
+                    ? (request as any).photo_urls
+                    : extractPhotosFromDescription(request.description);
+                  const detailKeys = Object.entries(parsed).filter(
+                    ([k]) => !['Issue', 'Customer Address', 'Customer Phone', 'Photos'].includes(k)
+                  );
+                  return (
+                    <div className="space-y-4">
+                      {/* Issue + Contact */}
+                      <div className="grid md:grid-cols-2 gap-3">
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                            <FileText className="h-3 w-3" /> Issue Description
+                          </p>
+                          <p className="text-sm text-foreground">
+                            {parsed['Issue'] || request.description.split('\n')[0] || 'No description'}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                            <Phone className="h-3 w-3" /> Contact
+                          </p>
+                          <p className="text-sm font-bold text-accent">
+                            {parsed['Customer Phone'] || request.profiles?.phone || 'Not provided'}
+                          </p>
+                          {parsed['Customer Address'] && (
+                            <p className="text-xs text-muted-foreground mt-1 flex items-start gap-1">
+                              <MapPin className="h-3 w-3 shrink-0 mt-0.5" />
+                              {parsed['Customer Address']}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Equipment Details */}
+                      {detailKeys.length > 0 && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                            <Tag className="h-3 w-3" /> Equipment Details
+                          </p>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                            {detailKeys.map(([k, v]) => (
+                              <div key={k}>
+                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{k}</span>
+                                <p className="text-xs font-medium text-foreground">{v}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Photo thumbnails */}
+                      {photoUrls.length > 0 && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                            <ImageIcon className="h-3 w-3" /> Attached Photos ({photoUrls.length})
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {photoUrls.map((url, idx) => (
+                              <a
+                                key={idx}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block w-16 h-16 rounded-lg overflow-hidden border border-border hover:border-accent transition-colors"
+                              >
+                                <img
+                                  src={url}
+                                  alt={`Photo ${idx + 1}`}
+                                  className="w-full h-full object-cover"
+                                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      {request.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="accent"
+                            className="flex-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateRequestStatus(request.id, 'accepted');
+                            }}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Accept Request
+                          </Button>
+                          <Button variant="outline" className="flex-1">
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Message User
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateRequestStatus(request.id, 'declined');
+                            }}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                      {request.status === 'accepted' && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="accent"
+                            className="flex-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateRequestStatus(request.id, 'completed');
+                            }}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Mark Complete
+                          </Button>
+                          <Button variant="outline" className="flex-1">
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Chat
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </motion.div>
             )}
           </motion.div>
