@@ -598,11 +598,7 @@ export const MapPage = () => {
                                 toast.error("Please login to request repair");
                                 return;
                               }
-                              setRepairModalProvider({
-                                id: provider.id,
-                                name: provider.name,
-                                address: provider.address,
-                              });
+                              setRepairModalProvider(provider);
                             }}
                           >
                             <Calendar className="h-3.5 w-3.5 mr-2" />
