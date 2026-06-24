@@ -1,27 +1,60 @@
-version: '3.8'
 
 services:
+  # ─── ML Backend (FastAPI) ────────────────────────────────────────────────────
   backend:
     build:
       context: ../Model/server
       dockerfile: Dockerfile
+    container_name: perasam-backend
     ports:
       - "8000:8000"
-    volumes:
-      - ../Model/server:/app
     environment:
       - PYTHONUNBUFFERED=1
+    # NOTE: Do NOT mount source code over the container — that would override
+    # the installed Python packages. Use a named volume for persistent model assets.
+    volumes:
+      - model_assets:/app/assets
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s   # Give it time to load TF models
+    networks:
+      - perasam-net
 
+  # ─── Frontend (React / Nginx) ────────────────────────────────────────────────
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Supabase vars are baked into the JS bundle at build time (VITE_ prefix)
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
+        - VITE_SUPABASE_PROJECT_ID=${VITE_SUPABASE_PROJECT_ID}
+        # ⚠ IMPORTANT: In Docker, the React frontend calls the backend via the
+        # browser (client-side), NOT from inside the container — so this must be
+        # the URL that the USER'S BROWSER can reach (not the Docker service name).
+        # For local dev: http://localhost:8000
+        # For cloud:     https://your-api-domain.com
+        - VITE_ML_API_URL=${VITE_ML_API_URL:-http://localhost:8000}
+    container_name: perasam-frontend
     ports:
       - "8080:8080"
-    volumes:
-      - .:/app
-      - /app/node_modules
-    environment:
-      - VITE_ML_API_URL=http://localhost:8000
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - perasam-net
+
+# ─── Shared network ───────────────────────────────────────────────────────────
+networks:
+  perasam-net:
+    driver: bridge
+
+# ─── Named volumes ────────────────────────────────────────────────────────────
+volumes:
+  model_assets:   # Persists trained .h5 models across container restarts

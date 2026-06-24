@@ -1,0 +1,12 @@
+fan_id_00_dataset:
+  AUC: 0.6029073522931017
+  threshold: 12.5
+fan_id_02_dataset:
+  AUC: 0.8617949891760617
+  threshold: 7.7
+fan_id_04_dataset:
+  AUC: 0.7815266217465979
+  threshold: 7.5
+fan_id_06_dataset:
+  AUC: 0.988014211063451
+  threshold: 10.6

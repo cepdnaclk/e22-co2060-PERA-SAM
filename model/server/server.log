@@ -1,0 +1,221 @@
+2026-04-12 12:18:17,133 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-12 12:18:17,543 [INFO] trainer: 
+=======================================================
+2026-04-12 12:18:17,543 [INFO] trainer:   fan / id_00
+2026-04-12 12:18:17,543 [INFO] trainer: =======================================================
+2026-04-12 12:18:17,543 [INFO] trainer:   Loading cached training vectors...
+2026-04-12 12:18:27,787 [INFO] trainer:   Training autoencoder (320-dim input, 186636 vectors)...
+2026-04-12 12:20:14,470 [WARNING] absl: You are saving your model as an HDF5 file via `model.save()` or `keras.saving.save_model(model)`. This file format is considered legacy. We recommend using instead the native Keras format, e.g. `model.save('my_model.keras')` or `keras.saving.save_model(model, 'my_model.keras')`. 
+2026-04-12 12:20:14,547 [INFO] trainer:   Calibrating anomaly threshold from real data...
+2026-04-12 12:20:23,700 [INFO] trainer:   AUC=0.7811  Threshold=10.5887
+2026-04-12 12:20:23,707 [INFO] trainer: 
+=======================================================
+2026-04-12 12:20:23,707 [INFO] trainer:   fan / id_02
+2026-04-12 12:20:23,707 [INFO] trainer: =======================================================
+2026-04-12 12:20:23,707 [INFO] trainer:   Extracting features from normal audio files...
+2026-04-12 12:20:24,718 [INFO] main: ======================================================
+2026-04-12 12:20:24,718 [INFO] main:          PERA-SAM ML Backend v2.0                    
+2026-04-12 12:20:24,718 [INFO] main:    python main.py  -> handles everything              
+2026-04-12 12:20:24,718 [INFO] main: ======================================================
+2026-04-12 12:20:24,718 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-12 12:20:24,933 [INFO] main: +-------------------------------------------------+
+2026-04-12 12:20:24,934 [INFO] main: | MISSING MODELS DETECTED - STARTING TRAINING     |
+2026-04-12 12:20:24,934 [INFO] main: | This may take several minutes...                 |
+2026-04-12 12:20:24,934 [INFO] main: +-------------------------------------------------+
+2026-04-12 12:20:24,942 [INFO] trainer: 
+=======================================================
+2026-04-12 12:20:24,942 [INFO] trainer:   fan / id_00
+2026-04-12 12:20:24,942 [INFO] trainer: =======================================================
+2026-04-12 12:20:24,942 [INFO] trainer:   Model exists – skipping training (d:\Eng Aca_ Computer Engineering\3 rd sem\2yp\test\Model\server\assets\model_fan_id_id_00_dataset.h5)
+2026-04-12 12:20:24,943 [INFO] trainer: 
+=======================================================
+2026-04-12 12:20:24,943 [INFO] trainer:   fan / id_02
+2026-04-12 12:20:24,943 [INFO] trainer: =======================================================
+2026-04-12 12:20:24,943 [INFO] trainer:   Extracting features from normal audio files...
+2026-04-12 12:21:43,818 [INFO] trainer:   Cached 313944 vectors to d:\Eng Aca_ Computer Engineering\3 rd sem\2yp\test\mimii_baseline\pickle\train_fan_id_02_0_dB_fan.pickle
+2026-04-12 12:21:43,898 [INFO] trainer:   Cached 313944 vectors to d:\Eng Aca_ Computer Engineering\3 rd sem\2yp\test\mimii_baseline\pickle\train_fan_id_02_0_dB_fan.pickle
+2026-04-12 12:21:43,946 [INFO] trainer:   Training autoencoder (320-dim input, 313944 vectors)...
+2026-04-12 12:22:03,460 [INFO] main: ======================================================
+2026-04-12 12:22:03,460 [INFO] main:          PERA-SAM ML Backend v2.0                    
+2026-04-12 12:22:03,460 [INFO] main:    python main.py  -> handles everything              
+2026-04-12 12:22:03,460 [INFO] main: ======================================================
+2026-04-12 12:22:03,460 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-12 12:22:03,794 [INFO] main: [OK] All models present - skipping training
+2026-04-12 12:22:06,505 [INFO] trainer:   Training autoencoder (320-dim input, 313944 vectors)...
+2026-04-12 12:22:14,619 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:22:14,697 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:22:14,772 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:22:14,846 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:22:14,908 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:22:14,916 [INFO] main: [OK] Inference engine ready - 5 model(s) loaded
+2026-04-12 12:24:03,609 [WARNING] absl: You are saving your model as an HDF5 file via `model.save()` or `keras.saving.save_model(model)`. This file format is considered legacy. We recommend using instead the native Keras format, e.g. `model.save('my_model.keras')` or `keras.saving.save_model(model, 'my_model.keras')`. 
+2026-04-12 12:24:03,802 [INFO] trainer:   Calibrating anomaly threshold from real data...
+2026-04-12 12:24:13,251 [INFO] trainer:   AUC=1.0000  Threshold=7.6273
+2026-04-12 12:24:13,264 [INFO] trainer: 
+=======================================================
+2026-04-12 12:24:13,264 [INFO] trainer:   fan / id_04
+2026-04-12 12:24:13,264 [INFO] trainer: =======================================================
+2026-04-12 12:24:13,265 [INFO] trainer:   Extracting features from normal audio files...
+2026-04-12 12:24:20,469 [WARNING] absl: You are saving your model as an HDF5 file via `model.save()` or `keras.saving.save_model(model)`. This file format is considered legacy. We recommend using instead the native Keras format, e.g. `model.save('my_model.keras')` or `keras.saving.save_model(model, 'my_model.keras')`. 
+2026-04-12 12:24:20,549 [INFO] trainer:   Calibrating anomaly threshold from real data...
+2026-04-12 12:24:27,382 [INFO] trainer:   AUC=1.0000  Threshold=7.1413
+2026-04-12 12:24:27,387 [INFO] trainer: 
+=======================================================
+2026-04-12 12:24:27,387 [INFO] trainer:   fan / id_04
+2026-04-12 12:24:27,387 [INFO] trainer: =======================================================
+2026-04-12 12:24:27,387 [INFO] trainer:   Extracting features from normal audio files...
+2026-04-12 12:25:47,911 [INFO] trainer:   Cached 319197 vectors to d:\Eng Aca_ Computer Engineering\3 rd sem\2yp\test\mimii_baseline\pickle\train_fan_id_04_0_dB_fan.pickle
+2026-04-12 12:25:47,971 [INFO] trainer:   Cached 319197 vectors to d:\Eng Aca_ Computer Engineering\3 rd sem\2yp\test\mimii_baseline\pickle\train_fan_id_04_0_dB_fan.pickle
+2026-04-12 12:25:47,985 [INFO] trainer:   Training autoencoder (320-dim input, 319197 vectors)...
+2026-04-12 12:25:48,029 [INFO] trainer:   Training autoencoder (320-dim input, 319197 vectors)...
+2026-04-12 12:27:56,063 [WARNING] absl: You are saving your model as an HDF5 file via `model.save()` or `keras.saving.save_model(model)`. This file format is considered legacy. We recommend using instead the native Keras format, e.g. `model.save('my_model.keras')` or `keras.saving.save_model(model, 'my_model.keras')`. 
+2026-04-12 12:27:56,119 [INFO] trainer:   Calibrating anomaly threshold from real data...
+2026-04-12 12:28:03,398 [WARNING] absl: You are saving your model as an HDF5 file via `model.save()` or `keras.saving.save_model(model)`. This file format is considered legacy. We recommend using instead the native Keras format, e.g. `model.save('my_model.keras')` or `keras.saving.save_model(model, 'my_model.keras')`. 
+2026-04-12 12:28:03,461 [INFO] trainer:   Calibrating anomaly threshold from real data...
+2026-04-12 12:28:05,156 [INFO] trainer:   AUC=0.9489  Threshold=10.6604
+2026-04-12 12:28:05,163 [INFO] trainer: 
+=======================================================
+2026-04-12 12:28:05,163 [INFO] trainer:   fan / id_06
+2026-04-12 12:28:05,163 [INFO] trainer: =======================================================
+2026-04-12 12:28:05,163 [INFO] trainer:   Extracting features from normal audio files...
+2026-04-12 12:28:11,087 [INFO] trainer:   AUC=0.9511  Threshold=9.5273
+2026-04-12 12:28:11,093 [INFO] trainer: 
+=======================================================
+2026-04-12 12:28:11,094 [INFO] trainer:   fan / id_06
+2026-04-12 12:28:11,094 [INFO] trainer: =======================================================
+2026-04-12 12:28:11,094 [INFO] trainer:   Extracting features from normal audio files...
+2026-04-12 12:29:44,053 [INFO] main: ======================================================
+2026-04-12 12:29:44,054 [INFO] main:          PERA-SAM ML Backend v2.0                    
+2026-04-12 12:29:44,054 [INFO] main:    python main.py  -> handles everything              
+2026-04-12 12:29:44,054 [INFO] main: ======================================================
+2026-04-12 12:29:44,054 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-12 12:29:44,789 [INFO] main: [OK] All models present - skipping training
+2026-04-12 12:29:53,053 [INFO] trainer:   Cached 313635 vectors to d:\Eng Aca_ Computer Engineering\3 rd sem\2yp\test\mimii_baseline\pickle\train_fan_id_06_0_dB_fan.pickle
+2026-04-12 12:29:53,122 [INFO] trainer:   Cached 313635 vectors to d:\Eng Aca_ Computer Engineering\3 rd sem\2yp\test\mimii_baseline\pickle\train_fan_id_06_0_dB_fan.pickle
+2026-04-12 12:29:53,133 [INFO] trainer:   Training autoencoder (320-dim input, 313635 vectors)...
+2026-04-12 12:29:53,255 [INFO] trainer:   Training autoencoder (320-dim input, 313635 vectors)...
+2026-04-12 12:29:57,561 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:29:57,649 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:29:57,739 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:29:57,843 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:29:57,926 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:29:58,017 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:29:58,042 [INFO] main: [OK] Inference engine ready - 5 model(s) loaded
+2026-04-12 12:29:58,045 [INFO] main: Shutting down PERA-SAM ML Backend
+2026-04-12 12:31:50,347 [INFO] main: ======================================================
+2026-04-12 12:31:50,347 [INFO] main:          PERA-SAM ML Backend v2.0                    
+2026-04-12 12:31:50,347 [INFO] main:    python main.py  -> handles everything              
+2026-04-12 12:31:50,347 [INFO] main: ======================================================
+2026-04-12 12:31:50,347 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-12 12:31:50,522 [INFO] main: [OK] All models present - skipping training
+2026-04-12 12:31:56,006 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:31:56,040 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:31:56,082 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:31:56,123 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:31:56,129 [INFO] main: [OK] Inference engine ready - 4 model(s) loaded
+2026-04-12 12:32:12,724 [INFO] main: ======================================================
+2026-04-12 12:32:12,724 [INFO] main:          PERA-SAM ML Backend v2.0                    
+2026-04-12 12:32:12,724 [INFO] main:    python main.py  -> handles everything              
+2026-04-12 12:32:12,724 [INFO] main: ======================================================
+2026-04-12 12:32:12,724 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-12 12:32:12,850 [INFO] main: [OK] All models present - skipping training
+2026-04-12 12:32:16,692 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:32:16,731 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:32:16,766 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:32:16,801 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:32:16,807 [INFO] main: [OK] Inference engine ready - 4 model(s) loaded
+2026-04-12 12:32:16,807 [INFO] main: Shutting down PERA-SAM ML Backend
+2026-04-12 12:32:34,350 [INFO] main: ======================================================
+2026-04-12 12:32:34,350 [INFO] main:          PERA-SAM ML Backend v2.0                    
+2026-04-12 12:32:34,350 [INFO] main:    python main.py  -> handles everything              
+2026-04-12 12:32:34,350 [INFO] main: ======================================================
+2026-04-12 12:32:34,350 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-12 12:32:34,473 [INFO] main: [OK] All models present - skipping training
+2026-04-12 12:32:38,318 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:32:38,355 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:32:38,391 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:32:38,427 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:32:38,431 [INFO] main: [OK] Inference engine ready - 4 model(s) loaded
+2026-04-12 12:32:38,431 [INFO] main: Shutting down PERA-SAM ML Backend
+2026-04-12 12:33:47,668 [INFO] main: ======================================================
+2026-04-12 12:33:47,669 [INFO] main:          PERA-SAM ML Backend v2.0                    
+2026-04-12 12:33:47,669 [INFO] main:    python main.py  -> handles everything              
+2026-04-12 12:33:47,669 [INFO] main: ======================================================
+2026-04-12 12:33:47,669 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-12 12:33:47,804 [INFO] main: [OK] All models present - skipping training
+2026-04-12 12:33:51,823 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:33:51,862 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:33:51,898 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:33:51,934 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:33:51,939 [INFO] main: [OK] Inference engine ready - 4 model(s) loaded
+2026-04-12 12:34:22,325 [INFO] main: ======================================================
+2026-04-12 12:34:22,325 [INFO] main:          PERA-SAM ML Backend v2.0                    
+2026-04-12 12:34:22,325 [INFO] main:    python main.py  -> handles everything              
+2026-04-12 12:34:22,325 [INFO] main: ======================================================
+2026-04-12 12:34:22,326 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-12 12:34:22,447 [INFO] main: [OK] All models present - skipping training
+2026-04-12 12:34:26,284 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:34:26,321 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:34:26,357 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:34:26,394 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:34:26,399 [INFO] main: [OK] Inference engine ready - 4 model(s) loaded
+2026-04-12 12:34:26,400 [INFO] main: Shutting down PERA-SAM ML Backend
+2026-04-12 12:35:14,391 [INFO] main: ======================================================
+2026-04-12 12:35:14,391 [INFO] main:          PERA-SAM ML Backend v2.0                    
+2026-04-12 12:35:14,391 [INFO] main:    python main.py  -> handles everything              
+2026-04-12 12:35:14,391 [INFO] main: ======================================================
+2026-04-12 12:35:14,391 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-12 12:35:14,518 [INFO] main: [OK] All models present - skipping training
+2026-04-12 12:35:18,294 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:35:18,332 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:35:18,368 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:35:18,406 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:35:18,410 [INFO] main: [OK] Inference engine ready - 4 model(s) loaded
+2026-04-12 12:35:18,411 [INFO] main: Shutting down PERA-SAM ML Backend
+2026-04-12 12:40:46,163 [INFO] main: ======================================================
+2026-04-12 12:40:46,164 [INFO] main:          PERA-SAM ML Backend v2.0                    
+2026-04-12 12:40:46,164 [INFO] main:    python main.py  -> handles everything              
+2026-04-12 12:40:46,164 [INFO] main: ======================================================
+2026-04-12 12:40:46,164 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-12 12:40:46,296 [INFO] main: [OK] All models present - skipping training
+2026-04-12 12:40:50,162 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:40:50,201 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:40:50,237 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:40:50,273 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:40:50,278 [INFO] main: [OK] Inference engine ready - 4 model(s) loaded
+2026-04-12 12:41:55,631 [INFO] main: ======================================================
+2026-04-12 12:41:55,631 [INFO] main:          PERA-SAM ML Backend v2.0                    
+2026-04-12 12:41:55,631 [INFO] main:    python main.py  -> handles everything              
+2026-04-12 12:41:55,631 [INFO] main: ======================================================
+2026-04-12 12:41:55,631 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-12 12:41:55,754 [INFO] main: [OK] All models present - skipping training
+2026-04-12 12:41:59,557 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:41:59,596 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:41:59,632 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:41:59,669 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-12 12:41:59,673 [INFO] main: [OK] Inference engine ready - 4 model(s) loaded
+2026-04-12 12:41:59,675 [INFO] main: Shutting down PERA-SAM ML Backend
+2026-04-16 11:08:15,399 [INFO] main: ======================================================
+2026-04-16 11:08:15,399 [INFO] main:          PERA-SAM ML Backend v2.0                    
+2026-04-16 11:08:15,399 [INFO] main:    python main.py  -> handles everything              
+2026-04-16 11:08:15,399 [INFO] main: ======================================================
+2026-04-16 11:08:15,399 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-16 11:08:16,197 [INFO] main: [OK] All models present - skipping training
+2026-04-16 11:08:31,585 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-16 11:08:31,640 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-16 11:08:31,693 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-16 11:08:31,753 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-16 11:08:31,768 [INFO] main: [OK] Inference engine ready - 4 model(s) loaded
+2026-04-16 13:55:08,054 [INFO] main: Shutting down PERA-SAM ML Backend
+2026-04-26 08:13:04,740 [INFO] main: ======================================================
+2026-04-26 08:13:04,740 [INFO] main:          PERA-SAM ML Backend v2.0                    
+2026-04-26 08:13:04,740 [INFO] main:    python main.py  -> handles everything              
+2026-04-26 08:13:04,740 [INFO] main: ======================================================
+2026-04-26 08:13:04,742 [INFO] main: Starting on http://0.0.0.0:8000
+2026-04-26 08:13:06,450 [INFO] main: [OK] All models present - skipping training
+2026-04-26 08:13:38,173 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-26 08:13:38,309 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-26 08:13:38,435 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-26 08:13:38,565 [WARNING] absl: Compiled the loaded model, but the compiled metrics have yet to be built. `model.compile_metrics` will be empty until you train or evaluate the model.
+2026-04-26 08:13:38,595 [INFO] main: [OK] Inference engine ready - 4 model(s) loaded
+2026-04-26 08:18:58,101 [INFO] main: Shutting down PERA-SAM ML Backend

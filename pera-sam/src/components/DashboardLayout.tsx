@@ -20,6 +20,7 @@ import {
     Calendar,
     PanelLeftClose,
     PanelLeftOpen,
+    History,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -36,6 +37,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     const normalUserNav = [
         { icon: Home, label: 'Home', path: '/dashboard' },
         { icon: LayoutDashboard, label: 'Analysis', path: '/dashboard/analysis' },
+        { icon: History, label: 'History', path: '/dashboard/history' },
         { icon: Map, label: 'Find Services', path: '/dashboard/map' },
         { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
         { icon: Info, label: 'About', path: '/dashboard/about' },
@@ -44,6 +46,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     const companyUserNav = [
         { icon: Home, label: 'Home', path: '/dashboard' },
         { icon: LayoutDashboard, label: 'Analysis', path: '/dashboard/analysis' },
+        { icon: History, label: 'History', path: '/dashboard/history' },
         { icon: MessageSquare, label: 'Requests', path: '/dashboard/requests' },
         { icon: Calendar, label: 'Appointments', path: '/dashboard/appointments' },
         { icon: Map, label: 'Service Map', path: '/dashboard/map' },
@@ -98,11 +101,21 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                     {/* User Info */}
                     <div className="px-4 mb-6">
                         <div className={`flex items-center gap-3 p-2 bg-sidebar-accent/50 rounded-xl overflow-hidden ${isMinimized ? 'justify-center' : ''}`}>
-                            <div className="w-10 h-10 bg-sidebar-primary rounded-lg flex-shrink-0 flex items-center justify-center">
-                                {user?.role === 'company' ? (
-                                    <Building2 className="h-5 w-5 text-sidebar-primary-foreground" />
+                            <div className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                {user?.avatarUrl ? (
+                                    <img
+                                        src={user.avatarUrl}
+                                        alt={user.name}
+                                        className="w-full h-full object-cover rounded-lg"
+                                    />
                                 ) : (
-                                    <User className="h-5 w-5 text-sidebar-primary-foreground" />
+                                    <div className="w-full h-full bg-sidebar-primary flex items-center justify-center rounded-lg">
+                                        {user?.role === 'company' ? (
+                                            <Building2 className="h-5 w-5 text-sidebar-primary-foreground" />
+                                        ) : (
+                                            <User className="h-5 w-5 text-sidebar-primary-foreground" />
+                                        )}
+                                    </div>
                                 )}
                             </div>
                             {!isMinimized && (
