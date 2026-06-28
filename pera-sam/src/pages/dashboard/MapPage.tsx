@@ -117,6 +117,7 @@ interface ServiceProvider {
   lat: number;
   lng: number;
   locationApproximate: boolean;
+  avatarUrl?: string;
 }
 
 // Routing component for path visualization (Temporarily disabled for debugging)
@@ -247,6 +248,7 @@ export const MapPage = () => {
               lat,
               lng,
               locationApproximate,
+              avatarUrl: p.avatar_url ?? undefined,
             };
           })
         );
@@ -454,7 +456,16 @@ export const MapPage = () => {
                 >
                   <Popup>
                     <div className="p-1">
-                      <h4 className="font-bold text-accent">{provider.name}</h4>
+                      <div className="flex items-center gap-2 mb-1">
+                        {provider.avatarUrl && (
+                          <img
+                            src={provider.avatarUrl}
+                            alt={provider.name}
+                            className="w-8 h-8 rounded-full object-cover border border-gray-200 flex-shrink-0"
+                          />
+                        )}
+                        <h4 className="font-bold text-accent">{provider.name}</h4>
+                      </div>
                       <p className="text-xs text-muted-foreground mt-1">{provider.address}</p>
                       {provider.locationApproximate && (
                         <p className="text-[9px] text-orange-400 mt-1 font-medium">⚠ Approx. location (address not resolved)</p>
@@ -541,9 +552,21 @@ export const MapPage = () => {
                     }`}
                 >
                   <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${selectedProvider === provider.id ? 'bg-accent text-white' : 'bg-accent/10 text-accent group-hover:bg-accent group-hover:text-white'
+                    <div className={`w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center transition-colors ${selectedProvider === provider.id ? 'bg-accent text-white' : 'bg-accent/10 text-accent group-hover:bg-accent group-hover:text-white'
                       }`}>
-                      <MapPin className="h-6 w-6" />
+                      {provider.avatarUrl ? (
+                        <img
+                          src={provider.avatarUrl}
+                          alt={provider.name}
+                          className="w-full h-full object-cover"
+                          onError={e => {
+                            (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            (e.currentTarget.parentElement as HTMLElement).innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
+                          }}
+                        />
+                      ) : (
+                        <MapPin className="h-6 w-6" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
