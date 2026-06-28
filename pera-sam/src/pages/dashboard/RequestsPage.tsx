@@ -14,6 +14,7 @@ import {
   Phone,
   FileText,
   Tag,
+  Building2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,6 +35,7 @@ interface RepairRequest {
   profiles: {
     name: string;
     phone: string;
+    avatar_url?: string;
   };
 }
 
@@ -64,21 +66,26 @@ export const RequestsPage = () => {
   const [requests, setRequests] = useState<RepairRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
+  const [filter, setFilter] = useState<string | null>(null);
+
+  const isCompany = user?.role === 'company';
 
   const fetchRequests = async () => {
     if (!user) return;
     try {
       setLoading(true);
+      const relation = isCompany ? 'profiles!user_id' : 'profiles!company_id';
       const { data, error } = await (supabase as any)
         .from('repair_requests')
         .select(`
           *,
-          profiles:user_id (
+          ${relation} (
             name,
-            phone
+            phone,
+            avatar_url
           )
         `)
-        .eq('company_id', user.id)
+        .eq(isCompany ? 'company_id' : 'user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -93,6 +100,34 @@ export const RequestsPage = () => {
 
   useEffect(() => {
     fetchRequests();
+    
+    if (!user) return;
+
+    // Subscribe to realtime updates for this user's/company's requests
+    const channel = supabase
+      .channel('requests-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'repair_requests',
+          filter: `${isCompany ? 'company_id' : 'user_id'}=eq.${user.id}`,
+        },
+        (payload) => {
+          fetchRequests();
+          if (payload.eventType === 'INSERT') {
+            toast.info(isCompany ? 'You have a new repair request!' : 'Your repair request was submitted successfully.');
+          } else if (payload.eventType === 'UPDATE') {
+            toast.info('A repair request was updated.');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const updateRequestStatus = async (requestId: string, newStatus: string) => {
@@ -133,10 +168,11 @@ export const RequestsPage = () => {
 
   // Dynamic stats calculation
   const stats = [
-    { label: 'Pending', value: requests.filter(r => r.status === 'pending').length.toString(), color: 'text-warning' },
-    { label: 'In Progress', value: requests.filter(r => r.status === 'accepted').length.toString(), color: 'text-info' },
-    { label: 'Completed', value: requests.filter(r => r.status === 'completed').length.toString(), color: 'text-success' },
+    { id: 'pending', label: 'Pending', value: requests.filter(r => r.status === 'pending').length.toString(), color: 'text-warning' },
+    { id: 'accepted', label: 'In Progress', value: requests.filter(r => r.status === 'accepted').length.toString(), color: 'text-info' },
+    { id: 'completed', label: 'Completed', value: requests.filter(r => r.status === 'completed').length.toString(), color: 'text-success' },
     {
+      id: 'this_week',
       label: 'This Week',
       value: requests.filter(r => {
         const oneWeekAgo = new Date();
@@ -146,6 +182,16 @@ export const RequestsPage = () => {
       color: 'text-foreground'
     },
   ];
+
+  const filteredRequests = requests.filter(r => {
+    if (!filter) return true;
+    if (filter === 'this_week') {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      return new Date(r.created_at) > oneWeekAgo;
+    }
+    return r.status === filter;
+  });
 
   if (loading) {
     return (
@@ -158,9 +204,11 @@ export const RequestsPage = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Repair Requests</h1>
+        <h1 className="text-3xl font-bold text-foreground">
+          {isCompany ? 'Repair Requests' : 'My Requests'}
+        </h1>
         <p className="text-muted-foreground mt-1">
-          Manage incoming service requests from users
+          {isCompany ? 'Manage incoming service requests from users' : 'Track the status of your repair requests'}
         </p>
       </div>
 
@@ -172,7 +220,9 @@ export const RequestsPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="glass-card rounded-xl p-4"
+            className={`glass-card rounded-xl p-4 cursor-pointer hover:shadow-card-hover transition-all ${filter === stat.id ? 'ring-2 ring-accent bg-accent/5' : ''
+              }`}
+            onClick={() => setFilter(filter === stat.id ? null : stat.id)}
           >
             <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
             <p className="text-sm text-muted-foreground">{stat.label}</p>
@@ -182,7 +232,7 @@ export const RequestsPage = () => {
 
       {/* Requests List */}
       <div className="space-y-4">
-        {requests.map((request, index) => (
+        {filteredRequests.map((request, index) => (
           <motion.div
             key={request.id}
             initial={{ opacity: 0, y: 20 }}
@@ -193,12 +243,20 @@ export const RequestsPage = () => {
             onClick={() => setSelectedRequest(selectedRequest === request.id ? null : request.id)}
           >
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
-                <User className="h-6 w-6 text-muted-foreground" />
+              <div className="w-12 h-12 bg-muted rounded-full overflow-hidden flex items-center justify-center flex-shrink-0">
+                {request.profiles?.avatar_url ? (
+                  <img src={request.profiles.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                ) : isCompany ? (
+                  <User className="h-6 w-6 text-muted-foreground" />
+                ) : (
+                  <Building2 className="h-6 w-6 text-muted-foreground" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-foreground">{request.profiles?.name || 'Unknown User'}</h3>
+                  <h3 className="font-semibold text-foreground">
+                    {request.profiles?.name || (isCompany ? 'Unknown User' : 'Unknown Company')}
+                  </h3>
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(request.status)}`}>
                     {getStatusIcon(request.status)}
                     {request.status}
@@ -208,7 +266,7 @@ export const RequestsPage = () => {
                   {request.machine_type} {request.brand ? `• ${request.brand}` : ''}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
-                  {request.description}
+                  {parseDescription(request.description)['Issue'] || (request.description?.includes(':') ? 'Tap to view details' : request.description || 'No description')}
                 </p>
                 <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                   {request.analysis_id && <span>Analysis: {request.analysis_id.slice(0, 8)}</span>}
@@ -242,7 +300,7 @@ export const RequestsPage = () => {
                             <FileText className="h-3 w-3" /> Issue Description
                           </p>
                           <p className="text-sm text-foreground">
-                            {parsed['Issue'] || request.description.split('\n')[0] || 'No description'}
+                            {parsed['Issue'] || (request.description && !request.description.includes(':') ? request.description : 'No additional issue description provided.')}
                           </p>
                         </div>
                         <div className="p-3 bg-muted/50 rounded-lg">
@@ -252,7 +310,7 @@ export const RequestsPage = () => {
                           <p className="text-sm font-bold text-accent">
                             {parsed['Customer Phone'] || request.profiles?.phone || 'Not provided'}
                           </p>
-                          {parsed['Customer Address'] && (
+                          {isCompany && parsed['Customer Address'] && (
                             <p className="text-xs text-muted-foreground mt-1 flex items-start gap-1">
                               <MapPin className="h-3 w-3 shrink-0 mt-0.5" />
                               {parsed['Customer Address']}
@@ -306,7 +364,7 @@ export const RequestsPage = () => {
                       )}
 
                       {/* Action buttons */}
-                      {request.status === 'pending' && (
+                      {isCompany && request.status === 'pending' && (
                         <div className="flex gap-2">
                           <Button
                             variant="accent"
@@ -334,7 +392,7 @@ export const RequestsPage = () => {
                           </Button>
                         </div>
                       )}
-                      {request.status === 'accepted' && (
+                      {isCompany && request.status === 'accepted' && (
                         <div className="flex gap-2">
                           <Button
                             variant="accent"
@@ -353,6 +411,14 @@ export const RequestsPage = () => {
                           </Button>
                         </div>
                       )}
+                      {!isCompany && (
+                        <div className="flex gap-2">
+                          <Button variant="outline" className="flex-1">
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Message Company
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
@@ -362,12 +428,12 @@ export const RequestsPage = () => {
         ))}
       </div>
 
-      {requests.length === 0 && (
+      {filteredRequests.length === 0 && (
         <div className="glass-card rounded-xl p-12 text-center">
           <Waves className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-          <p className="text-muted-foreground">No repair requests yet</p>
+          <p className="text-muted-foreground">No repair requests found</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Requests from users will appear here
+            {filter ? `No requests match the "${stats.find(s => s.id === filter)?.label}" filter.` : 'Requests from users will appear here'}
           </p>
         </div>
       )}
