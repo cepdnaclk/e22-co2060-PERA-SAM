@@ -75,6 +75,7 @@ export const RequestsPage = () => {
     try {
       setLoading(true);
       const relation = isCompany ? 'profiles!user_id' : 'profiles!company_id';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from('repair_requests')
         .select(`
@@ -89,7 +90,8 @@ export const RequestsPage = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRequests(data as any[] || []);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setRequests((data as any[]) || []);
     } catch (err) {
       console.error('Error fetching requests:', err);
       toast.error('Failed to load repair requests');
@@ -128,10 +130,11 @@ export const RequestsPage = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, isCompany]); // Removed fetchRequests from dependency array to avoid infinite loop
 
   const updateRequestStatus = async (requestId: string, newStatus: string) => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any)
         .from('repair_requests')
         .update({ status: newStatus })
@@ -285,7 +288,9 @@ export const RequestsPage = () => {
               >
                 {(() => {
                   const parsed = parseDescription(request.description);
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   const photoUrls: string[] = (request as any).photo_urls?.length
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     ? (request as any).photo_urls
                     : extractPhotosFromDescription(request.description);
                   const detailKeys = Object.entries(parsed).filter(

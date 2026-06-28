@@ -220,6 +220,7 @@ export const RequestRepairModal = ({ provider, onClose, onSuccess }: Props) => {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     addPhotos(e.dataTransfer.files);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [photos]);
 
   // ── Gemini Vision AI ──────────────────────────────────────────────────────────
@@ -325,6 +326,7 @@ Return ONLY a valid JSON object (no markdown, no code block) with these exact ke
       setAiFields(filled);
       setPhotos(prev => prev.map((p, i) => i === 0 ? { ...p, aiAnalyzed: true } : p));
       toast.success(`✨ AI detected ${filled.length} field(s) from your photo!`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error('AI analysis error:', err);
       toast.error('AI analysis failed. Please fill in details manually.');
@@ -403,6 +405,7 @@ Return ONLY a valid JSON object (no markdown, no code block) with these exact ke
         category === 'pump' ? eq('pumpBrand') :
         category === 'server' ? eq('serverBrand') : '';
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any)
         .from('repair_requests')
         .insert({
@@ -418,6 +421,7 @@ Return ONLY a valid JSON object (no markdown, no code block) with these exact ke
       if (error) {
         // If photo_urls column doesn't exist, retry without it
         if (error.message?.includes('photo_urls')) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { error: retryError } = await (supabase as any)
             .from('repair_requests')
             .insert({
@@ -437,6 +441,7 @@ Return ONLY a valid JSON object (no markdown, no code block) with these exact ke
       toast.success('✅ Repair request sent successfully!');
       onSuccess();
       onClose();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error('Submit error:', err);
       toast.error(`Failed to send request: ${err.message || 'Unknown error'}`);
