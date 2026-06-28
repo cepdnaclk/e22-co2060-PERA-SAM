@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import {
     Home,
@@ -33,11 +34,51 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     const { user, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
+    
+    const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+    const isCompany = user?.role === 'company';
+
+    useEffect(() => {
+        if (!user || !isCompany) return;
+
+        const fetchPendingCount = async () => {
+            const { count } = await supabase
+                .from('repair_requests')
+                .select('*', { count: 'exact', head: true })
+                .eq('company_id', user.id)
+                .eq('status', 'pending');
+            
+            if (count !== null) setPendingRequestsCount(count);
+        };
+
+        fetchPendingCount();
+
+        const channel = supabase
+            .channel('layout-requests-updates')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'repair_requests',
+                    filter: `company_id=eq.${user.id}`,
+                },
+                () => {
+                    fetchPendingCount();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user, isCompany]);
 
     const normalUserNav = [
         { icon: Home, label: 'Home', path: '/dashboard' },
         { icon: LayoutDashboard, label: 'Analysis', path: '/dashboard/analysis' },
         { icon: History, label: 'History', path: '/dashboard/history' },
+        { icon: MessageSquare, label: 'My Requests', path: '/dashboard/requests' },
         { icon: Map, label: 'Find Services', path: '/dashboard/map' },
         { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
         { icon: Info, label: 'About', path: '/dashboard/about' },
@@ -150,7 +191,23 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                                 >
                                     <item.icon className={`h-5 w-5 flex-shrink-0 transition-transform ${!isActive && 'group-hover:scale-110'}`} />
                                     {!isMinimized && <span className="font-medium whitespace-nowrap">{item.label}</span>}
-                                    {isActive && !isMinimized && <ChevronRight className="h-4 w-4 ml-auto" />}
+                                    
+                                    {/* Notification Badge */}
+                                    {isCompany && item.path === '/dashboard/requests' && pendingRequestsCount > 0 && (
+                                        <div className="ml-auto flex items-center justify-center">
+                                            {isMinimized ? (
+                                                <div className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                                            ) : (
+                                                <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
+                                                    {pendingRequestsCount} New
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {isActive && !isMinimized && !(isCompany && item.path === '/dashboard/requests' && pendingRequestsCount > 0) && (
+                                        <ChevronRight className="h-4 w-4 ml-auto" />
+                                    )}
                                 </Link>
                             );
                         })}
