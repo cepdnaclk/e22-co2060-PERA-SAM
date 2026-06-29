@@ -156,7 +156,7 @@ const OneTimeRecenter = ({ lat, lng }: { lat: number; lng: number }) => {
 };
 
 export const MapPage = () => {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
@@ -164,6 +164,7 @@ export const MapPage = () => {
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [repairModalProvider, setRepairModalProvider] = useState<ServiceProvider | null>(null);
+  const [providerDistances, setProviderDistances] = useState<Record<string, string>>({});
 
 
   // Fetch providers from Supabase
@@ -264,13 +265,36 @@ export const MapPage = () => {
     fetchProviders();
   }, [user]);
 
+  const userRef = useRef(user);
+  const updateProfileRef = useRef(updateProfile);
+
+  useEffect(() => {
+    userRef.current = user;
+    updateProfileRef.current = updateProfile;
+  }, [user, updateProfile]);
+
   // Get user location with fallback (single snapshot)
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           console.log("User location acquired:", position.coords);
-          setUserLocation([position.coords.latitude, position.coords.longitude]);
+          const newLat = position.coords.latitude;
+          const newLng = position.coords.longitude;
+          setUserLocation([newLat, newLng]);
+          
+          const currentUser = userRef.current;
+          if (currentUser) {
+            const currentLat = currentUser.location?.lat;
+            const currentLng = currentUser.location?.lng;
+            
+            // Only update if coordinates significantly changed
+            if (!currentLat || !currentLng || Math.abs(currentLat - newLat) > 0.0001 || Math.abs(currentLng - newLng) > 0.0001) {
+              updateProfileRef.current({ location_lat: newLat, location_lng: newLng }).catch(err => {
+                console.error("Failed to sync location to profile", err);
+              });
+            }
+          }
         },
         (error) => {
           console.warn("Geolocation failed or denied. Using default location (Peradeniya).", error.message);
@@ -286,20 +310,74 @@ export const MapPage = () => {
     }
   }, []);
 
-  // Calculate distances using Haversine formula (km)
-  const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+  // Calculate distances using Haversine formula (km) as fallback
+  const haversineKm = useCallback((lat1: number, lng1: number, lat2: number, lng2: number) => {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
     const a = Math.sin(dLat / 2) ** 2 +
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  };
+  }, []);
+
+  // Fetch real-world driving distances
+  useEffect(() => {
+    if (!userLocation || providers.length === 0) return;
+
+    const fetchRealWorldDistances = async () => {
+      try {
+        // Prepare coordinates for OSRM: format is {lng},{lat}
+        // First coordinate is the user (source)
+        const coords = [`${userLocation[1]},${userLocation[0]}`];
+        
+        // Add all providers up to API limit (100 total coords usually, so 99 destinations max)
+        const providersToFetch = providers.slice(0, 99);
+        providersToFetch.forEach(p => {
+          coords.push(`${p.lng},${p.lat}`);
+        });
+
+        const url = `https://router.project-osrm.org/table/v1/driving/${coords.join(';')}?sources=0&annotations=distance`;
+        
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.distances && data.distances[0]) {
+            const newDistances: Record<string, string> = {};
+            
+            providers.forEach((p, index) => {
+              if (index < 99 && data.distances[0][index + 1] !== null && data.distances[0][index + 1] !== undefined) {
+                const distMeters = data.distances[0][index + 1];
+                newDistances[p.id] = `${(distMeters / 1000).toFixed(1)} km`;
+              } else {
+                // Fallback to haversine for missing routes or out of bounds providers
+                const d = haversineKm(userLocation[0], userLocation[1], p.lat, p.lng);
+                newDistances[p.id] = `${d.toFixed(1)} km`;
+              }
+            });
+            
+            setProviderDistances(newDistances);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching real-world distances, falling back to Haversine", err);
+      }
+
+      // Fallback if API fails
+      const fallbackDistances: Record<string, string> = {};
+      providers.forEach(p => {
+        const d = haversineKm(userLocation[0], userLocation[1], p.lat, p.lng);
+        fallbackDistances[p.id] = `${d.toFixed(1)} km`;
+      });
+      setProviderDistances(fallbackDistances);
+    };
+
+    fetchRealWorldDistances();
+  }, [userLocation, providers, haversineKm]);
 
   const providersWithDistance = providers.map(p => {
     if (!userLocation) return p;
-    const d = haversineKm(userLocation[0], userLocation[1], p.lat, p.lng);
-    return { ...p, distance: `${d.toFixed(1)} km` };
+    return { ...p, distance: providerDistances[p.id] || '...' };
   });
 
   const filteredProviders = providersWithDistance.filter(provider => {
