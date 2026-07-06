@@ -11,15 +11,15 @@ import {
   MessageSquare,
   Calendar,
   ChevronRight,
-  Laptop,
-  Server,
-  Car,
   Settings,
-  Wind,
   Factory,
   Navigation,
   RefreshCcw,
-  Droplets
+  Droplets,
+  Cog,
+  Gauge,
+  Waves,
+  CircleDot
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -95,13 +95,13 @@ if (typeof window !== 'undefined') {
 }
 
 const serviceCategories = [
-  { id: 'all', label: 'All Services', icon: Settings },
-  { id: 'laptop', label: 'Laptop/PC', icon: Laptop },
-  { id: 'server', label: 'Servers', icon: Server },
-  { id: 'vehicle', label: 'Vehicles', icon: Car },
-  { id: 'hvac', label: 'HVAC', icon: Wind },
-  { id: 'pump', label: 'Pumps', icon: Droplets },
-  { id: 'industrial', label: 'Industrial', icon: Factory },
+  { id: 'all',             label: 'All Services',        icon: Settings },
+  { id: 'fan',             label: 'Industrial Fan',      icon: Waves },
+  { id: 'pump',            label: 'Industrial Pump',     icon: Droplets },
+  { id: 'slider',          label: 'Slide Rail',          icon: Cog },
+  { id: 'valve',           label: 'Industrial Valve',    icon: Gauge },
+  { id: 'vehicle_bearing', label: 'Vehicle Bearing',     icon: CircleDot },
+  { id: 'industrial',      label: 'Industrial (General)',icon: Factory },
 ];
 
 interface ServiceProvider {

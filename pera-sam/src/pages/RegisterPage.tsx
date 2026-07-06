@@ -44,12 +44,12 @@ type NormalUserForm = z.infer<typeof normalUserSchema>;
 type CompanyUserForm = z.infer<typeof companyUserSchema>;
 
 const serviceCategories = [
-  { id: 'laptop', label: 'Laptop/PC Fans' },
-  { id: 'server', label: 'Server Equipment' },
-  { id: 'pump', label: 'Pumps & Pipelines' },
-  { id: 'vehicle', label: 'Vehicle Engines' },
-  { id: 'hvac', label: 'HVAC Systems' },
-  { id: 'industrial', label: 'Industrial Machinery' },
+  { id: 'fan',             label: 'Industrial Fan' },
+  { id: 'pump',            label: 'Industrial Pumps' },
+  { id: 'slider',          label: 'Slide Rail / Conveyor' },
+  { id: 'valve',           label: 'Industrial Valves' },
+  { id: 'vehicle_bearing', label: 'Vehicle Bearings' },
+  { id: 'industrial',      label: 'Industrial Machinery' },
 ];
 
 export const RegisterPage = () => {
