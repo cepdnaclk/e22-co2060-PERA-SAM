@@ -31,12 +31,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 
 const categories = [
-  { id: 'fan', label: 'Industrial Fan', ids: ['00', '02', '04', '06'] },
-  { id: 'laptop', label: 'Laptop Fan', ids: ['Standard'] },
-  { id: 'server', label: 'Server Fan', ids: ['Rack-Unit-1'] },
-  { id: 'pump', label: 'Pump/Pipeline', ids: ['P1', 'P2'] },
-  { id: 'vehicle', label: 'Vehicle Engine', ids: ['V6', 'V8'] },
-  { id: 'hvac', label: 'HVAC System', ids: ['Central'] },
+  { id: 'fan',             label: 'Industrial Fan',    ids: ['00', '02', '04', '06'] },
+  { id: 'pump',            label: 'Industrial Pump',   ids: ['00', '02', '04', '06'] },
+  { id: 'slider',          label: 'Slide Rail',        ids: ['00', '02', '04', '06'] },
+  { id: 'valve',           label: 'Industrial Valve',  ids: ['00', '02', '04', '06'] },
+  { id: 'vehicle_bearing', label: 'Vehicle Bearing',   ids: ['—'] },
 ];
 
 interface AnalysisResult {

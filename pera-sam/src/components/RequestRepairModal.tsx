@@ -7,11 +7,11 @@ import {
   User,
   MapPin,
   Phone,
-  Laptop,
-  Car,
-  Wind,
+  Waves,
   Droplets,
-  Server,
+  Cog,
+  Gauge,
+  CircleDot,
   Wrench,
   Upload,
   Image as ImageIcon,
@@ -51,12 +51,11 @@ interface Props {
 }
 
 type RepairCategory =
-  | 'laptop'
-  | 'vehicle'
-  | 'hvac'
-  | 'piping'
+  | 'fan'
   | 'pump'
-  | 'server'
+  | 'slider'
+  | 'valve'
+  | 'vehicle_bearing'
   | '';
 
 interface UploadedPhoto {
@@ -66,84 +65,54 @@ interface UploadedPhoto {
 }
 
 interface EquipmentDetails {
-  // Laptop
-  laptopBrand: string;
-  laptopModel: string;
-  // Vehicle
-  vehicleType: string;
-  vehicleFuelType: string;
-  vehicleBrand: string;
-  vehicleModel: string;
-  // HVAC
-  hvacSystemType: string;
-  hvacCapacity: string;
-  hvacBrand: string;
-  // Piping
-  pipingType: string;
-  pipingMaterial: string;
+  // Fan
+  fanId: string;
+  fanInstallLocation: string;
   // Pump
   pumpType: string;
   pumpBrand: string;
-  // Server
-  serverType: string;
-  serverBrand: string;
-  serverSpec: string;
+  // Slider / Slide Rail
+  sliderType: string;
+  sliderLength: string;
+  // Valve
+  valveType: string;
+  valveMaterial: string;
+  // Vehicle Bearing
+  bearingType: string;
+  vehicleType: string;
+  vehicleBrand: string;
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 const repairCategories = [
-  { id: 'laptop', label: 'Laptop / PC', icon: Laptop, color: 'from-blue-500/20 to-blue-600/10' },
-  { id: 'vehicle', label: 'Vehicle Parts', icon: Car, color: 'from-orange-500/20 to-orange-600/10' },
-  { id: 'hvac', label: 'HVAC System', icon: Wind, color: 'from-cyan-500/20 to-cyan-600/10' },
-  { id: 'piping', label: 'Piping / Plumbing', icon: Wrench, color: 'from-green-500/20 to-green-600/10' },
-  { id: 'pump', label: 'Pumps', icon: Droplets, color: 'from-indigo-500/20 to-indigo-600/10' },
-  { id: 'server', label: 'Server Machine', icon: Server, color: 'from-purple-500/20 to-purple-600/10' },
+  { id: 'fan',             label: 'Industrial Fan',     icon: Waves,     color: 'from-teal-500/20 to-teal-600/10' },
+  { id: 'pump',            label: 'Industrial Pump',    icon: Droplets,  color: 'from-blue-500/20 to-blue-600/10' },
+  { id: 'slider',          label: 'Slide Rail',         icon: Cog,       color: 'from-violet-500/20 to-violet-600/10' },
+  { id: 'valve',           label: 'Industrial Valve',   icon: Gauge,     color: 'from-amber-500/20 to-amber-600/10' },
+  { id: 'vehicle_bearing', label: 'Vehicle Bearing',    icon: CircleDot, color: 'from-rose-500/20 to-rose-600/10' },
 ];
 
-const laptopBrands = [
-  'Dell', 'HP', 'Lenovo', 'Asus', 'Acer', 'Apple (Mac)',
-  'Samsung', 'MSI', 'Toshiba', 'Huawei', 'LG Gram', 'Razer', 'Other',
-];
-
-const vehicleTypes = ['Car', 'Van', 'Truck', 'Bus', 'Three-Wheeler', 'Motorcycle', 'SUV / Jeep'];
-const vehicleFuelTypes = ['Petrol', 'Diesel', 'Electric', 'Hybrid (Petrol-Electric)', 'CNG'];
-const vehicleBrands = [
-  'Toyota', 'Nissan', 'Honda', 'Suzuki', 'Mitsubishi', 'Mazda',
-  'BMW', 'Mercedes-Benz', 'Hyundai', 'Kia', 'Ford', 'Subaru',
-  'Isuzu', 'Tata', 'Bajaj', 'Hero', 'TVS', 'Other',
-];
-
-const hvacSystemTypes = [
-  'Split Air Conditioner', 'Cassette AC', 'Central / Ducted AC',
-  'Ductless Mini-Split', 'Chiller Unit', 'Rooftop Package Unit',
-  'Ventilation / Exhaust Fan', 'Heat Pump', 'VRF / VRV System',
-];
-const hvacCapacities = [
-  '0.75 Ton (9,000 BTU)', '1.0 Ton (12,000 BTU)', '1.5 Ton (18,000 BTU)',
-  '2.0 Ton (24,000 BTU)', '2.5 Ton (30,000 BTU)', '3.0 Ton (36,000 BTU)',
-  '4.0+ Ton (Industrial)',
-];
-const hvacBrands = [
-  'Carrier', 'Daikin', 'Mitsubishi Electric', 'LG', 'Samsung',
-  'Hitachi', 'Panasonic', 'Midea', 'Gree', 'Haier', 'York', 'Other',
-];
-
-const pipingTypes = [
-  'Water Supply / Cold Water', 'Hot Water / Steam', 'Drainage / Sewage',
-  'Gas Line', 'Industrial Process Piping', 'Irrigation / Garden',
-];
-const pipingMaterials = ['PVC', 'CPVC', 'Galvanized Steel', 'Copper', 'Cast Iron', 'HDPE', 'Other'];
+const fanIds = ['id_00', 'id_02', 'id_04', 'id_06'];
+const fanInstallLocations = ['Production Line', 'HVAC / Ventilation', 'Server Room', 'Clean Room', 'Other'];
 
 const pumpTypes = [
   'Centrifugal Pump', 'Submersible Pump', 'Jet Pump', 'Sump Pump',
   'Booster Pump', 'Industrial High-Pressure Pump', 'Water Pump (Domestic)',
 ];
 
-const serverTypes = ['Tower Server', 'Rack-Mount Server', 'Blade Server', 'Micro / Edge Server'];
-const serverBrands = [
-  'Dell EMC (PowerEdge)', 'HP Enterprise (ProLiant)', 'IBM', 'Cisco UCS',
-  'Supermicro', 'Lenovo ThinkSystem', 'Fujitsu PRIMERGY', 'Other',
+const sliderTypes = ['Ball Screw Slide', 'Linear Rail', 'Dovetail Slide', 'Telescopic Rail', 'Roller Slide', 'Other'];
+const sliderLengths = ['< 200 mm', '200–500 mm', '500 mm–1 m', '1 m–2 m', '> 2 m'];
+
+const valveTypes = ['Gate Valve', 'Ball Valve', 'Globe Valve', 'Check Valve', 'Butterfly Valve', 'Safety / Relief Valve', 'Solenoid Valve'];
+const valveMaterials = ['Cast Iron', 'Carbon Steel', 'Stainless Steel', 'Brass', 'PVC', 'Bronze', 'Other'];
+
+const bearingTypes = ['Ball Bearing', 'Roller Bearing', 'Tapered Roller', 'Needle Bearing', 'Thrust Bearing', 'Other'];
+const vehicleTypes = ['Car', 'Van', 'Truck', 'Bus', 'Three-Wheeler', 'Motorcycle', 'SUV / Jeep'];
+const vehicleBrands = [
+  'Toyota', 'Nissan', 'Honda', 'Suzuki', 'Mitsubishi', 'Mazda',
+  'BMW', 'Mercedes-Benz', 'Hyundai', 'Kia', 'Ford', 'Subaru',
+  'Isuzu', 'Tata', 'Bajaj', 'Hero', 'TVS', 'Other',
 ];
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -175,12 +144,11 @@ export const RequestRepairModal = ({ provider, onClose, onSuccess }: Props) => {
   const [category, setCategory] = useState<RepairCategory>('');
   const [description, setDescription] = useState('');
   const [equipment, setEquipment] = useState<EquipmentDetails>({
-    laptopBrand: '', laptopModel: '',
-    vehicleType: '', vehicleFuelType: '', vehicleBrand: '', vehicleModel: '',
-    hvacSystemType: '', hvacCapacity: '', hvacBrand: '',
-    pipingType: '', pipingMaterial: '',
+    fanId: '', fanInstallLocation: '',
     pumpType: '', pumpBrand: '',
-    serverType: '', serverBrand: '', serverSpec: '',
+    sliderType: '', sliderLength: '',
+    valveType: '', valveMaterial: '',
+    bearingType: '', vehicleType: '', vehicleBrand: '',
   });
 
   // Step 3 — Photos
@@ -241,21 +209,20 @@ export const RequestRepairModal = ({ provider, onClose, onSuccess }: Props) => {
       const base64 = await fileToBase64(photos[0].file);
       const mimeType = photos[0].file.type;
 
-      const prompt = `You are an equipment analysis assistant. Look at this image and identify the equipment.
+      const prompt = `You are an industrial equipment analysis assistant. Look at this image and identify the equipment.
 Return ONLY a valid JSON object (no markdown, no code block) with these exact keys:
 {
-  "equipmentType": "one of: laptop, vehicle, hvac, piping, pump, server, or unknown",
-  "laptopBrand": "brand name if laptop, else empty string",
-  "laptopModel": "model/version if laptop, else empty string",
+  "equipmentType": "one of: fan, pump, slider, valve, vehicle_bearing, or unknown",
+  "fanId": "id_00|id_02|id_04|id_06 or empty",
+  "fanInstallLocation": "install location or empty",
+  "pumpType": "pump type or empty",
+  "pumpBrand": "pump brand or empty",
+  "sliderType": "slider/rail type or empty",
+  "valveType": "valve type or empty",
+  "valveMaterial": "valve material or empty",
+  "bearingType": "bearing type or empty",
   "vehicleType": "Car|Van|Truck|Bus|Three-Wheeler|Motorcycle|SUV / Jeep or empty",
   "vehicleBrand": "vehicle brand or empty",
-  "vehicleModel": "vehicle model or empty",
-  "vehicleFuelType": "Petrol|Diesel|Electric|Hybrid (Petrol-Electric)|CNG or empty",
-  "hvacSystemType": "HVAC type or empty",
-  "hvacBrand": "HVAC brand or empty",
-  "pumpType": "pump type or empty",
-  "serverBrand": "server brand or empty",
-  "serverType": "Tower Server|Rack-Mount Server|Blade Server|Micro / Edge Server or empty",
   "additionalInfo": "any other relevant info in 1 sentence"
 }`;
 
@@ -290,8 +257,8 @@ Return ONLY a valid JSON object (no markdown, no code block) with these exact ke
       // Apply detected values
       if (parsed.equipmentType && parsed.equipmentType !== 'unknown') {
         const map: Record<string, RepairCategory> = {
-          laptop: 'laptop', vehicle: 'vehicle', hvac: 'hvac',
-          piping: 'piping', pump: 'pump', server: 'server',
+          fan: 'fan', pump: 'pump', slider: 'slider',
+          valve: 'valve', vehicle_bearing: 'vehicle_bearing',
         };
         if (map[parsed.equipmentType]) {
           setCategory(map[parsed.equipmentType]);
@@ -304,17 +271,16 @@ Return ONLY a valid JSON object (no markdown, no code block) with these exact ke
         const applyField = (field: keyof EquipmentDetails, val?: string) => {
           if (val && val.trim()) { next[field] = val.trim(); filled.push(field); }
         };
-        applyField('laptopBrand', parsed.laptopBrand);
-        applyField('laptopModel', parsed.laptopModel);
+        applyField('fanId', parsed.fanId);
+        applyField('fanInstallLocation', parsed.fanInstallLocation);
+        applyField('pumpType', parsed.pumpType);
+        applyField('pumpBrand', parsed.pumpBrand);
+        applyField('sliderType', parsed.sliderType);
+        applyField('valveType', parsed.valveType);
+        applyField('valveMaterial', parsed.valveMaterial);
+        applyField('bearingType', parsed.bearingType);
         applyField('vehicleType', parsed.vehicleType);
         applyField('vehicleBrand', parsed.vehicleBrand);
-        applyField('vehicleModel', parsed.vehicleModel);
-        applyField('vehicleFuelType', parsed.vehicleFuelType);
-        applyField('hvacSystemType', parsed.hvacSystemType);
-        applyField('hvacBrand', parsed.hvacBrand);
-        applyField('pumpType', parsed.pumpType);
-        applyField('serverBrand', parsed.serverBrand);
-        applyField('serverType', parsed.serverType);
         return next;
       });
 
@@ -340,33 +306,26 @@ Return ONLY a valid JSON object (no markdown, no code block) with these exact ke
   const buildDescription = (): string => {
     const lines: string[] = [];
     if (description) lines.push(`Issue: ${description}`);
-    if (category === 'laptop') {
-      if (eq('laptopBrand')) lines.push(`Brand: ${eq('laptopBrand')}`);
-      if (eq('laptopModel')) lines.push(`Model/Version: ${eq('laptopModel')}`);
-    }
-    if (category === 'vehicle') {
-      if (eq('vehicleType')) lines.push(`Vehicle Type: ${eq('vehicleType')}`);
-      if (eq('vehicleFuelType')) lines.push(`Fuel Type: ${eq('vehicleFuelType')}`);
-      if (eq('vehicleBrand')) lines.push(`Brand: ${eq('vehicleBrand')}`);
-      if (eq('vehicleModel')) lines.push(`Model: ${eq('vehicleModel')}`);
-    }
-    if (category === 'hvac') {
-      if (eq('hvacSystemType')) lines.push(`HVAC Type: ${eq('hvacSystemType')}`);
-      if (eq('hvacCapacity')) lines.push(`Capacity: ${eq('hvacCapacity')}`);
-      if (eq('hvacBrand')) lines.push(`Brand: ${eq('hvacBrand')}`);
-    }
-    if (category === 'piping') {
-      if (eq('pipingType')) lines.push(`Piping Type: ${eq('pipingType')}`);
-      if (eq('pipingMaterial')) lines.push(`Material: ${eq('pipingMaterial')}`);
+    if (category === 'fan') {
+      if (eq('fanId')) lines.push(`Machine ID: ${eq('fanId')}`);
+      if (eq('fanInstallLocation')) lines.push(`Install Location: ${eq('fanInstallLocation')}`);
     }
     if (category === 'pump') {
       if (eq('pumpType')) lines.push(`Pump Type: ${eq('pumpType')}`);
       if (eq('pumpBrand')) lines.push(`Brand: ${eq('pumpBrand')}`);
     }
-    if (category === 'server') {
-      if (eq('serverType')) lines.push(`Server Type: ${eq('serverType')}`);
-      if (eq('serverBrand')) lines.push(`Brand: ${eq('serverBrand')}`);
-      if (eq('serverSpec')) lines.push(`Spec: ${eq('serverSpec')}`);
+    if (category === 'slider') {
+      if (eq('sliderType')) lines.push(`Slide Rail Type: ${eq('sliderType')}`);
+      if (eq('sliderLength')) lines.push(`Rail Length: ${eq('sliderLength')}`);
+    }
+    if (category === 'valve') {
+      if (eq('valveType')) lines.push(`Valve Type: ${eq('valveType')}`);
+      if (eq('valveMaterial')) lines.push(`Material: ${eq('valveMaterial')}`);
+    }
+    if (category === 'vehicle_bearing') {
+      if (eq('bearingType')) lines.push(`Bearing Type: ${eq('bearingType')}`);
+      if (eq('vehicleType')) lines.push(`Vehicle Type: ${eq('vehicleType')}`);
+      if (eq('vehicleBrand')) lines.push(`Vehicle Brand: ${eq('vehicleBrand')}`);
     }
     lines.push(`Customer Address: ${customerAddress || 'Not provided'}`);
     lines.push(`Customer Phone: ${customerPhone || 'Not provided'}`);
@@ -399,11 +358,11 @@ Return ONLY a valid JSON object (no markdown, no code block) with these exact ke
 
       const machineTypeLabel = repairCategories.find(c => c.id === category)?.label || category;
       const brandLabel =
-        category === 'laptop' ? eq('laptopBrand') :
-        category === 'vehicle' ? eq('vehicleBrand') :
-        category === 'hvac' ? eq('hvacBrand') :
-        category === 'pump' ? eq('pumpBrand') :
-        category === 'server' ? eq('serverBrand') : '';
+      category === 'fan'             ? eq('fanId') :
+      category === 'pump'            ? eq('pumpBrand') :
+      category === 'slider'          ? eq('sliderType') :
+      category === 'valve'           ? eq('valveType') :
+      category === 'vehicle_bearing' ? eq('bearingType') : '';
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any)
@@ -467,145 +426,28 @@ Return ONLY a valid JSON object (no markdown, no code block) with these exact ke
         animate={{ opacity: 1, y: 0 }}
         className="space-y-4 pt-2"
       >
-        {/* ── Laptop ── */}
-        {category === 'laptop' && (
+        {/* ── Fan ── */}
+        {category === 'fan' && (
           <>
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Laptop Brand</Label>
-              <Select value={eq('laptopBrand')} onValueChange={v => setEq('laptopBrand', v)}>
-                <SelectTrigger className={aiClass('laptopBrand')}>
-                  <SelectValue placeholder="Select brand…" />
+              <Label className="text-sm font-medium">Machine ID</Label>
+              <Select value={eq('fanId')} onValueChange={v => setEq('fanId', v)}>
+                <SelectTrigger className={aiClass('fanId')}>
+                  <SelectValue placeholder="Select machine ID…" />
                 </SelectTrigger>
                 <SelectContent className="z-[10000]">
-                  {laptopBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                  {fanIds.map(id => <SelectItem key={id} value={id}>{id}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Model / Version</Label>
-              <Input
-                placeholder="e.g. Dell Inspiron 15, HP Pavilion 14…"
-                value={eq('laptopModel')}
-                onChange={e => setEq('laptopModel', e.target.value)}
-                className={aiClass('laptopModel')}
-              />
-            </div>
-          </>
-        )}
-
-        {/* ── Vehicle ── */}
-        {category === 'vehicle' && (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Vehicle Type</Label>
-                <Select value={eq('vehicleType')} onValueChange={v => setEq('vehicleType', v)}>
-                  <SelectTrigger className={aiClass('vehicleType')}>
-                    <SelectValue placeholder="Type…" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[10000]">
-                    {vehicleTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Fuel Type</Label>
-                <Select value={eq('vehicleFuelType')} onValueChange={v => setEq('vehicleFuelType', v)}>
-                  <SelectTrigger className={aiClass('vehicleFuelType')}>
-                    <SelectValue placeholder="Fuel…" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[10000]">
-                    {vehicleFuelTypes.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Brand</Label>
-              <Select value={eq('vehicleBrand')} onValueChange={v => setEq('vehicleBrand', v)}>
-                <SelectTrigger className={aiClass('vehicleBrand')}>
-                  <SelectValue placeholder="Select brand…" />
+              <Label className="text-sm font-medium">Install Location</Label>
+              <Select value={eq('fanInstallLocation')} onValueChange={v => setEq('fanInstallLocation', v)}>
+                <SelectTrigger className={aiClass('fanInstallLocation')}>
+                  <SelectValue placeholder="Select location…" />
                 </SelectTrigger>
                 <SelectContent className="z-[10000]">
-                  {vehicleBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Model</Label>
-              <Input
-                placeholder="e.g. Toyota Corolla 2019, Suzuki Alto…"
-                value={eq('vehicleModel')}
-                onChange={e => setEq('vehicleModel', e.target.value)}
-                className={aiClass('vehicleModel')}
-              />
-            </div>
-          </>
-        )}
-
-        {/* ── HVAC ── */}
-        {category === 'hvac' && (
-          <>
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">System Type</Label>
-              <Select value={eq('hvacSystemType')} onValueChange={v => setEq('hvacSystemType', v)}>
-                <SelectTrigger className={aiClass('hvacSystemType')}>
-                  <SelectValue placeholder="Select system type…" />
-                </SelectTrigger>
-                <SelectContent className="z-[10000]">
-                  {hvacSystemTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Capacity</Label>
-                <Select value={eq('hvacCapacity')} onValueChange={v => setEq('hvacCapacity', v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Capacity…" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[10000]">
-                    {hvacCapacities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Brand</Label>
-                <Select value={eq('hvacBrand')} onValueChange={v => setEq('hvacBrand', v)}>
-                  <SelectTrigger className={aiClass('hvacBrand')}>
-                    <SelectValue placeholder="Brand…" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[10000]">
-                    {hvacBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ── Piping ── */}
-        {category === 'piping' && (
-          <>
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Piping / Plumbing Type</Label>
-              <Select value={eq('pipingType')} onValueChange={v => setEq('pipingType', v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type…" />
-                </SelectTrigger>
-                <SelectContent className="z-[10000]">
-                  {pipingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Pipe Material</Label>
-              <Select value={eq('pipingMaterial')} onValueChange={v => setEq('pipingMaterial', v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select material…" />
-                </SelectTrigger>
-                <SelectContent className="z-[10000]">
-                  {pipingMaterials.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  {fanInstallLocations.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -638,39 +480,105 @@ Return ONLY a valid JSON object (no markdown, no code block) with these exact ke
           </>
         )}
 
-        {/* ── Server ── */}
-        {category === 'server' && (
+        {/* ── Slider / Slide Rail ── */}
+        {category === 'slider' && (
           <>
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Server Type</Label>
-              <Select value={eq('serverType')} onValueChange={v => setEq('serverType', v)}>
-                <SelectTrigger className={aiClass('serverType')}>
-                  <SelectValue placeholder="Select server type…" />
+              <Label className="text-sm font-medium">Slide Rail Type</Label>
+              <Select value={eq('sliderType')} onValueChange={v => setEq('sliderType', v)}>
+                <SelectTrigger className={aiClass('sliderType')}>
+                  <SelectValue placeholder="Select type…" />
                 </SelectTrigger>
                 <SelectContent className="z-[10000]">
-                  {serverTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  {sliderTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Brand / Manufacturer</Label>
-              <Select value={eq('serverBrand')} onValueChange={v => setEq('serverBrand', v)}>
-                <SelectTrigger className={aiClass('serverBrand')}>
-                  <SelectValue placeholder="Select brand…" />
+              <Label className="text-sm font-medium">Rail Length</Label>
+              <Select value={eq('sliderLength')} onValueChange={v => setEq('sliderLength', v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select length range…" />
                 </SelectTrigger>
                 <SelectContent className="z-[10000]">
-                  {serverBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                  {sliderLengths.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
+
+        {/* ── Valve ── */}
+        {category === 'valve' && (
+          <>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Valve Type</Label>
+              <Select value={eq('valveType')} onValueChange={v => setEq('valveType', v)}>
+                <SelectTrigger className={aiClass('valveType')}>
+                  <SelectValue placeholder="Select valve type…" />
+                </SelectTrigger>
+                <SelectContent className="z-[10000]">
+                  {valveTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Specs / Model No. (optional)</Label>
-              <Input
-                placeholder="e.g. PowerEdge R740, 2x Intel Xeon…"
-                value={eq('serverSpec')}
-                onChange={e => setEq('serverSpec', e.target.value)}
-                className={aiClass('serverSpec')}
-              />
+              <Label className="text-sm font-medium">Valve Material</Label>
+              <Select value={eq('valveMaterial')} onValueChange={v => setEq('valveMaterial', v)}>
+                <SelectTrigger className={aiClass('valveMaterial')}>
+                  <SelectValue placeholder="Select material…" />
+                </SelectTrigger>
+                <SelectContent className="z-[10000]">
+                  {valveMaterials.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
+
+        {/* ── Vehicle Bearing (placeholder) ── */}
+        {category === 'vehicle_bearing' && (
+          <>
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+              <p className="text-xs text-amber-400 font-medium flex items-center gap-2">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                Vehicle Bearing ML model is coming soon. Please describe the issue manually below.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Bearing Type</Label>
+              <Select value={eq('bearingType')} onValueChange={v => setEq('bearingType', v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select bearing type…" />
+                </SelectTrigger>
+                <SelectContent className="z-[10000]">
+                  {bearingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Vehicle Type</Label>
+                <Select value={eq('vehicleType')} onValueChange={v => setEq('vehicleType', v)}>
+                  <SelectTrigger className={aiClass('vehicleType')}>
+                    <SelectValue placeholder="Type…" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[10000]">
+                    {vehicleTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Vehicle Brand</Label>
+                <Select value={eq('vehicleBrand')} onValueChange={v => setEq('vehicleBrand', v)}>
+                  <SelectTrigger className={aiClass('vehicleBrand')}>
+                    <SelectValue placeholder="Brand…" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[10000]">
+                    {vehicleBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </>
         )}

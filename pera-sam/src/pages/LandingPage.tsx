@@ -273,7 +273,7 @@ const features = [
   {
     icon: Activity,
     title: 'Multi-device Support',
-    description: 'Analyze sounds from laptops, servers, vehicles, pumps, and industrial equipment.',
+    description: 'Analyze sounds from industrial fans, pumps, valves, slide rails, and vehicle bearings.',
   },
 ];
 

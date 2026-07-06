@@ -65,12 +65,11 @@ const statusConfig = {
 };
 
 const categoryLabels: Record<string, string> = {
-  fan: 'Industrial Fan',
-  laptop: 'Laptop Fan',
-  server: 'Server Fan',
-  pump: 'Pump/Pipeline',
-  vehicle: 'Vehicle Engine',
-  hvac: 'HVAC System',
+  fan:             'Industrial Fan',
+  pump:            'Industrial Pump',
+  slider:          'Slide Rail',
+  valve:           'Industrial Valve',
+  vehicle_bearing: 'Vehicle Bearing',
 };
 
 function formatDate(iso: string) {

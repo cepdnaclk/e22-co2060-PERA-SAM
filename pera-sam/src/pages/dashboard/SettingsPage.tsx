@@ -26,12 +26,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { ProfileImageCropper } from '@/components/ProfileImageCropper';
 
 const SERVICE_CATEGORIES = [
-  { id: 'laptop',     label: 'Laptop / PC Fans' },
-  { id: 'server',     label: 'Server Equipment' },
-  { id: 'pump',       label: 'Pumps & Pipelines' },
-  { id: 'vehicle',    label: 'Vehicle Engines' },
-  { id: 'hvac',       label: 'HVAC Systems' },
-  { id: 'industrial', label: 'Industrial Machinery' },
+  { id: 'fan',             label: 'Industrial Fan' },
+  { id: 'pump',            label: 'Industrial Pumps' },
+  { id: 'slider',          label: 'Slide Rail / Conveyor' },
+  { id: 'valve',           label: 'Industrial Valves' },
+  { id: 'vehicle_bearing', label: 'Vehicle Bearings' },
+  { id: 'industrial',      label: 'Industrial Machinery' },
 ];
 
 /** Geocode an address string to lat/lng via OSM Nominatim */
