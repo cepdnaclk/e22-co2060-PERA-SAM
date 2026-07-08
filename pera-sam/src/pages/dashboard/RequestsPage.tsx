@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
+import { RequestChatDialog } from '@/components/RequestChatDialog';
 
 interface RepairRequest {
   id: string;
@@ -67,6 +68,8 @@ export const RequestsPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
+  const [chatRequestId, setChatRequestId] = useState<string | null>(null);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   const isCompany = user?.role === 'company';
 
@@ -100,8 +103,32 @@ export const RequestsPage = () => {
     }
   };
 
+  const fetchUnreadCounts = async () => {
+    if (!user) return;
+    try {
+      // Fetch all unread messages meant for this user across all their requests
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('request_messages')
+        .select('request_id')
+        .eq('is_read', false)
+        .neq('sender_id', user.id);
+
+      if (error) throw error;
+      
+      const counts: Record<string, number> = {};
+      data?.forEach((msg: any) => {
+        counts[msg.request_id] = (counts[msg.request_id] || 0) + 1;
+      });
+      setUnreadCounts(counts);
+    } catch (err) {
+      console.error('Error fetching unread counts:', err);
+    }
+  };
+
   useEffect(() => {
     fetchRequests();
+    fetchUnreadCounts();
     
     if (!user) return;
 
@@ -127,8 +154,26 @@ export const RequestsPage = () => {
       )
       .subscribe();
 
+    // Subscribe to realtime updates for unread messages
+    const msgChannel = supabase
+      .channel('unread-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'request_messages',
+        },
+        () => {
+          // Re-fetch unread counts whenever messages change (inserted/updated)
+          fetchUnreadCounts();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(msgChannel);
     };
   }, [user, isCompany]); // Removed fetchRequests from dependency array to avoid infinite loop
 
@@ -382,9 +427,22 @@ export const RequestsPage = () => {
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Accept Request
                           </Button>
-                          <Button variant="outline" className="flex-1">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1 relative"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setChatRequestId(request.id);
+                            }}
+                          >
                             <MessageSquare className="h-4 w-4 mr-2" />
                             Message User
+                            {unreadCounts[request.id] > 0 && (
+                              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
+                              </span>
+                            )}
                           </Button>
                           <Button
                             variant="ghost"
@@ -410,17 +468,43 @@ export const RequestsPage = () => {
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Mark Complete
                           </Button>
-                          <Button variant="outline" className="flex-1">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1 relative"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setChatRequestId(request.id);
+                            }}
+                          >
                             <MessageSquare className="h-4 w-4 mr-2" />
                             Chat
+                            {unreadCounts[request.id] > 0 && (
+                              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
+                              </span>
+                            )}
                           </Button>
                         </div>
                       )}
                       {!isCompany && (
                         <div className="flex gap-2">
-                          <Button variant="outline" className="flex-1">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1 relative"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setChatRequestId(request.id);
+                            }}
+                          >
                             <MessageSquare className="h-4 w-4 mr-2" />
                             Message Company
+                            {unreadCounts[request.id] > 0 && (
+                              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
+                              </span>
+                            )}
                           </Button>
                         </div>
                       )}
@@ -441,6 +525,18 @@ export const RequestsPage = () => {
             {filter ? `No requests match the "${stats.find(s => s.id === filter)?.label}" filter.` : 'Requests from users will appear here'}
           </p>
         </div>
+      )}
+
+      {chatRequestId && (
+        <RequestChatDialog
+          isOpen={!!chatRequestId}
+          onClose={() => setChatRequestId(null)}
+          requestId={chatRequestId}
+          isCompany={isCompany}
+          otherPartyName={
+            requests.find(r => r.id === chatRequestId)?.profiles?.name || (isCompany ? 'User' : 'Company')
+          }
+        />
       )}
     </div>
   );
