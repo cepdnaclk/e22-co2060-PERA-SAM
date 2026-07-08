@@ -216,4 +216,9 @@
       transform: scaleY(1);
     }
   }
+
+  @keyframes hero-blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
 }
