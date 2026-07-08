@@ -11,6 +11,7 @@ import { Logo } from '@/components/Logo';
 import { useAuth } from '@/lib/auth-context';
 import { User, Building2, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTypewriter } from '@/hooks/useTypewriter';
 
 const normalUserSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -69,6 +70,9 @@ export const RegisterPage = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const { register: registerUser, isLoading } = useAuth();
   const navigate = useNavigate();
+
+  const heroLines = ['Unlock the Power', 'of Precision Sound.'];
+  const { displayedLines, activeLine, done } = useTypewriter(heroLines, 55, 400);
 
   const normalForm = useForm<NormalUserForm>({
     resolver: zodResolver(normalUserSchema),
@@ -239,9 +243,31 @@ export const RegisterPage = () => {
             transition={{ delay: 0.3 }}
           >
             <h2 className="text-5xl font-bold text-white mb-6 leading-tight">
-              Unlock the Power
+              <span>
+                {displayedLines[0] ?? ''}
+                {activeLine === 0 && !done && (
+                  <span
+                    className="inline-block w-[3px] h-[0.85em] ml-1 align-middle rounded-sm"
+                    style={{
+                      background: 'currentColor',
+                      animation: 'hero-blink 0.75s step-end infinite',
+                    }}
+                  />
+                )}
+              </span>
               <br />
-              <span className="text-accent">of Precision Sound.</span>
+              <span className="text-accent">
+                {displayedLines[1] ?? ''}
+                {activeLine === 1 && !done && (
+                  <span
+                    className="inline-block w-[3px] h-[0.85em] ml-1 align-middle rounded-sm"
+                    style={{
+                      background: 'currentColor',
+                      animation: 'hero-blink 0.75s step-end infinite',
+                    }}
+                  />
+                )}
+              </span>
             </h2>
             <p className="text-white/60 text-lg leading-relaxed">
               Experience the next generation of sound analysis. Our ML-driven engine detects

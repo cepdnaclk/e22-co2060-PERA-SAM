@@ -11,6 +11,7 @@ import { Logo } from '@/components/Logo';
 import { useAuth } from '@/lib/auth-context';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTypewriter } from '@/hooks/useTypewriter';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -23,6 +24,9 @@ export const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
+
+  const heroLines = ['Welcome Back', 'to Precision.'];
+  const { displayedLines, activeLine, done } = useTypewriter(heroLines, 55, 400);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -112,9 +116,31 @@ export const LoginPage = () => {
             transition={{ delay: 0.3 }}
           >
             <h2 className="text-5xl font-bold text-white mb-6 leading-tight">
-              Welcome Back
+              <span>
+                {displayedLines[0] ?? ''}
+                {activeLine === 0 && !done && (
+                  <span
+                    className="inline-block w-[3px] h-[0.85em] ml-1 align-middle rounded-sm"
+                    style={{
+                      background: 'currentColor',
+                      animation: 'hero-blink 0.75s step-end infinite',
+                    }}
+                  />
+                )}
+              </span>
               <br />
-              <span className="text-accent">to Precision.</span>
+              <span className="text-accent">
+                {displayedLines[1] ?? ''}
+                {activeLine === 1 && !done && (
+                  <span
+                    className="inline-block w-[3px] h-[0.85em] ml-1 align-middle rounded-sm"
+                    style={{
+                      background: 'currentColor',
+                      animation: 'hero-blink 0.75s step-end infinite',
+                    }}
+                  />
+                )}
+              </span>
             </h2>
             <p className="text-white/60 text-lg leading-relaxed">
               Sign in to access your dashboard and continue analyzing
