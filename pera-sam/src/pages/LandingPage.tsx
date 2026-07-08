@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -244,6 +244,43 @@ const ContactSection = () => {
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── Word-Reveal Component (Antigravity-style smooth scroll reveal) ──────────────
+const WordReveal = ({ text, className = '', delay = 0 }: { text: string; className?: string; delay?: number }) => {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setInView(true); observer.disconnect(); } },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const words = text.split(' ');
+  return (
+    <p ref={ref} className={className} style={{ display: 'flex', flexWrap: 'wrap', gap: '0 0.3em', lineHeight: 1.7 }}>
+      {words.map((word, i) => (
+        <span
+          key={i}
+          style={{
+            display: 'inline-block',
+            opacity: inView ? 1 : 0,
+            transform: inView ? 'translateY(0px)' : 'translateY(10px)',
+            transition: `opacity 0.45s ease ${delay + i * 0.045}s, transform 0.45s ease ${delay + i * 0.045}s`,
+          }}
+        >
+          {word}
+        </span>
+      ))}
+    </p>
+  );
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 const features = [
   {
     icon: Waves,
@@ -278,9 +315,90 @@ const features = [
 ];
 
 
+// ─── Typewriter-Reveal Component (Scroll-triggered typewriter) ─────────────
+const TypewriterReveal = ({ text, className = '', speed = 55 }: { text: string; className?: string; speed?: number }) => {
+  const ref = useRef<HTMLHeadingElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setInView(true); observer.disconnect(); } },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const { displayedLines, done } = useTypewriter([text], speed, 0, inView);
+
+  return (
+    <h2 ref={ref} className={className}>
+      <span>
+        {displayedLines[0] ?? ''}
+        {!done && inView && (
+          <span
+            className="inline-block w-[3px] h-[0.85em] ml-1 align-middle rounded-sm"
+            style={{
+              background: 'currentColor',
+              animation: 'hero-blink 0.75s step-end infinite',
+            }}
+          />
+        )}
+      </span>
+    </h2>
+  );
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Typewriter Hook ─────────────────────────────────────────────────────────
+function useTypewriter(lines: string[], speed = 60, pauseBetween = 500, enabled = true) {
+  const [displayedLines, setDisplayedLines] = useState<string[]>([]);
+  const [currentLine, setCurrentLine] = useState(0);
+  const [currentChar, setCurrentChar] = useState(0);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!enabled || done) return;
+    if (currentLine >= lines.length) {
+      setDone(true);
+      return;
+    }
+    if (currentChar <= lines[currentLine].length) {
+      const timeout = setTimeout(() => {
+        setDisplayedLines(prev => {
+          const next = [...prev];
+          next[currentLine] = lines[currentLine].slice(0, currentChar);
+          return next;
+        });
+        setCurrentChar(c => c + 1);
+      }, currentChar === 0 && currentLine > 0 ? pauseBetween : speed);
+      return () => clearTimeout(timeout);
+    } else {
+      setCurrentLine(l => l + 1);
+      setCurrentChar(0);
+    }
+  }, [enabled, currentLine, currentChar, done, lines, speed, pauseBetween]);
+
+  return { displayedLines, activeLine: currentLine, done };
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const LandingPage = () => {
   const [activeSection, setActiveSection] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
+  const heroLines = ['Detect Machine Faults', 'Before They Happen'];
+  const { displayedLines, activeLine, done } = useTypewriter(heroLines, 55, 400);
+
+  // Paragraph typewriter — starts after h1 is fully typed
+  const paraText = 'Upload audio recordings of your mechanical equipment and let our Acoustic Intelligence analyze sounds to identify normal or abnormal behavior with detailed diagnostic reports.';
+  const { displayedLines: paraLines, done: paraDone } = useTypewriter(
+    [paraText],
+    10,
+    0,
+    done  // only start when h1 animation is complete
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -384,14 +502,46 @@ export const LandingPage = () => {
             </div>
 
             <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 leading-tight">
-              Detect Machine Faults
+              {/* Line 1: plain foreground text */}
+              <span>
+                {displayedLines[0] ?? ''}
+                {activeLine === 0 && !done && (
+                  <span
+                    className="inline-block w-[3px] h-[0.85em] ml-1 align-middle rounded-sm"
+                    style={{
+                      background: 'currentColor',
+                      animation: 'hero-blink 0.75s step-end infinite',
+                    }}
+                  />
+                )}
+              </span>
               <br />
-              <span className="gradient-text">Before They Happen</span>
+              {/* Line 2: gradient text */}
+              <span className="gradient-text">
+                {displayedLines[1] ?? ''}
+                {activeLine === 1 && !done && (
+                  <span
+                    className="inline-block w-[3px] h-[0.85em] ml-1 align-middle rounded-sm"
+                    style={{
+                      background: 'currentColor',
+                      animation: 'hero-blink 0.75s step-end infinite',
+                    }}
+                  />
+                )}
+              </span>
             </h1>
 
-            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-              Upload audio recordings of your mechanical equipment and let our Acoustic Intelligence analyze
-              sounds to identify normal or abnormal behavior with detailed diagnostic reports.
+            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto" style={{ minHeight: '4rem' }}>
+              {paraLines[0] ?? ''}
+              {!paraDone && paraLines[0] !== undefined && (
+                <span
+                  className="inline-block w-[2px] h-[0.8em] ml-0.5 align-middle rounded-sm"
+                  style={{
+                    background: 'currentColor',
+                    animation: 'hero-blink 0.55s step-end infinite',
+                  }}
+                />
+              )}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -443,7 +593,11 @@ export const LandingPage = () => {
                   <feature.icon className="h-6 w-6 text-accent" />
                 </div>
                 <h3 className="text-xl font-semibold text-foreground mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
+                <WordReveal
+                  text={feature.description}
+                  className="text-muted-foreground"
+                  delay={index * 0.08}
+                />
               </motion.div>
             ))}
           </div>
@@ -499,7 +653,11 @@ export const LandingPage = () => {
                   <item.icon className="h-8 w-8 text-accent" />
                 </div>
                 <h3 className="text-xl font-bold text-foreground mb-3">{item.title}</h3>
-                <p className="text-muted-foreground">{item.description}</p>
+                <WordReveal
+                  text={item.description}
+                  className="text-muted-foreground"
+                  delay={i * 0.1}
+                />
               </motion.div>
             ))}
           </div>
@@ -538,10 +696,11 @@ export const LandingPage = () => {
                   <User className="h-7 w-7 text-accent" />
                 </div>
                 <h3 className="text-2xl font-bold text-foreground mb-3">Normal User</h3>
-                <p className="text-muted-foreground mb-6">
-                  Free access to sound analysis, waveform visualization, and PDF report generation
-                  for personal equipment diagnostics.
-                </p>
+                <WordReveal
+                  text="Free access to sound analysis, waveform visualization, and PDF report generation for personal equipment diagnostics."
+                  className="text-muted-foreground mb-6"
+                  delay={0.1}
+                />
                 <ul className="space-y-3 mb-8">
                   {['Upload audio recordings', 'View analysis results', 'Download PDF reports', 'Find nearby technicians'].map((item, i) => (
                     <li key={i} className="flex items-center gap-2 text-sm text-foreground">
@@ -574,10 +733,11 @@ export const LandingPage = () => {
                   <Building2 className="h-7 w-7 text-accent" />
                 </div>
                 <h3 className="text-2xl font-bold text-foreground mb-3">Company / Technician</h3>
-                <p className="text-muted-foreground mb-6">
-                  List your services on our platform, receive repair requests, and connect
-                  with customers looking for expert maintenance.
-                </p>
+                <WordReveal
+                  text="List your services on our platform, receive repair requests, and connect with customers looking for expert maintenance."
+                  className="text-muted-foreground mb-6"
+                  delay={0.1}
+                />
                 <ul className="space-y-3 mb-8">
                   {['Appear on service map', 'Receive repair requests', 'Chat with customers', 'Schedule appointments'].map((item, i) => (
                     <li key={i} className="flex items-center gap-2 text-sm text-foreground">
@@ -770,9 +930,10 @@ export const LandingPage = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Ready to Analyze Your Equipment?
-            </h2>
+            <TypewriterReveal 
+              text="Ready to Analyze Your Equipment?" 
+              className="text-4xl md:text-5xl font-bold text-white mb-6"
+            />
             <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto">
               Join With PERA-SAM for early fault detection and preventive maintenance.
             </p>
