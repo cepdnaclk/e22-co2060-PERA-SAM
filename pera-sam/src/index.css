@@ -30,7 +30,7 @@
     --muted-foreground: 215 16% 47%;
 
     /* Teal Accent - Tech/AI feel */
-    --accent: 173 80% 40%;
+    --accent: 224 76% 48%;
     --accent-foreground: 0 0% 100%;
 
     /* Status Colors */
@@ -44,40 +44,40 @@
     --destructive-foreground: 0 0% 100%;
 
     /* Info - Teal blue */
-    --info: 199 89% 48%;
+    --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 173 80% 40%;
+    --ring: 224 76% 48%;
 
     --radius: 0.75rem;
 
     /* Sidebar - Black theme */
     --sidebar-background: 0 0% 0%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 173 80% 40%;
+    --sidebar-primary: 224 76% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 8%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 0 0% 12%;
-    --sidebar-ring: 173 80% 40%;
+    --sidebar-ring: 224 76% 48%;
 
     /* Waveform colors */
-    --waveform-normal: 173 80% 40%;
+    --waveform-normal: 224 76% 48%;
     --waveform-abnormal: 0 84% 60%;
     --waveform-bg: 214 32% 96%;
 
     /* Chart colors */
-    --chart-1: 173 80% 40%;
-    --chart-2: 199 89% 48%;
+    --chart-1: 224 76% 48%;
+    --chart-2: 217 91% 60%;
     --chart-3: 142 76% 36%;
     --chart-4: 38 92% 50%;
     --chart-5: 0 84% 60%;
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(222 47% 20%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(173 80% 40%) 0%, hsl(199 89% 48%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(224 76% 48%) 0%, hsl(217 91% 60%) 100%);
     --gradient-hero: linear-gradient(180deg, hsl(210 40% 98%) 0%, hsl(214 32% 96%) 100%);
   }
 
@@ -91,7 +91,7 @@
     --popover: 222 47% 9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 173 80% 40%;
+    --primary: 224 76% 48%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 222 47% 15%;
@@ -100,7 +100,7 @@
     --muted: 222 47% 15%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 173 80% 40%;
+    --accent: 224 76% 48%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62% 50%;
@@ -108,7 +108,7 @@
 
     --border: 222 47% 18%;
     --input: 222 47% 18%;
-    --ring: 173 80% 40%;
+    --ring: 224 76% 48%;
 
     --gradient-primary: linear-gradient(135deg, hsl(222 47% 6%) 0%, hsl(222 47% 15%) 100%);
     --gradient-hero: linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 9%) 100%);

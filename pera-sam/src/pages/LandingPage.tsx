@@ -479,8 +479,8 @@ export const LandingPage = () => {
                 )}
               </span>
               <br />
-              {/* Line 2: gradient text */}
-              <span className="gradient-text">
+              {/* Line 2: dark blue gradient text */}
+              <span className="bg-gradient-to-r from-blue-900 to-blue-600 bg-clip-text text-transparent">
                 {displayedLines[1] ?? ''}
                 {activeLine === 1 && !done && (
                   <span
