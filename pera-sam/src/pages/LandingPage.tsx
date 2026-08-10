@@ -361,14 +361,7 @@ export const LandingPage = () => {
   const heroLines = ['Detect Machine Faults', 'Before They Happen'];
   const { displayedLines, activeLine, done } = useTypewriter(heroLines, 55, 400);
 
-  // Paragraph typewriter — starts after h1 is fully typed
   const paraText = 'Upload audio recordings of your mechanical equipment and let our Acoustic Intelligence analyze sounds to identify normal or abnormal behavior with detailed diagnostic reports.';
-  const { displayedLines: paraLines, done: paraDone } = useTypewriter(
-    [paraText],
-    10,
-    0,
-    done  // only start when h1 animation is complete
-  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -433,9 +426,9 @@ export const LandingPage = () => {
           <img
             src={heroBackground}
             alt="Industrial Background"
-            className="w-full h-full object-cover opacity-[0.33] grayscale scale-105 transition-all duration-1000 group-hover:scale-100"
+            className="w-full h-full object-cover opacity-[0.6] scale-105 transition-all duration-1000 group-hover:scale-100"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/20 to-background/90" />
         </div>
 
         {/* Animated waveform background */}
@@ -501,18 +494,16 @@ export const LandingPage = () => {
               </span>
             </h1>
 
-            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto" style={{ minHeight: '4rem' }}>
-              {paraLines[0] ?? ''}
-              {!paraDone && paraLines[0] !== undefined && (
-                <span
-                  className="inline-block w-[2px] h-[0.8em] ml-0.5 align-middle rounded-sm"
-                  style={{
-                    background: 'currentColor',
-                    animation: 'hero-blink 0.55s step-end infinite',
-                  }}
-                />
-              )}
-            </p>
+            <motion.div
+              className="bg-primary/10 px-5 py-3 rounded-xl mb-10 max-w-2xl mx-auto border border-primary/10 backdrop-blur-sm shadow-sm"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.5 }}
+            >
+              <p className="text-sm text-primary font-medium" style={{ minHeight: '3rem', lineHeight: '1.6' }}>
+                {paraText}
+              </p>
+            </motion.div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link to="/register">
@@ -900,8 +891,8 @@ export const LandingPage = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <TypewriterReveal 
-              text="Ready to Analyze Your Equipment?" 
+            <TypewriterReveal
+              text="Ready to Analyze Your Equipment?"
               className="text-4xl md:text-5xl font-bold text-white mb-6"
             />
             <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto">
