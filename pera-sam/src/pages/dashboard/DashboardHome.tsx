@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface AnalysisRecord {
   id: string;
@@ -108,12 +109,15 @@ export const DashboardHome = () => {
             </p>
           </div>
         </div>
-        <Link to="/dashboard/analysis">
-          <Button variant="accent" size="lg">
-            <Upload className="h-5 w-5 mr-2" />
-            New Analysis
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <Link to="/dashboard/analysis">
+            <Button variant="accent" size="lg">
+              <Upload className="h-5 w-5 mr-2" />
+              New Analysis
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Grid */}
