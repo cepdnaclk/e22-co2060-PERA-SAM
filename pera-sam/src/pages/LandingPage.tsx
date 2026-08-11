@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
+import { BorderBeam } from '@/components/BorderBeam';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import heroBg from '@/assets/hero-bg.jpg';
 import {
   Activity,
@@ -282,6 +284,47 @@ const WordReveal = ({ text, className = '', delay = 0 }: { text: string; classNa
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── GlowCard: BorderBeam travelling-light border effect (kavithakanchana.me style) ──
+const GlowCard = ({
+  children,
+  className = '',
+  style = {},
+  motionProps = {},
+  beamDuration = 5,
+  beamDelay = 0,
+  beamSize = 80,
+  beamReverse = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  motionProps?: Record<string, unknown>;
+  beamDuration?: number;
+  beamDelay?: number;
+  beamSize?: number;
+  beamReverse?: boolean;
+}) => {
+  return (
+    <motion.div
+      className={`glass-card relative overflow-hidden ${className}`}
+      style={style}
+      {...motionProps}
+    >
+      {children}
+      <BorderBeam
+        size={beamSize}
+        duration={beamDuration}
+        delay={beamDelay}
+        colorFrom="hsl(217 91% 80%)"
+        colorTo="hsl(246 80% 75%)"
+        borderWidth={1.5}
+        reverse={beamReverse}
+      />
+    </motion.div>
+  );
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 const features = [
   {
     icon: Waves,
@@ -391,7 +434,7 @@ export const LandingPage = () => {
 
   const navLinkClasses = (id: string) => `
     font-medium transition-all duration-200 
-    ${activeSection === id ? 'text-accent scale-105' : 'text-primary hover:text-accent'}
+    ${activeSection === id ? 'text-accent scale-105' : 'text-primary dark:text-white hover:text-accent'}
   `;
 
   return (
@@ -407,6 +450,7 @@ export const LandingPage = () => {
             <a href="#pricing" className={navLinkClasses('pricing')}>Pricing</a>
             <a href="#about" className={navLinkClasses('about')}>About Us</a>
             <a href="#contact" className={navLinkClasses('contact')}>Contact Us</a>
+            <ThemeToggle />
           </nav>
           <div className="flex items-center gap-3">
             <Link to="/login">
@@ -459,7 +503,7 @@ export const LandingPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-6">
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary dark:text-white px-4 py-2 rounded-full mb-6 border border-accent/40 shadow-[0_0_10px_hsl(var(--accent)/0.25)] dark:shadow-[0_0_15px_hsl(var(--accent)/0.3)]">
               <Activity className="h-4 w-4" />
               <span className="text-sm font-medium">ML-Powered Sound Analysis Manager </span>
             </div>
@@ -495,12 +539,12 @@ export const LandingPage = () => {
             </h1>
 
             <motion.div
-              className="bg-primary/10 px-5 py-3 rounded-xl mb-10 max-w-2xl mx-auto border border-primary/10 backdrop-blur-sm shadow-sm"
+              className="bg-primary/10 px-5 py-3 rounded-xl mb-10 max-w-2xl mx-auto border border-accent/40 backdrop-blur-sm shadow-[0_0_15px_hsl(var(--accent)/0.25)] dark:shadow-[0_0_20px_hsl(var(--accent)/0.3)]"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.5 }}
             >
-              <p className="text-sm text-primary font-medium" style={{ minHeight: '3rem', lineHeight: '1.6' }}>
+              <p className="text-sm text-primary dark:text-white font-medium" style={{ minHeight: '3rem', lineHeight: '1.6' }}>
                 {paraText}
               </p>
             </motion.div>
@@ -542,13 +586,17 @@ export const LandingPage = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
-              <motion.div
+              <GlowCard
                 key={index}
-                className="glass-card rounded-xl p-6 hover:shadow-card-hover transition-all duration-300"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
+                className="rounded-xl p-6 hover:shadow-card-hover transition-all duration-300"
+                beamDelay={index * 0.8}
+                beamDuration={5}
+                motionProps={{
+                  initial: { opacity: 0, y: 20 },
+                  whileInView: { opacity: 1, y: 0 },
+                  viewport: { once: true },
+                  transition: { duration: 0.6, delay: index * 0.1 },
+                }}
               >
                 <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-4">
                   <feature.icon className="h-6 w-6 text-accent" />
@@ -559,7 +607,7 @@ export const LandingPage = () => {
                   className="text-muted-foreground"
                   delay={index * 0.08}
                 />
-              </motion.div>
+              </GlowCard>
             ))}
           </div>
         </div>
@@ -602,13 +650,17 @@ export const LandingPage = () => {
                 icon: Shield
               },
             ].map((item, i) => (
-              <motion.div
+              <GlowCard
                 key={i}
-                className="glass-card rounded-2xl p-8 text-center relative overflow-hidden group"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: i * 0.1 }}
+                className="rounded-2xl p-8 text-center relative overflow-hidden group"
+                beamReverse={i === 1}
+                beamDelay={i * 1.2}
+                motionProps={{
+                  initial: { opacity: 0, y: 20 },
+                  whileInView: { opacity: 1, y: 0 },
+                  viewport: { once: true },
+                  transition: { duration: 0.6, delay: i * 0.1 },
+                }}
               >
                 <div className="w-16 h-16 bg-accent/10 rounded-2xl mx-auto mb-6 flex items-center justify-center">
                   <item.icon className="h-8 w-8 text-accent" />
@@ -619,7 +671,7 @@ export const LandingPage = () => {
                   className="text-muted-foreground"
                   delay={i * 0.1}
                 />
-              </motion.div>
+              </GlowCard>
             ))}
           </div>
         </div>
@@ -644,14 +696,15 @@ export const LandingPage = () => {
           </motion.div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <motion.div
-              className="glass-card rounded-2xl p-8 relative overflow-hidden group hover:shadow-card-hover transition-all duration-300"
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
+            <GlowCard
+              className="rounded-2xl p-8 relative overflow-hidden group hover:shadow-card-hover transition-all duration-300"
+              motionProps={{
+                initial: { opacity: 0, x: -20 },
+                whileInView: { opacity: 1, x: 0 },
+                viewport: { once: true },
+                transition: { duration: 0.6 },
+              }}
             >
-
               <div className="relative z-10">
                 <div className="w-14 h-14 bg-accent/10 rounded-xl flex items-center justify-center mb-6">
                   <User className="h-7 w-7 text-accent" />
@@ -676,16 +729,17 @@ export const LandingPage = () => {
                   <Button variant="outline" className="w-full">Get Started Free</Button>
                 </Link>
               </div>
-            </motion.div>
+            </GlowCard>
 
-            <motion.div
-              className="glass-card rounded-2xl p-8 relative overflow-hidden group border-accent/30 hover:shadow-card-hover transition-all duration-300"
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
+            <GlowCard
+              className="rounded-2xl p-8 relative overflow-hidden group border-accent/30 hover:shadow-card-hover transition-all duration-300"
+              motionProps={{
+                initial: { opacity: 0, x: 20 },
+                whileInView: { opacity: 1, x: 0 },
+                viewport: { once: true },
+                transition: { duration: 0.6 },
+              }}
             >
-
               <div className="absolute top-4 right-4 bg-accent text-accent-foreground text-xs font-semibold px-3 py-1 rounded-full">
                 Pro
               </div>
@@ -713,7 +767,7 @@ export const LandingPage = () => {
                   <Button variant="accent" className="w-full">Register Company</Button>
                 </Link>
               </div>
-            </motion.div>
+            </GlowCard>
           </div>
         </div>
       </section>
@@ -842,7 +896,11 @@ export const LandingPage = () => {
           </div>
 
           {/* Mobile App QR Codes */}
-          <div className="max-w-4xl mx-auto glass-card rounded-3xl p-10 flex flex-col md:flex-row items-center gap-12 border-accent/20">
+          <GlowCard 
+            className="max-w-4xl mx-auto rounded-3xl p-10 flex flex-col md:flex-row items-center gap-12 border-accent/20"
+            beamSize={120}
+            beamDuration={7}
+          >
             <div className="flex-1 text-center md:text-left">
               <h3 className="text-3xl font-bold text-foreground mb-4">Download Our Mobile App</h3>
               <p className="text-muted-foreground mb-8">
@@ -864,7 +922,7 @@ export const LandingPage = () => {
                 <div className="text-center mt-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest">Scan to Install</div>
               </div>
             </div>
-          </div>
+          </GlowCard>
         </div>
       </section>
 

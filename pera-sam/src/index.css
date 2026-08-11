@@ -140,6 +140,7 @@
     @apply bg-card/80 backdrop-blur-xl border border-border/50 shadow-lg;
   }
 
+
   .gradient-text {
     @apply bg-clip-text text-transparent;
     background-image: var(--gradient-accent);
@@ -222,3 +223,42 @@
     50%       { opacity: 0; }
   }
 }
+
+/* ── View Transition: circular ripple expand for dark/light mode toggle ─────
+   Works in Chrome 111+, Edge 111+, Safari 18+. Silently ignored elsewhere.  */
+@keyframes vt-expand-circle {
+  from { clip-path: circle(0px at var(--vt-x, 50%) var(--vt-y, 50%)); }
+  to   { clip-path: circle(var(--vt-r, 150vmax) at var(--vt-x, 50%) var(--vt-y, 50%)); }
+}
+
+@keyframes vt-collapse-circle {
+  from { clip-path: circle(var(--vt-r, 150vmax) at var(--vt-x, 50%) var(--vt-y, 50%)); }
+  to   { clip-path: circle(0px at var(--vt-x, 50%) var(--vt-y, 50%)); }
+}
+
+::view-transition-old(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+  animation: vt-expand-circle 0.55s cubic-bezier(0.4, 0, 0.2, 1) both;
+  mix-blend-mode: normal;
+}
+
+/* Ensure smooth color transitions on all elements during theme change */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-duration: 0.25s;
+  transition-timing-function: ease;
+}
+
+/* But don't override animation-specific transitions */
+.no-transition,
+.no-transition *,
+[data-motion-initial],
+[data-motion-animate] {
+  transition: none !important;
+}
