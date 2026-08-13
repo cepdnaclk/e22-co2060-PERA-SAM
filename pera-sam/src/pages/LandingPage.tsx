@@ -332,9 +332,9 @@ const features = [
     description: 'Advanced ML algorithms analyze mechanical sounds to detect anomalies in fans, pumps, and engines.',
   },
   {
-    icon: FileText,
-    title: 'PDF Reports',
-    description: 'Generate comprehensive diagnostic reports with confidence scores and detailed recommendations.',
+    icon: Activity,
+    title: 'Multi-device Support',
+    description: 'Analyze sounds from industrial fans, pumps, valves, slide rails, and vehicle bearings.',
   },
   {
     icon: MapPin,
@@ -352,9 +352,9 @@ const features = [
     description: 'Get instant analysis results with time-series graphs and prediction confidence metrics.',
   },
   {
-    icon: Activity,
-    title: 'Multi-device Support',
-    description: 'Analyze sounds from industrial fans, pumps, valves, slide rails, and vehicle bearings.',
+    icon: FileText,
+    title: 'Diagnostic Documentation',
+    description: 'Generate comprehensive diagnostic reports with confidence scores and detailed recommendations.',
   },
 ];
 
@@ -584,30 +584,34 @@ export const LandingPage = () => {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="max-w-3xl mx-auto relative pt-4 pb-4">
+            {/* Vertical timeline connecting line */}
+            <div className="absolute left-[27px] md:left-[31px] top-0 bottom-0 w-[2px] bg-border/60" />
+            
             {features.map((feature, index) => (
-              <GlowCard
+              <motion.div
                 key={index}
-                className="rounded-xl p-6 hover:shadow-card-hover transition-all duration-300"
-                beamDelay={index * 0.8}
-                beamDuration={5}
-                motionProps={{
-                  initial: { opacity: 0, y: 20 },
-                  whileInView: { opacity: 1, y: 0 },
-                  viewport: { once: true },
-                  transition: { duration: 0.6, delay: index * 0.1 },
-                }}
+                className="relative flex items-start gap-4 md:gap-6 mb-6 md:mb-8 last:mb-0 group"
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-4">
-                  <feature.icon className="h-6 w-6 text-accent" />
+                {/* Circular Badge */}
+                <div className="relative z-10 w-14 h-14 md:w-16 md:h-16 bg-accent rounded-full flex items-center justify-center shrink-0 ring-[6px] ring-background shadow-lg transition-transform duration-300 group-hover:scale-110">
+                  <feature.icon className="h-6 w-6 md:h-7 md:w-7 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">{feature.title}</h3>
-                <WordReveal
-                  text={feature.description}
-                  className="text-muted-foreground"
-                  delay={index * 0.08}
-                />
-              </GlowCard>
+                
+                {/* Content */}
+                <div className="pt-0.5 md:pt-1">
+                  <h3 className="text-lg md:text-xl font-bold text-foreground mb-1 transition-colors duration-300 group-hover:text-accent">{feature.title}</h3>
+                  <WordReveal
+                    text={feature.description}
+                    className="text-sm md:text-base text-muted-foreground leading-snug"
+                    delay={index * 0.08}
+                  />
+                </div>
+              </motion.div>
             ))}
           </div>
         </div>
