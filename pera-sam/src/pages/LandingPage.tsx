@@ -464,7 +464,7 @@ export const LandingPage = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 relative overflow-hidden">
+      <section className="min-h-[100dvh] pt-32 pb-20 px-4 relative overflow-hidden flex items-center">
         {/* Background Industrial Image with Technical Filter */}
         <div className="absolute inset-0 z-0">
           <img
@@ -733,6 +733,7 @@ export const LandingPage = () => {
 
             <GlowCard
               className="rounded-2xl p-8 relative overflow-hidden group border-accent/30 hover:shadow-card-hover transition-all duration-300"
+              beamReverse={true}
               motionProps={{
                 initial: { opacity: 0, x: 20 },
                 whileInView: { opacity: 1, x: 0 },
@@ -896,7 +897,7 @@ export const LandingPage = () => {
           </div>
 
           {/* Mobile App QR Codes */}
-          <GlowCard 
+          <GlowCard
             className="max-w-4xl mx-auto rounded-3xl p-10 flex flex-col md:flex-row items-center gap-12 border-accent/20"
             beamSize={120}
             beamDuration={7}
