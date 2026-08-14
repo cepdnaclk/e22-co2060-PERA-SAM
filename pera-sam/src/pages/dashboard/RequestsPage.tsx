@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
 import { RequestChatDialog } from '@/components/RequestChatDialog';
+import { ReportGeneratorModal } from '@/components/ReportGeneratorModal';
 
 interface RepairRequest {
   id: string;
@@ -70,6 +71,7 @@ export const RequestsPage = () => {
   const [filter, setFilter] = useState<string | null>(null);
   const [chatRequestId, setChatRequestId] = useState<string | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [reportRequest, setReportRequest] = useState<RepairRequest | null>(null);
 
   const isCompany = user?.role === 'company';
 
@@ -77,24 +79,94 @@ export const RequestsPage = () => {
     if (!user) return;
     try {
       setLoading(true);
-      const relation = isCompany ? 'profiles!user_id' : 'profiles!company_id';
+
+      // Step 1: fetch the repair requests
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data: requestData, error: requestError } = await (supabase as any)
         .from('repair_requests')
-        .select(`
-          *,
-          ${relation} (
-            name,
-            phone,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq(isCompany ? 'company_id' : 'user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      console.log('[RequestsPage] Step1 requestData:', requestData, 'error:', requestError);
+
+      if (requestError) throw requestError;
+      if (!requestData || requestData.length === 0) {
+        setRequests([]);
+        return;
+      }
+
+      // Step 2: collect the IDs of the other party
+      const otherPartyIds: string[] = [
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...new Set((requestData as any[]).map((r: any) => isCompany ? r.user_id : r.company_id).filter(Boolean))
+      ];
+      console.log('[RequestsPage] Step2 otherPartyIds:', otherPartyIds);
+
+      // Step 3: batch-fetch their profiles (name, phone, avatar_url) — bypasses RLS via SECURITY DEFINER RPC
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setRequests((data as any[]) || []);
+      let profileMap: Record<string, { name: string; phone: string | null; avatar_url: string | null }> = {};
+      if (otherPartyIds.length > 0) {
+        // Try via SECURITY DEFINER RPC first (guaranteed to bypass RLS)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: rpcData, error: rpcError } = await (supabase as any)
+          .rpc('get_profiles_for_requests', { user_ids: otherPartyIds });
+
+        console.log('[RequestsPage] Step3 RPC profileData:', rpcData, 'error:', rpcError);
+
+        if (!rpcError && rpcData && (rpcData as any[]).length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (rpcData as any[]).forEach((p: any) => {
+            profileMap[p.id] = { name: p.name, phone: p.phone, avatar_url: p.avatar_url };
+          });
+        } else {
+          // Fallback: direct query (works if RLS "Authenticated users can view all profiles" is active)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: profileData, error: profileError } = await (supabase as any)
+            .from('profiles')
+            .select('id, name, phone, avatar_url')
+            .in('id', otherPartyIds);
+
+          console.log('[RequestsPage] Step3 direct profileData:', profileData, 'error:', profileError);
+
+          if (profileData) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (profileData as any[]).forEach((p: any) => {
+              profileMap[p.id] = { name: p.name, phone: p.phone, avatar_url: p.avatar_url };
+            });
+          }
+        }
+      }
+
+      console.log('[RequestsPage] Step3 profileMap:', profileMap);
+
+      // Step 4: merge profile data into each request
+      // If profile fetch failed (e.g. RLS), extract name from the description as last resort fallback
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const merged = (requestData as any[]).map((r: any) => {
+        const profileId = isCompany ? r.user_id : r.company_id;
+        const profile = profileMap[profileId] || null;
+
+        // Last-resort: parse "Customer Name: ..." from description if profiles couldn't be loaded
+        let fallbackName: string | null = null;
+        if (!profile?.name && r.description) {
+          const nameMatch = (r.description as string).match(/Customer Name:\s*(.+)/);
+          if (nameMatch) fallbackName = nameMatch[1].trim();
+        }
+
+        return {
+          ...r,
+          profiles: profile
+            ? profile
+            : fallbackName
+            ? { name: fallbackName, phone: null, avatar_url: null }
+            : null,
+        };
+      });
+
+      console.log('[RequestsPage] Step4 merged:', merged);
+
+      setRequests(merged as RepairRequest[]);
     } catch (err) {
       console.error('Error fetching requests:', err);
       toast.error('Failed to load repair requests');
@@ -485,6 +557,25 @@ export const RequestsPage = () => {
                               </span>
                             )}
                           </Button>
+                          <Button
+                            variant="outline"
+                            onClick={(e) => { e.stopPropagation(); setReportRequest(request); }}
+                            title="Generate Service Report"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                      {isCompany && request.status === 'completed' && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            className="flex-1 gap-2"
+                            onClick={(e) => { e.stopPropagation(); setReportRequest(request); }}
+                          >
+                            <FileText className="h-4 w-4" />
+                            Generate Report
+                          </Button>
                         </div>
                       )}
                       {!isCompany && (
@@ -536,6 +627,19 @@ export const RequestsPage = () => {
           otherPartyName={
             requests.find(r => r.id === chatRequestId)?.profiles?.name || (isCompany ? 'User' : 'Company')
           }
+        />
+      )}
+
+      {reportRequest && (
+        <ReportGeneratorModal
+          onClose={() => setReportRequest(null)}
+          companyName={user?.companyName || user?.name || 'Service Company'}
+          companyAddress={user?.address || ''}
+          customerName={reportRequest.profiles?.name || parseDescription(reportRequest.description)['Customer Name'] || ''}
+          customerPhone={reportRequest.profiles?.phone || parseDescription(reportRequest.description)['Customer Phone'] || ''}
+          machineType={reportRequest.machine_type}
+          brand={reportRequest.brand}
+          issueDescription={parseDescription(reportRequest.description)['Issue'] || reportRequest.description || ''}
         />
       )}
     </div>
