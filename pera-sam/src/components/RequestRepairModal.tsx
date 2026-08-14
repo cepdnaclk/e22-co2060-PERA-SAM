@@ -305,6 +305,8 @@ Return ONLY a valid JSON object (no markdown, no code block) with these exact ke
 
   const buildDescription = (): string => {
     const lines: string[] = [];
+    // Always include customer name as first line — used as fallback display in company dashboard
+    lines.push(`Customer Name: ${customerName.trim() || 'Not provided'}`);
     if (description) lines.push(`Issue: ${description}`);
     if (category === 'fan') {
       if (eq('fanId')) lines.push(`Machine ID: ${eq('fanId')}`);
