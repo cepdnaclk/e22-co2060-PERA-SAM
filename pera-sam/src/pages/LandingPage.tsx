@@ -941,10 +941,11 @@ export const LandingPage = () => {
           <img
             src={ctaBackground}
             alt="CTA Background"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-center"
           />
-          <div className="absolute inset-0 bg-primary/90 mix-blend-multiply" />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary via-transparent to-primary/80" />
+          {/* Light mode: strong overlay for contrast; Dark mode: lighter overlay to preserve image visibility */}
+          <div className="absolute inset-0 bg-primary/85 dark:bg-primary/45 mix-blend-multiply" />
+          <div className="absolute inset-0 bg-gradient-to-t from-primary/70 dark:from-primary/40 via-transparent to-primary/50 dark:to-primary/25" />
         </div>
 
         <div className="container mx-auto text-center relative z-10">
