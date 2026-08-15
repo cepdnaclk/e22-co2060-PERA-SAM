@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +12,10 @@ import {
   Upload,
   ChevronRight,
   Waves,
-  User
+  User,
+  Bell,
+  MessageSquare,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
@@ -27,11 +30,186 @@ interface AnalysisRecord {
   created_at: string;
 }
 
+interface NotificationItem {
+  id: string;
+  type: 'message' | 'analysis';
+  title: string;
+  message: string;
+  time: string;
+  link: string;
+  isRead: boolean;
+  created_at: string;
+}
+
 export const DashboardHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [analyses, setAnalyses] = useState<AnalysisRecord[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const fetchUnreadMessages = async (): Promise<NotificationItem[]> => {
+    if (!user) return [];
+    try {
+      const { data, error } = await supabase
+        .from('request_messages')
+        .select('id, content, created_at, request_id')
+        .eq('is_read', false)
+        .neq('sender_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []).map((msg: any) => ({
+        id: msg.id,
+        type: 'message',
+        title: 'New Message',
+        message: msg.content.length > 50 ? msg.content.slice(0, 50) + '...' : msg.content,
+        time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        link: `/dashboard/requests`,
+        isRead: false,
+        created_at: msg.created_at
+      }));
+    } catch (err) {
+      console.error('Error fetching unread messages:', err);
+      return [];
+    }
+  };
+
+  const fetchRecentAnalyses = async (): Promise<NotificationItem[]> => {
+    if (!user) return [];
+    try {
+      const { data, error } = await supabase
+        .from('analysis_results' as any)
+        .select('id, category, status, created_at, details')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      
+      const readAnalysisIds: string[] = JSON.parse(localStorage.getItem(`read_analyses_${user.id}`) || '[]');
+
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        type: 'analysis',
+        title: `Analysis: ${item.status.toUpperCase()}`,
+        message: `Machine category: ${item.category}`,
+        time: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        link: `/dashboard/history`,
+        isRead: readAnalysisIds.includes(item.id),
+        created_at: item.created_at
+      }));
+    } catch (err) {
+      console.error('Error fetching recent analyses:', err);
+      return [];
+    }
+  };
+
+  const loadNotifications = async () => {
+    const messages = await fetchUnreadMessages();
+    const analyses = await fetchRecentAnalyses();
+    const combined = [...messages, ...analyses].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    setNotifications(combined);
+  };
+
+  const markAnalysesAsRead = (ids: string[]) => {
+    if (!user) return;
+    const readAnalysisIds: string[] = JSON.parse(localStorage.getItem(`read_analyses_${user.id}`) || '[]');
+    const updated = Array.from(new Set([...readAnalysisIds, ...ids]));
+    localStorage.setItem(`read_analyses_${user.id}`, JSON.stringify(updated));
+  };
+
+  const handleNotificationClick = async (notif: NotificationItem) => {
+    if (notif.type === 'message') {
+      await supabase
+        .from('request_messages')
+        .update({ is_read: true })
+        .eq('id', notif.id);
+    } else if (notif.type === 'analysis') {
+      markAnalysesAsRead([notif.id]);
+    }
+    
+    setDropdownOpen(false);
+    loadNotifications();
+    navigate(notif.link);
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!user) return;
+    
+    const unreadMsgIds = notifications.filter(n => n.type === 'message' && !n.isRead).map(n => n.id);
+    if (unreadMsgIds.length > 0) {
+      await supabase
+        .from('request_messages')
+        .update({ is_read: true })
+        .in('id', unreadMsgIds);
+    }
+    
+    const unreadAnalysisIds = notifications.filter(n => n.type === 'analysis' && !n.isRead).map(n => n.id);
+    if (unreadAnalysisIds.length > 0) {
+      markAnalysesAsRead(unreadAnalysisIds);
+    }
+    
+    loadNotifications();
+  };
+
+  useEffect(() => {
+    if (!user) return;
+
+    loadNotifications();
+
+    const msgChannel = supabase
+      .channel('dashboard-home-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'request_messages',
+        },
+        () => {
+          loadNotifications();
+        }
+      )
+      .subscribe();
+
+    const analysisChannel = supabase
+      .channel('dashboard-home-analyses')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'analysis_results',
+        },
+        (payload: any) => {
+          if (payload.new && payload.new.user_id === user.id) {
+            loadNotifications();
+          }
+        }
+      )
+      .subscribe();
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      supabase.removeChannel(msgChannel);
+      supabase.removeChannel(analysisChannel);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [user]);
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   useEffect(() => {
     const fetchAnalyses = async () => {
@@ -109,14 +287,81 @@ export const DashboardHome = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 relative" ref={dropdownRef}>
           <ThemeToggle />
-          <Link to="/dashboard/analysis">
-            <Button variant="accent" size="lg">
-              <Upload className="h-5 w-5 mr-2" />
-              New Analysis
-            </Button>
-          </Link>
+          
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="relative p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title="Notifications"
+          >
+            <Bell className="h-6 w-6" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => navigate('/dashboard/settings')}
+            className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title="Settings"
+          >
+            <Settings className="h-6 w-6" />
+          </button>
+
+          {dropdownOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 bg-background/95 backdrop-blur-md border border-border rounded-xl shadow-xl z-50 overflow-hidden py-1">
+              <div className="px-4 py-2 border-b border-border flex items-center justify-between">
+                <span className="font-semibold text-sm text-foreground">Notifications</span>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="text-xs text-accent hover:underline font-medium"
+                  >
+                    Mark all as read
+                  </button>
+                )}
+              </div>
+              
+              <div className="max-h-64 overflow-y-auto divide-y divide-border">
+                {notifications.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-muted-foreground">
+                    No new notifications
+                  </div>
+                ) : (
+                  notifications.map((notif) => (
+                    <div
+                      key={notif.id}
+                      onClick={() => handleNotificationClick(notif)}
+                      className={`p-3.5 hover:bg-muted/50 transition-colors cursor-pointer flex items-start gap-3 ${!notif.isRead ? 'bg-accent/5' : ''}`}
+                    >
+                      <div className="mt-0.5">
+                        {notif.type === 'message' ? (
+                          <MessageSquare className="h-4 w-4 text-accent" />
+                        ) : (
+                          <Waves className="h-4 w-4 text-success" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <p className={`text-xs font-semibold truncate ${!notif.isRead ? 'text-foreground' : 'text-muted-foreground'}`}>
+                            {notif.title}
+                          </p>
+                          <span className="text-[9px] text-muted-foreground shrink-0">{notif.time}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                          {notif.message}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
