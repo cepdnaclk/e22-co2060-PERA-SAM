@@ -9,7 +9,10 @@ import {
   ExternalLink,
   Mail,
   MapPin,
-  Phone
+  Phone,
+  Github,
+  Linkedin,
+  UserCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ceoImg from '@/assets/team/ceo.png';
@@ -25,10 +28,34 @@ export const AboutPage = () => {
   ];
 
   const team = [
-    { name: 'Mr. Bhagya Karunanayake', role: 'CEO & Project Owner', image: ceoImg, specialty: 'Machine Learning' },
-    { name: 'Mr. Pahan Prabhash', role: 'Co-founder', image: member2Img, specialty: 'Audio Signal Processing' },
-    { name: 'Mr. Dileka Sandaruwan', role: 'Project Owner', image: member3Img, specialty: 'Deep Learning' },
-    { name: 'Miss. Dhanushka Kavindya', role: 'Project Owner', image: member4Img, specialty: 'User Experience' },
+    {
+      name: 'Mr. Bhagya Karunanayake',
+      role: 'Project Owner',
+      image: ceoImg,
+      regNo: 'E/22/184',
+      links: { github: 'https://github.com/zerokali20', linkedin: 'https://www.linkedin.com/in/bhagya-karunanayake-b52085270/', email: 'e22184@eng.pdn.ac.lk', portfolio: 'https://www.thecn.com/KK1842' }
+    },
+    {
+      name: 'Mr. Pahan Prabhash',
+      role: 'Project Owner',
+      image: member2Img,
+      regNo: 'E/22/396',
+      links: { github: 'https://github.com/PahanPrabash', linkedin: '#', email: 'e22396@eng.pdn.ac.lk', portfolio: 'https://www.thecn.com/PT944' }
+    },
+    {
+      name: 'Mr. Dileka Sandaruwan',
+      role: 'Project Owner',
+      image: member3Img,
+      regNo: 'E/22/336',
+      links: { github: 'https://github.com/DilekaSadaruwan', linkedin: '#', email: 'e22336@eng.pdn.ac.lk', portfolio: 'https://www.thecn.com/DS1883' }
+    },
+    {
+      name: 'Miss. Dhanushka Kavindya',
+      role: 'Project Owner',
+      image: member4Img,
+      regNo: 'E/22/188',
+      links: { github: 'https://github.com/e22188', linkedin: 'https://www.linkedin.com/in/r-m-d-kavindaya-0423a6364/', email: 'e22188@eng.pdn.ac.lk', portfolio: 'https://www.thecn.com/DK949' }
+    },
   ];
 
   return (
@@ -174,27 +201,75 @@ export const AboutPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
       >
-        <h2 className="text-2xl font-bold text-foreground mb-6 text-center">Leadership Team</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {team.map((member, i) => (
+        <h2 className="text-2xl font-bold text-foreground mb-12 text-center">Leadership Team</h2>
+        <div className="flex flex-wrap justify-center gap-6 max-w-5xl mx-auto mb-10">
+          {team.map((member, index) => (
             <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5 + i * 0.1 }}
-              className="glass-card rounded-xl overflow-hidden group hover:border-accent/40 transition-all duration-300"
+              key={index}
+              className="group transition-all duration-300 flex flex-col items-center p-5 w-[160px]"
+              style={{ marginTop: index % 2 === 1 ? '32px' : '0px' }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: index * 0.1 }}
             >
-              <div className="aspect-square relative overflow-hidden h-48 w-full border-b border-border/50">
+              {/* Circular avatar */}
+              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-accent/40 ring-2 ring-accent/20 mb-3 flex-shrink-0 relative group-hover:ring-accent/60 transition-all duration-300">
                 <img
                   src={member.image}
                   alt={member.name}
-                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
               </div>
-              <div className="p-4 text-center">
-                <h3 className="font-bold text-foreground">{member.name}</h3>
-                <p className="text-sm text-accent font-medium mb-1">{member.role}</p>
-                <p className="text-xs text-muted-foreground">{member.specialty}</p>
+
+              {/* Info */}
+              <div className="text-center">
+                <h3 className="text-xs font-bold text-foreground leading-tight mb-1">
+                  {member.name}
+                </h3>
+                <p className="text-accent text-[10px] font-semibold uppercase tracking-wider mb-0.5">{member.role}</p>
+                <p className="text-[9px] text-muted-foreground font-mono tracking-wide mb-3">{member.regNo}</p>
+
+                <div className="flex items-center justify-center gap-1.5">
+                  {member.links.github && (
+                    <a
+                      href={member.links.github}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 bg-muted hover:bg-accent/10 text-muted-foreground hover:text-accent rounded-md transition-colors border border-transparent hover:border-accent/20"
+                    >
+                      <Github className="h-3 w-3" />
+                    </a>
+                  )}
+                  {member.links.linkedin && (
+                    <a
+                      href={member.links.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 bg-muted hover:bg-accent/10 text-muted-foreground hover:text-accent rounded-md transition-colors border border-transparent hover:border-accent/20"
+                    >
+                      <Linkedin className="h-3 w-3" />
+                    </a>
+                  )}
+                  {member.links.email && (
+                    <a
+                      href={`mailto:${member.links.email}`}
+                      className="p-1.5 bg-muted hover:bg-accent/10 text-muted-foreground hover:text-accent rounded-md transition-colors border border-transparent hover:border-accent/20"
+                    >
+                      <Mail className="h-3 w-3" />
+                    </a>
+                  )}
+                  {member.links.portfolio && (
+                    <a
+                      href={member.links.portfolio}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 bg-muted hover:bg-accent/10 text-muted-foreground hover:text-accent rounded-md transition-colors border border-transparent hover:border-accent/20"
+                    >
+                      <UserCircle className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
               </div>
             </motion.div>
           ))}
