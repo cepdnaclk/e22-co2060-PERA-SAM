@@ -247,6 +247,11 @@ export default function AnalysisScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Header */}
       <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+        {/* Gradient accent bar */}
+        <View style={styles.headerGradient}>
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.accent }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo, opacity: 0.5 }]} />
+        </View>
         <View style={styles.headerLeft}>
           <View style={styles.headerIconBg}>
             <Ionicons name="mic" size={18} color={BrandColors.white} />
@@ -494,6 +499,14 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.white,
     ...Shadows.sm,
   },
+  headerGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    overflow: 'hidden',
+  },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerIconBg: {
     width: 32,
@@ -515,7 +528,7 @@ const styles = StyleSheet.create({
   },
   resetText: { ...Typography.caption, color: BrandColors.indigo, fontWeight: '700' },
 
-  scroll: { padding: 20, paddingBottom: 40 },
+  scroll: { padding: 20, paddingBottom: 100 },
 
   // Steps
   stepRow: {
