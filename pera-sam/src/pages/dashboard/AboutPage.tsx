@@ -319,10 +319,16 @@ export const AboutPage = () => {
             <Mail className="h-4 w-4 mr-2" />
             Contact Support
           </Button>
-          <Button variant="outline">
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Documentation
-          </Button>
+          <a
+            href="https://cepdnaclk.github.io/e22-co2060-PERA-SAM/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Documentation
+            </Button>
+          </a>
         </div>
       </motion.div>
     </div>
