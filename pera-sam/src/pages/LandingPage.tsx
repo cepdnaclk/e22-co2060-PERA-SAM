@@ -312,7 +312,7 @@ const GlowCard = ({
     >
       {children}
       <BorderBeam
-        size={beamSize}
+        beamLength={beamSize}
         duration={beamDuration}
         delay={beamDelay}
         colorFrom="hsl(217 91% 80%)"
