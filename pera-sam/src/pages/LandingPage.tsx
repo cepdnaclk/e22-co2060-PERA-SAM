@@ -584,35 +584,78 @@ export const LandingPage = () => {
             </p>
           </motion.div>
 
-          <div className="max-w-3xl mx-auto relative pt-4 pb-4">
-            {/* Vertical timeline connecting line */}
-            <div className="absolute left-[27px] md:left-[31px] top-0 bottom-0 w-[2px] bg-border/60" />
-            
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                className="relative flex items-start gap-4 md:gap-6 mb-6 md:mb-8 last:mb-0 group"
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-              >
-                {/* Circular Badge */}
-                <div className="relative z-10 w-14 h-14 md:w-16 md:h-16 bg-accent rounded-full flex items-center justify-center shrink-0 ring-[6px] ring-background shadow-lg transition-transform duration-300 group-hover:scale-110">
-                  <feature.icon className="h-6 w-6 md:h-7 md:w-7 text-white" />
-                </div>
-                
-                {/* Content */}
-                <div className="pt-0.5 md:pt-1">
-                  <h3 className="text-lg md:text-xl font-bold text-foreground mb-1 transition-colors duration-300 group-hover:text-accent">{feature.title}</h3>
-                  <WordReveal
-                    text={feature.description}
-                    className="text-sm md:text-base text-muted-foreground leading-snug"
-                    delay={index * 0.08}
-                  />
-                </div>
-              </motion.div>
-            ))}
+          {/* Two-column features layout */}
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-0 lg:gap-8 items-start">
+
+            {/* ── LEFT COLUMN: Features 1–3 (aligned left) ── */}
+            <div className="flex flex-col gap-8">
+              {features.slice(0, 3).map((feature, index) => (
+                <motion.div
+                  key={index}
+                  className="relative flex items-start gap-4 group"
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: index * 0.12 }}
+                >
+                  {/* Circular Badge */}
+                  <div className="relative z-10 w-14 h-14 bg-accent rounded-full flex items-center justify-center shrink-0 ring-[5px] ring-background shadow-lg transition-transform duration-300 group-hover:scale-110">
+                    <feature.icon className="h-6 w-6 text-white" />
+                  </div>
+                  {/* Content */}
+                  <div className="pt-1">
+                    <h3 className="text-lg font-bold text-foreground mb-1 transition-colors duration-300 group-hover:text-accent">
+                      {feature.title}
+                    </h3>
+                    <WordReveal
+                      text={feature.description}
+                      className="text-sm text-muted-foreground leading-snug"
+                      delay={index * 0.08}
+                    />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* ── CENTER: Placeholder for future images ── */}
+            <div className="hidden lg:flex flex-col items-center justify-center self-stretch">
+              {/* Vertical divider line */}
+              <div className="w-px flex-1 bg-gradient-to-b from-transparent via-border to-transparent" />
+              {/* Center dot accent */}
+              <div className="w-3 h-3 rounded-full bg-accent/40 border border-accent/60 my-4 shrink-0" />
+              <div className="w-px flex-1 bg-gradient-to-b from-transparent via-border to-transparent" />
+            </div>
+
+            {/* ── RIGHT COLUMN: Features 4–6 (aligned right, icon on right) ── */}
+            <div className="flex flex-col gap-8">
+              {features.slice(3, 6).map((feature, index) => (
+                <motion.div
+                  key={index + 3}
+                  className="relative flex items-start flex-row-reverse gap-4 group"
+                  initial={{ opacity: 0, x: 30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: index * 0.12 }}
+                >
+                  {/* Circular Badge (right side) */}
+                  <div className="relative z-10 w-14 h-14 bg-accent rounded-full flex items-center justify-center shrink-0 ring-[5px] ring-background shadow-lg transition-transform duration-300 group-hover:scale-110">
+                    <feature.icon className="h-6 w-6 text-white" />
+                  </div>
+                  {/* Content (text right-aligned) */}
+                  <div className="pt-1 text-right">
+                    <h3 className="text-lg font-bold text-foreground mb-1 transition-colors duration-300 group-hover:text-accent">
+                      {feature.title}
+                    </h3>
+                    <WordReveal
+                      text={feature.description}
+                      className="text-sm text-muted-foreground leading-snug"
+                      delay={index * 0.08}
+                    />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
           </div>
         </div>
       </section>
