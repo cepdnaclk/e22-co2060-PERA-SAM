@@ -21,10 +21,28 @@ import member3Img from '@/assets/team/member3.png';
 import member4Img from '@/assets/team/member4.png';
 import techLeadImg from '@/assets/team/tech_lead.png';
 import supervisorImg from '@/assets/team/supervisor.png';
+import dashboardBg from '@/assets/Dashboardbg.png';
 
 export const AboutPage = () => {
   const milestones = [
-    { year: '2026', title: 'Founded', description: 'PERA-SAM was founded with a vision to revolutionize mechanical diagnostics using ML-powered sound analysis. We develop the system with traing sound dataset model training which is world wide useable dataset call zendo MIMII dataset we in MVP in our 3rd semster we train the sound using industrai fan sound using https://zenodo.org/records/3384388/files/0_dB_fan. We delevering the software solution up to analysis industrial fan sound up to our 3rd semster.     New updates will be future.' },
+    {
+      year: '2026',
+      title: 'Founded',
+      description: (
+        <>
+          PERA-SAM was founded with a vision to revolutionize mechanical diagnostics using ML-powered sound analysis. We develop the system with traing sound dataset model training which is world wide useable dataset call zendo MIMII dataset we in MVP in our 3rd semster we train the sound using industrai fan sound using{' '}
+          <a
+            href="https://zenodo.org/records/3384388"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent hover:underline font-medium break-all"
+          >
+            this Zenodo dataset
+          </a>
+          . We delevering the software solution up to analysis industrial fan sound up to our 3rd semster. New updates will be future.
+        </>
+      ),
+    },
   ];
 
   const team = [
@@ -59,20 +77,31 @@ export const AboutPage = () => {
   ];
 
   return (
-    <div className="space-y-12 w-full pb-10">
+    <div
+      className="space-y-8 w-full pt-2 pb-10 relative"
+      style={{
+        backgroundImage: `url(${dashboardBg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'local',
+      }}
+    >
+      {/* Background overlay for readability */}
+      <div
+        className="absolute inset-0 -z-10"
+        style={{ background: 'hsl(var(--background) / 0.85)' }}
+      />
       {/* Hero */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="text-center"
       >
-        <div className="flex justify-center mb-6">
-          <Logo size="xl" showText={false} />
-        </div>
-        <h1 className="text-4xl font-bold text-foreground mb-4">
+        <h1 className="text-4xl font-bold text-white mb-4">
           About PERA-SAM
         </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+        <p className="text-lg text-white/80 max-w-2xl mx-auto">
           PERA-SAM (Sound Analysis Manager) is an AI-powered platform that analyzes
           mechanical and fan sounds to detect normal or abnormal behavior, helping
           prevent equipment failures before they happen.
@@ -84,36 +113,36 @@ export const AboutPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="glass-card rounded-xl p-8"
+        className="max-w-4xl mx-auto glass-card rounded-xl p-8"
       >
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-2 gap-8 lg:gap-16 items-center">
           <div>
-            <h2 className="text-2xl font-bold text-foreground mb-4">Our Mission</h2>
-            <p className="text-muted-foreground mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Our Mission</h2>
+            <p className="text-gray-700 dark:text-white/80 mb-4 text-left leading-relaxed">
               We believe that predictive maintenance should be accessible to everyone.
               Our mission is to democratize industrial-grade sound diagnostics, enabling
               individuals and businesses to detect equipment issues early and prevent
               costly failures.
             </p>
-            <p className="text-muted-foreground">
+            <p className="text-gray-700 dark:text-white/80 text-left leading-relaxed">
               Using advanced AI trained on the MIMII dataset (Malfunctioning Industrial
               Machine Investigation and Inspection), we can analyze sounds from fans,
               pumps, sliders, and valves with exceptional accuracy.
             </p>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-4 flex flex-col justify-center md:pl-8">
             {[
               { icon: Activity, label: 'Real-time Analysis', value: 'Sub-5 second processing' },
               { icon: Shield, label: 'Accuracy Rate', value: '99.0% detection rate' },
               { icon: Users, label: 'Active Users', value: 'Grow in Sri Lanka' },
             ].map((stat, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-                <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
+              <div key={i} className="flex items-center gap-4 py-3 border-b border-white/10 last:border-0">
+                <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
                   <stat.icon className="h-5 w-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="font-semibold text-foreground">{stat.value}</p>
+                  <p className="text-sm text-gray-500 dark:text-white/60">{stat.label}</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{stat.value}</p>
                 </div>
               </div>
             ))}
@@ -127,23 +156,20 @@ export const AboutPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <h2 className="text-2xl font-bold text-foreground mb-6 text-center">How It Works</h2>
-        <div className="grid md:grid-cols-3 gap-6">
+        <h2 className="text-2xl font-bold text-white mb-6 text-center">How It Works</h2>
+        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto px-4 items-stretch">
           {[
             {
-
               title: 'Upload Audio',
               description: 'Record and upload audio from your mechanical equipment using any device',
               icon: Waves
             },
             {
-
               title: 'AI Analysis',
               description: 'Our AI analyzes frequency patterns, amplitude variations, and sound signatures',
               icon: Activity
             },
             {
-
               title: 'Get Results',
               description: 'Receive detailed diagnostic reports with confidence scores and recommendations',
               icon: Shield
@@ -154,14 +180,13 @@ export const AboutPage = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 + i * 0.1 }}
-              className="glass-card rounded-xl p-6 text-center"
+              className="rounded-xl p-6 text-center"
             >
-              <div className="text-4xl font-bold text-accent/20 mb-4">{item.step}</div>
-              <div className="w-14 h-14 bg-accent/10 rounded-xl mx-auto mb-4 flex items-center justify-center">
+              <div className="w-14 h-14 bg-white/10 rounded-xl mx-auto mb-4 flex items-center justify-center">
                 <item.icon className="h-7 w-7 text-accent" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">{item.title}</h3>
-              <p className="text-sm text-muted-foreground">{item.description}</p>
+              <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
+              <p className="text-sm text-white/70">{item.description}</p>
             </motion.div>
           ))}
         </div>
@@ -172,23 +197,23 @@ export const AboutPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="glass-card rounded-xl p-8"
+        className="max-w-4xl mx-auto glass-card rounded-xl p-8"
       >
-        <h2 className="text-2xl font-bold text-foreground mb-6">Our Journey</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Our Journey</h2>
         <div className="space-y-6">
           {milestones.map((milestone, i) => (
             <div key={i} className="flex gap-4">
               <div className="flex flex-col items-center">
-                <div className="w-12 h-12 bg-accent rounded-full flex items-center justify-center text-accent-foreground font-bold text-sm">
+                <div className="w-12 h-12 bg-accent rounded-full flex items-center justify-center text-white font-bold text-sm">
                   {milestone.year}
                 </div>
                 {i < milestones.length - 1 && (
-                  <div className="w-0.5 flex-1 bg-border my-2" />
+                  <div className="w-0.5 flex-1 bg-gray-300 dark:bg-white/20 my-2" />
                 )}
               </div>
               <div className="pt-2">
-                <h3 className="font-semibold text-foreground">{milestone.title}</h3>
-                <p className="text-sm text-muted-foreground">{milestone.description}</p>
+                <h3 className="font-semibold text-gray-900 dark:text-white">{milestone.title}</h3>
+                <p className="text-sm text-gray-700 dark:text-white/70 text-left leading-relaxed mt-1">{milestone.description}</p>
               </div>
             </div>
           ))}
@@ -201,7 +226,7 @@ export const AboutPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
       >
-        <h2 className="text-2xl font-bold text-foreground mb-12 text-center">Leadership Team</h2>
+        <h2 className="text-2xl font-bold text-white mb-12 text-center">Leadership Team</h2>
         <div className="flex flex-wrap justify-center gap-6 max-w-5xl mx-auto mb-10">
           {team.map((member, index) => (
             <motion.div
@@ -224,11 +249,11 @@ export const AboutPage = () => {
 
               {/* Info */}
               <div className="text-center">
-                <h3 className="text-xs font-bold text-foreground leading-tight mb-1">
+                <h3 className="text-xs font-bold text-white leading-tight mb-1">
                   {member.name}
                 </h3>
                 <p className="text-accent text-[10px] font-semibold uppercase tracking-wider mb-0.5">{member.role}</p>
-                <p className="text-[9px] text-muted-foreground font-mono tracking-wide mb-3">{member.regNo}</p>
+                <p className="text-[9px] text-white/60 font-mono tracking-wide mb-3">{member.regNo}</p>
 
                 <div className="flex items-center justify-center gap-1.5">
                   {member.links.github && (
@@ -281,36 +306,37 @@ export const AboutPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
-        className="glass-card rounded-xl p-8"
+        className="max-w-4xl mx-auto px-4"
       >
-        <h2 className="text-2xl font-bold text-foreground mb-6">Contact Us</h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
-              <Mail className="h-5 w-5 text-accent" />
+        <h2 className="text-2xl font-bold text-white mb-6">Contact Us</h2>
+        <div className="grid md:grid-cols-3 gap-6 items-start">
+          <div className="flex items-start gap-4">
+            <div className="mt-1 flex-shrink-0">
+              <Mail className="h-6 w-6 text-accent" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Email</p>
-              <p className="font-medium text-foreground">invictus2026sam@gmail.com</p>
+              <p className="text-sm text-white/60 mb-1">Email</p>
+              <p className="font-medium text-white">invictus2026sam@gmail.com</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
-              <Phone className="h-5 w-5 text-accent" />
+          <div className="flex items-start gap-4">
+            <div className="mt-1 flex-shrink-0">
+              <Phone className="h-6 w-6 text-accent" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Phone</p>
-              <p className="font-medium text-foreground">+94 76 326 3100</p>
-              <p className="font-medium text-foreground">+94 71 525 6633</p>
+              <p className="text-sm text-white/60 mb-1">Phone</p>
+              <p className="font-medium text-white">+94 76 326 3100</p>
+              <p className="font-medium text-white">+94 71 525 6633</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
-              <MapPin className="h-5 w-5 text-accent" />
+          <div className="flex items-start gap-4">
+            <div className="mt-1 flex-shrink-0">
+              <MapPin className="h-6 w-6 text-accent" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Address</p>
-              <p className="font-medium text-foreground">Faculty Of Engineering, University of Peradeniya, Sri Lanka  </p>
+              <p className="text-sm text-white/60 mb-1">Address</p>
+              <p className="font-medium text-white whitespace-nowrap">Faculty Of Engineering,</p>
+              <p className="font-medium text-white whitespace-nowrap">University of Peradeniya, Sri Lanka.</p>
             </div>
           </div>
         </div>

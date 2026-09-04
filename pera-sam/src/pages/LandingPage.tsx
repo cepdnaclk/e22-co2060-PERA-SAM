@@ -38,6 +38,7 @@ import qrCodeImg from '@/assets/qr_code.png';
 import heroBackground from '@/assets/hero-bg-industrial.png';
 import ctaBackground from '@/assets/cta-bg.png';
 import invictusBanner from '@/assets/invictus-banner.png';
+import howItWorksBg from '@/assets/How PERASAM works.png';
 import { enableGlobalCursorStyles } from 'react-resizable-panels';
 
 // ─── Tech Stack for Marquee ──────────────────────────────────────────────────
@@ -661,8 +662,22 @@ export const LandingPage = () => {
       </section>
 
       {/* How it Works Section */}
-      <section id="how-it-works" className="py-20 px-4">
-        <div className="container mx-auto">
+      <section
+        id="how-it-works"
+        className="py-20 px-4 relative overflow-hidden"
+        style={{
+          backgroundImage: `url(${howItWorksBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+        {/* Overlay to keep content readable */}
+        <div
+          className="absolute inset-0 z-0"
+          style={{ background: 'hsl(var(--background) / 0.88)' }}
+        />
+        <div className="container mx-auto relative z-10">
           <motion.div
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
