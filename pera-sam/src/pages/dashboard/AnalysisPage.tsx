@@ -31,11 +31,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 
 const categories = [
-  { id: 'fan',             label: 'Industrial Fan',    ids: ['00', '02', '04', '06'] },
-  { id: 'pump',            label: 'Industrial Pump',   ids: ['00', '02', '04', '06'] },
-  { id: 'slider',          label: 'Slide Rail',        ids: ['00', '02', '04', '06'] },
-  { id: 'valve',           label: 'Industrial Valve',  ids: ['00', '02', '04', '06'] },
-  { id: 'vehicle_bearing', label: 'Vehicle Bearing',   ids: ['—'] },
+  { id: 'fan',             label: 'Industrial Fan',    ids: ['00', '02', '04', '06'], modelStatus: 'calibrated' },
+  { id: 'pump',            label: 'Industrial Pump',   ids: ['00', '02', '04', '06'], modelStatus: 'fallback'   },
+  { id: 'slider',          label: 'Slide Rail',        ids: ['00', '02', '04', '06'], modelStatus: 'fallback'   },
+  { id: 'valve',           label: 'Industrial Valve',  ids: ['00', '02', '04', '06'], modelStatus: 'fallback'   },
+  { id: 'vehicle_bearing', label: 'Vehicle Bearing',   ids: ['00'],                   modelStatus: 'fallback'   },
 ];
 
 interface AnalysisResult {
@@ -55,6 +55,8 @@ interface AnalysisResult {
   identified_category?: string;
   identified_id?: string;
   anomaly_score?: number;
+  fallback_mode?: string | null;
+  fallback_note?: string;
 }
 
 export const AnalysisPage = () => {
@@ -218,10 +220,12 @@ export const AnalysisPage = () => {
           amplitude: Math.abs(v) + 0.2,
           frequency: 800 + (analysis.score * 50) + (Math.abs(v) * 200),
         })),
-        machine_id: analysis.machine_id,
+        machine_id:          analysis.machine_id,
         identified_category: analysis.machine_category,
-        identified_id: analysis.machine_id,
-        anomaly_score: analysis.score
+        identified_id:       analysis.machine_id,
+        anomaly_score:       analysis.score,
+        fallback_mode:       analysis.fallback_mode ?? null,
+        fallback_note:       analysis.fallback_note,
       });
 
       toast.success('Analysis complete!');
@@ -525,11 +529,25 @@ export const AnalysisPage = () => {
                   <SelectContent>
                     {categories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
-                        {cat.label}
+                        <span className="flex items-center gap-2">
+                          {cat.label}
+                          {cat.modelStatus === 'calibrated' ? (
+                            <span className="text-[9px] font-bold uppercase tracking-wide text-green-500">Calibrated</span>
+                          ) : (
+                            <span className="text-[9px] font-bold uppercase tracking-wide text-yellow-500">Fallback</span>
+                          )}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedCategory && selectedCategory.modelStatus === 'fallback' && (
+                  <p className="mt-2 text-xs text-yellow-500/90 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
+                    ⚠️ No dedicated model trained yet for <strong>{selectedCategory.label}</strong>. Analysis will use a
+                    cross-category fan model as a proxy — results are indicative only.
+                    Train a dedicated model via <code className="font-mono">cloud_trainer.ipynb</code> for full accuracy.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -630,6 +648,14 @@ export const AnalysisPage = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Fallback Model Notice */}
+              {result.fallback_note && (
+                <div className="flex items-start gap-3 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-400">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{result.fallback_note}</span>
+                </div>
+              )}
 
               {/* Waveform Visualization */}
               <div className="glass-card rounded-xl p-6">

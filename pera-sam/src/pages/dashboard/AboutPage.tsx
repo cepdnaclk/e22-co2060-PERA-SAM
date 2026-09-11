@@ -20,7 +20,6 @@ import member2Img from '@/assets/team/member2.png';
 import member3Img from '@/assets/team/member3.png';
 import member4Img from '@/assets/team/member4.png';
 import techLeadImg from '@/assets/team/tech_lead.png';
-import supervisorImg from '@/assets/team/supervisor.png';
 import dashboardBg from '@/assets/Dashboardbg.png';
 
 export const AboutPage = () => {
