@@ -28,7 +28,6 @@ import {
   UserCircle
 } from 'lucide-react';
 import { useTypewriter } from '@/hooks/useTypewriter';
-import supervisorImg from '@/assets/team/supervisor.png';
 import techLeadImg from '@/assets/team/tech_lead.png';
 import ceoImg from '@/assets/team/ceo.png';
 import member2Img from '@/assets/team/member2.png';
@@ -885,13 +884,6 @@ export const LandingPage = () => {
                 links: { github: 'https://github.com/e22188', linkedin: 'https://www.linkedin.com/in/r-m-d-kavindaya-0423a6364/', email: 'e22188@eng.pdn.ac.lk', portfolio: 'https://www.thecn.com/DK949' }
               },
               {
-                name: '#',
-                role: 'Project Supervisor',
-                image: '#',
-                regNo: 'DEPT. OF COMPUTER ENG.',
-                links: { linkedin: '#', email: 'aruna@ce.pdn.ac.lk' }
-              },
-              {
                 name: 'Miss. Sayumi Muthukumarana',
                 role: 'Tech Lead',
                 image: techLeadImg,
@@ -926,7 +918,7 @@ export const LandingPage = () => {
                 {/* Info */}
                 <div className="text-center">
                   <h3 className="text-xs font-bold text-foreground leading-tight mb-1">
-                    {member.name === '#' ? 'Project Supervisor' : member.name}
+                    {member.name}
                   </h3>
                   <p className="text-accent text-[10px] font-semibold uppercase tracking-wider mb-0.5">{member.role}</p>
                   <p className="text-[9px] text-muted-foreground font-mono tracking-wide mb-3">{member.regNo}</p>
