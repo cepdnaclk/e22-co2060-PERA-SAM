@@ -30,11 +30,11 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 
-const categories = [
+const defaultCategories = [
   { id: 'fan',             label: 'Industrial Fan',    ids: ['00', '02', '04', '06'], modelStatus: 'calibrated' },
-  { id: 'pump',            label: 'Industrial Pump',   ids: ['00', '02', '04', '06'], modelStatus: 'fallback'   },
-  { id: 'slider',          label: 'Slide Rail',        ids: ['00', '02', '04', '06'], modelStatus: 'fallback'   },
-  { id: 'valve',           label: 'Industrial Valve',  ids: ['00', '02', '04', '06'], modelStatus: 'fallback'   },
+  { id: 'pump',            label: 'Industrial Pump',   ids: ['00', '02', '04', '06'], modelStatus: 'calibrated' },
+  { id: 'slider',          label: 'Slide Rail',        ids: ['00', '02', '04', '06'], modelStatus: 'calibrated' },
+  { id: 'valve',           label: 'Industrial Valve',  ids: ['00', '02', '04', '06'], modelStatus: 'calibrated' },
   { id: 'vehicle_bearing', label: 'Vehicle Bearing',   ids: ['00'],                   modelStatus: 'fallback'   },
 ];
 
@@ -86,6 +86,35 @@ export const AnalysisPage = () => {
       }
     };
   }, [audioUrl]);
+
+  const [categories, setCategories] = useState(defaultCategories);
+
+  useEffect(() => {
+    const fetchModelStatus = async () => {
+      try {
+        const mlApiUrl = import.meta.env.VITE_ML_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${mlApiUrl}/models`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.supported_categories) {
+            setCategories(prev => prev.map(cat => {
+              const info = data.supported_categories[cat.id];
+              if (info) {
+                return {
+                  ...cat,
+                  modelStatus: info.status as 'calibrated' | 'fallback',
+                };
+              }
+              return cat;
+            }));
+          }
+        }
+      } catch (err) {
+        console.debug('ML API /models sync (using defaults):', err);
+      }
+    };
+    fetchModelStatus();
+  }, []);
 
   const selectedCategory = categories.find(c => c.id === category);
 
