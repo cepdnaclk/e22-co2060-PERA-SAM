@@ -26,7 +26,7 @@ import uvicorn
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 SERVER_DIR  = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(SERVER_DIR, "config.yaml")
+CONFIG_PATH = os.path.join(SERVER_DIR, "config.yaml") if os.path.exists(os.path.join(SERVER_DIR, "config.yaml")) else os.path.join(SERVER_DIR, "config.yml")
 ASSETS_DIR  = os.path.join(SERVER_DIR, "assets")
 os.makedirs(ASSETS_DIR, exist_ok=True)
 
@@ -106,7 +106,15 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://proud-glacier-05c9fb600.7.azurestaticapps.net"],
+    allow_origins=[
+        "https://proud-glacier-05c9fb600.7.azurestaticapps.net",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
