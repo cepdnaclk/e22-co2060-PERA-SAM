@@ -25,6 +25,8 @@ import {
   AnalysisStatus,
 } from '../../constants/theme';
 import { FloatingOrb } from '../../components/AnimatedUI';
+import { useThemeContext } from '../../lib/ThemeContext';
+import { ThemeToggle } from '../../components/ThemeToggle';
 
 interface AnalysisRecord {
   id: string;
@@ -48,6 +50,7 @@ export interface AppNotification {
 
 export default function DashboardScreen() {
   const { user } = useAuth();
+  const { colors, isDark } = useThemeContext();
   const [refreshing, setRefreshing] = useState(false);
   const [recentAnalyses, setRecentAnalyses] = useState<AnalysisRecord[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -198,9 +201,9 @@ export default function DashboardScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(500).delay(50)} style={styles.header}>
+      <Animated.View entering={FadeInDown.duration(500).delay(50)} style={[styles.header, { backgroundColor: colors.card }]}>
         {/* Gradient accent bar */}
         <View style={styles.headerGradient}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo }]} />
@@ -210,22 +213,32 @@ export default function DashboardScreen() {
           <View style={styles.logoBox}>
             <Ionicons name="mic" size={18} color={BrandColors.white} />
           </View>
-          <Text style={styles.headerTitle}>PERA-SAM</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>PERA-SAM</Text>
         </View>
 
-        {/* Notification Button */}
-        <TouchableOpacity
-          style={styles.notifBtn}
-          onPress={() => setShowNotifModal(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
-            size={22}
-            color={unreadCount > 0 ? BrandColors.indigo : BrandColors.foreground}
-          />
-          {unreadCount > 0 && <View style={styles.notifDot} />}
-        </TouchableOpacity>
+        {/* Right header actions: Theme Toggle & Notification Button */}
+        <View style={styles.headerRight}>
+          <ThemeToggle />
+          <TouchableOpacity
+            style={[
+              styles.notifBtn,
+              {
+                backgroundColor: isDark ? '#1e293b' : BrandColors.muted,
+                borderWidth: 1,
+                borderColor: isDark ? '#334155' : BrandColors.border,
+              },
+            ]}
+            onPress={() => setShowNotifModal(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
+              size={22}
+              color={unreadCount > 0 ? BrandColors.indigo : colors.foreground}
+            />
+            {unreadCount > 0 && <View style={styles.notifDot} />}
+          </TouchableOpacity>
+        </View>
       </Animated.View>
 
       <ScrollView
@@ -260,7 +273,7 @@ export default function DashboardScreen() {
 
         {/* Quick Stats */}
         <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.statsRow}>
-          <View style={[styles.statCard, { borderLeftColor: BrandColors.indigo }]}>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.indigo }]}>
             <Text style={[styles.statNumber, { color: BrandColors.indigo }]}>{totalCount}</Text>
             <Text style={styles.statLabel}>Total Analyses</Text>
           </View>
@@ -268,6 +281,8 @@ export default function DashboardScreen() {
             style={[
               styles.statCard,
               {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
                 borderLeftColor: lastStatus
                   ? StatusConfig[lastStatus].color
                   : BrandColors.mutedForeground,
@@ -293,61 +308,61 @@ export default function DashboardScreen() {
 
         {/* Quick Actions */}
         <Animated.View entering={FadeInDown.duration(500).delay(300)}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quick Actions</Text>
         </Animated.View>
         <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.actionsRow}>
           <TouchableOpacity
-            style={styles.actionCard}
+            style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={() => router.push('/(tabs)/analysis' as any)}
             activeOpacity={0.8}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.accentLight }]}>
               <Ionicons name="mic" size={24} color={BrandColors.accent} />
             </View>
-            <Text style={styles.actionTitle}>New Analysis</Text>
+            <Text style={[styles.actionTitle, { color: colors.foreground }]}>New Analysis</Text>
             <Text style={styles.actionDesc}>Upload audio</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionCard}
+            style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={() => router.push('/(tabs)/history' as any)}
             activeOpacity={0.8}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.purpleLight }]}>
               <Ionicons name="time" size={24} color={BrandColors.purple} />
             </View>
-            <Text style={styles.actionTitle}>History</Text>
+            <Text style={[styles.actionTitle, { color: colors.foreground }]}>History</Text>
             <Text style={styles.actionDesc}>Past results</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionCard}
+            style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={() => router.push('/(tabs)/map' as any)}
             activeOpacity={0.8}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.blueLight }]}>
               <Ionicons name="map" size={24} color={BrandColors.blue} />
             </View>
-            <Text style={styles.actionTitle}>Services</Text>
+            <Text style={[styles.actionTitle, { color: colors.foreground }]}>Services</Text>
             <Text style={styles.actionDesc}>Find nearby</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionCard}
+            style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={() => router.push('/(tabs)/appointments' as any)}
             activeOpacity={0.8}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.emeraldLight }]}>
               <Ionicons name="calendar" size={24} color={BrandColors.emerald} />
             </View>
-            <Text style={styles.actionTitle}>Appointments</Text>
+            <Text style={[styles.actionTitle, { color: colors.foreground }]}>Appointments</Text>
             <Text style={styles.actionDesc}>Schedule & track</Text>
           </TouchableOpacity>
         </Animated.View>
 
         {/* Recent Activity */}
         <Animated.View entering={FadeInDown.duration(500).delay(500)} style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Recent Activity</Text>
           {recentAnalyses.length > 0 && (
             <TouchableOpacity onPress={() => router.push('/(tabs)/history' as any)}>
               <Text style={styles.viewAllLink}>View All →</Text>
@@ -355,11 +370,11 @@ export default function DashboardScreen() {
           )}
         </Animated.View>
         {recentAnalyses.length === 0 ? (
-          <Animated.View entering={FadeInDown.duration(500).delay(600)} style={styles.emptyCard}>
+          <Animated.View entering={FadeInDown.duration(500).delay(600)} style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.emptyIconBg}>
               <Ionicons name="analytics-outline" size={40} color={BrandColors.indigo} />
             </View>
-            <Text style={styles.emptyTitle}>No analyses yet</Text>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No analyses yet</Text>
             <Text style={styles.emptyDesc}>
               Upload an audio file to get your first equipment health report.
             </Text>
@@ -377,10 +392,10 @@ export default function DashboardScreen() {
             const cfg = StatusConfig[item.status] || StatusConfig.normal;
             return (
               <Animated.View key={item.id} entering={FadeInRight.duration(400).delay(600 + idx * 100)}>
-                <View style={styles.activityCard}>
+                <View style={[styles.activityCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={[styles.activityDot, { backgroundColor: cfg.color }]} />
                   <View style={styles.activityInfo}>
-                    <Text style={styles.activityCategory}>
+                    <Text style={[styles.activityCategory, { color: colors.foreground }]}>
                       {item.category?.charAt(0).toUpperCase() + item.category?.slice(1) || 'Unknown'}
                     </Text>
                     <Text style={styles.activityDate}>
@@ -412,13 +427,13 @@ export default function DashboardScreen() {
         onRequestClose={() => setShowNotifModal(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowNotifModal(false)}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={[styles.modalContent, { backgroundColor: colors.card }]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHandle} />
 
             {/* Modal Header */}
             <View style={styles.notifHeader}>
               <View style={styles.notifHeaderTitleRow}>
-                <Text style={styles.notifHeaderTitle}>Notifications</Text>
+                <Text style={[styles.notifHeaderTitle, { color: colors.foreground }]}>Notifications</Text>
                 {unreadCount > 0 && (
                   <View style={styles.notifCountBadge}>
                     <Text style={styles.notifCountText}>{unreadCount} new</Text>
@@ -479,7 +494,11 @@ export default function DashboardScreen() {
 
                   return (
                     <TouchableOpacity
-                      style={[styles.notifCard, !item.isRead && styles.notifCardUnread]}
+                      style={[
+                        styles.notifCard,
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                        !item.isRead && styles.notifCardUnread,
+                      ]}
                       onPress={() => handleNotifPress(item)}
                       activeOpacity={0.8}
                     >
@@ -489,7 +508,7 @@ export default function DashboardScreen() {
                       </View>
                       <View style={styles.notifBody}>
                         <View style={styles.notifTopRow}>
-                          <Text style={styles.notifTitle}>{item.title}</Text>
+                          <Text style={[styles.notifTitle, { color: colors.foreground }]}>{item.title}</Text>
                           <Text style={styles.notifTime}>{item.time}</Text>
                         </View>
                         <Text style={styles.notifMsg} numberOfLines={2}>
@@ -531,6 +550,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   logoBox: {
     width: 34,
     height: 34,
