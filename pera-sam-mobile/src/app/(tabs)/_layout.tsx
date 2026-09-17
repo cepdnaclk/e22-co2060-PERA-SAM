@@ -66,7 +66,7 @@ function AnimatedTabIcon({
   unreadCount,
 }: {
   focused: boolean;
-  color: string;
+  color: any;
   tab: (typeof TAB_ITEMS)[number];
   unreadCount: number;
 }) {
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   iconActiveBg: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 14,
   },
   activeDot: {

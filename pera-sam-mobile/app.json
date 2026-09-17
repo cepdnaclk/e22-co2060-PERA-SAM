@@ -59,7 +59,10 @@
           "locationAlwaysAndWhenInUsePermission": "Allow PERA-SAM to use your location to find nearby service providers.",
           "locationWhenInUsePermission": "Allow PERA-SAM to use your location to find nearby service providers."
         }
-      ]
+      ],
+      "expo-image",
+      "expo-status-bar",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

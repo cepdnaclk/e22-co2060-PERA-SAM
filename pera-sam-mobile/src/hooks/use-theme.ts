@@ -8,7 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export function useTheme() {
   const scheme = useColorScheme();
-  const theme = scheme ?? 'light';
+  const theme = scheme === 'dark' ? 'dark' : 'light';
   const isDark = theme === 'dark';
   const brand = isDark ? DarkBrandColors : BrandColors;
 
