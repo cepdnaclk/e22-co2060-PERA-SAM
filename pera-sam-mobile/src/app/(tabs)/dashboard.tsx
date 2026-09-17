@@ -324,48 +324,48 @@ export default function DashboardScreen() {
         </Animated.View>
         <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.actionsRow}>
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+            style={styles.actionBtn}
             onPress={() => router.push('/(tabs)/analysis' as any)}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.accentLight }]}>
-              <Ionicons name="mic" size={24} color={BrandColors.accent} />
+              <Ionicons name="mic" size={26} color={BrandColors.accent} />
             </View>
             <Text style={[styles.actionTitle, { color: colors.foreground }]}>New Analysis</Text>
             <Text style={styles.actionDesc}>Upload audio</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+            style={styles.actionBtn}
             onPress={() => router.push('/(tabs)/history' as any)}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.purpleLight }]}>
-              <Ionicons name="time" size={24} color={BrandColors.purple} />
+              <Ionicons name="time" size={26} color={BrandColors.purple} />
             </View>
             <Text style={[styles.actionTitle, { color: colors.foreground }]}>History</Text>
             <Text style={styles.actionDesc}>Past results</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+            style={styles.actionBtn}
             onPress={() => router.push('/(tabs)/map' as any)}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.blueLight }]}>
-              <Ionicons name="map" size={24} color={BrandColors.blue} />
+              <Ionicons name="map" size={26} color={BrandColors.blue} />
             </View>
             <Text style={[styles.actionTitle, { color: colors.foreground }]}>Services</Text>
             <Text style={styles.actionDesc}>Find nearby</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+            style={styles.actionBtn}
             onPress={() => router.push('/(tabs)/appointments' as any)}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.emeraldLight }]}>
-              <Ionicons name="calendar" size={24} color={BrandColors.emerald} />
+              <Ionicons name="calendar" size={26} color={BrandColors.emerald} />
             </View>
             <Text style={[styles.actionTitle, { color: colors.foreground }]}>Appointments</Text>
             <Text style={styles.actionDesc}>Schedule & track</Text>
@@ -663,34 +663,38 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Actions
-  actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 28 },
-  actionCard: {
+  // Actions (borderless buttons without outer card box)
+  actionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 28,
+  },
+  actionBtn: {
     width: '48%',
-    backgroundColor: BrandColors.card,
-    borderRadius: BorderRadius.lg,
-    padding: 16,
     alignItems: 'center',
-    ...Shadows.md,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    paddingVertical: 12,
+    paddingHorizontal: 6,
   },
   actionIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
+    width: 58,
+    height: 58,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
+    ...Shadows.sm,
   },
   actionTitle: {
     ...Typography.label,
     color: BrandColors.foreground,
     marginBottom: 2,
+    textAlign: 'center',
   },
   actionDesc: {
     ...Typography.caption,
     color: BrandColors.mutedForeground,
+    textAlign: 'center',
   },
 
   // Empty
