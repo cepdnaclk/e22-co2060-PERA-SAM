@@ -89,12 +89,19 @@ class SoundAnalyzer:
                     if category not in self.models:
                         self.models[category] = {}
 
-                    self.models[category][machine_id] = tf.keras.models.load_model(model_path)
+                    try:
+                        model_obj = tf.keras.models.load_model(model_path, compile=False)
+                    except Exception:
+                        model_obj = tf.keras.models.load_model(model_path)
+                    self.models[category][machine_id] = model_obj
                     print(f"[OK] Model loaded: Category={category}, ID={machine_id} ({filename})")
                 else:
                     if "default" not in self.models:
-                        # Non-standard filename → load as default fallback model
-                        self.models["default"] = tf.keras.models.load_model(model_path)
+                        try:
+                            def_model = tf.keras.models.load_model(model_path, compile=False)
+                        except Exception:
+                            def_model = tf.keras.models.load_model(model_path)
+                        self.models["default"] = def_model
                         print(f"[OK] Default/fallback model loaded: {filename}")
             except Exception as e:
                 print(f"[WARN] Error loading model {filename}: {e}")

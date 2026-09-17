@@ -29,6 +29,7 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+*.log
 
 # Large binaries and model files
 mimii_baseline/pickle/
