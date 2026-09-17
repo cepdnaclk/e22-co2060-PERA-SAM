@@ -38,6 +38,9 @@ interface AnalysisRecord {
   status: AnalysisStatus;
   confidence: number;
   machine_id?: string;
+  anomaly_score?: number;
+  recommendation?: string;
+  details?: { filename?: string };
 }
 
 export interface AppNotification {
@@ -57,6 +60,9 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [recentAnalyses, setRecentAnalyses] = useState<AnalysisRecord[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+
+  // Detail modal state for recent activity
+  const [selectedRecord, setSelectedRecord] = useState<AnalysisRecord | null>(null);
 
   // Notification state
   const [showNotifModal, setShowNotifModal] = useState(false);
@@ -404,7 +410,11 @@ export default function DashboardScreen() {
             const cfg = StatusConfig[item.status] || StatusConfig.normal;
             return (
               <Animated.View key={item.id} entering={FadeInRight.duration(400).delay(600 + idx * 100)}>
-                <View style={[styles.activityCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <TouchableOpacity
+                  style={[styles.activityCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={() => setSelectedRecord(item)}
+                  activeOpacity={0.7}
+                >
                   <View style={[styles.activityDot, { backgroundColor: cfg.color }]} />
                   <View style={styles.activityInfo}>
                     <Text style={[styles.activityCategory, { color: colors.foreground }]}>
@@ -424,7 +434,8 @@ export default function DashboardScreen() {
                       {cfg.label}
                     </Text>
                   </View>
-                </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} style={{ marginLeft: 6 }} />
+                </TouchableOpacity>
               </Animated.View>
             );
           })
@@ -535,7 +546,106 @@ export default function DashboardScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* ─── Analysis Detail Modal ────────────────────────────────────────── */}
+      <Modal
+        visible={!!selectedRecord}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSelectedRecord(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setSelectedRecord(null)}>
+          <Pressable
+            style={[styles.modalContent, { backgroundColor: colors.card, maxHeight: '85%' }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {selectedRecord && (() => {
+              const cfg = StatusConfig[selectedRecord.status] || StatusConfig.normal;
+              return (
+                <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+                  {/* Modal handle */}
+                  <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
+
+                  {/* Modal Header */}
+                  <View style={styles.detailModalHeader}>
+                    <Text style={[styles.detailModalTitle, { color: colors.foreground }]}>Analysis Details</Text>
+                    <TouchableOpacity onPress={() => setSelectedRecord(null)}>
+                      <Ionicons name="close-circle" size={28} color={BrandColors.mutedForeground} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Status Hero */}
+                  <View style={[styles.modalHero, { backgroundColor: cfg.bg }]}>
+                    <View style={[styles.modalHeroIcon, { backgroundColor: cfg.color }]}>
+                      <Ionicons name={cfg.icon as any} size={24} color={BrandColors.white} />
+                    </View>
+                    <Text style={[styles.modalStatus, { color: cfg.color }]}>{cfg.label}</Text>
+                  </View>
+
+                  {/* Details Grid */}
+                  <View style={[styles.detailGrid, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <DetailRow label="Category" value={selectedRecord.category ? selectedRecord.category.charAt(0).toUpperCase() + selectedRecord.category.slice(1) : 'Unknown'} colors={colors} even />
+                    <DetailRow label="Machine ID" value={selectedRecord.machine_id || 'N/A'} colors={colors} />
+                    <DetailRow label="Health Score" value={`${selectedRecord.confidence?.toFixed(1) ?? '—'}%`} colors={colors} even />
+                    <DetailRow label="Anomaly Score" value={selectedRecord.anomaly_score?.toFixed(4) ?? 'N/A'} colors={colors} />
+                    <DetailRow label="File" value={selectedRecord.details?.filename || 'N/A'} colors={colors} even />
+                    <DetailRow
+                      label="Date"
+                      value={new Date(selectedRecord.created_at).toLocaleString()}
+                      colors={colors}
+                    />
+                  </View>
+
+                  {/* Recommendation */}
+                  {selectedRecord.recommendation && (
+                    <View style={styles.modalReco}>
+                      <View style={styles.modalRecoIconBg}>
+                        <Ionicons name="bulb" size={16} color={BrandColors.amber} />
+                      </View>
+                      <Text style={styles.modalRecoText}>{selectedRecord.recommendation}</Text>
+                    </View>
+                  )}
+
+                  {/* Action button to Find Service Provider if not normal */}
+                  {selectedRecord.status !== 'normal' && (
+                    <TouchableOpacity
+                      style={styles.modalActionBtn}
+                      onPress={() => {
+                        setSelectedRecord(null);
+                        router.push('/(tabs)/map' as any);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="construct-outline" size={18} color={BrandColors.white} />
+                      <Text style={styles.modalActionBtnText}>Find Service Provider</Text>
+                    </TouchableOpacity>
+                  )}
+                </ScrollView>
+              );
+            })()}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+  even,
+  colors,
+}: {
+  label: string;
+  value: string;
+  even?: boolean;
+  colors: any;
+}) {
+  return (
+    <View style={[styles.detailRow, { borderBottomColor: colors.border }, even && { backgroundColor: colors.background }]}>
+      <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: colors.foreground }]}>{value}</Text>
+    </View>
   );
 }
 
@@ -866,4 +976,104 @@ const styles = StyleSheet.create({
   notifEmpty: { alignItems: 'center', paddingVertical: 40, gap: 8 },
   notifEmptyTitle: { ...Typography.h3, color: BrandColors.foreground },
   notifEmptySub: { ...Typography.bodySmall, color: BrandColors.mutedForeground },
+
+  // ─── Analysis Detail Modal Styles ────────────────────────────────
+  detailModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  detailModalTitle: {
+    ...Typography.h2,
+    color: BrandColors.foreground,
+  },
+  modalHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 18,
+    borderRadius: BorderRadius.xl,
+    marginBottom: 20,
+  },
+  modalHeroIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalStatus: {
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  detailGrid: {
+    backgroundColor: BrandColors.card,
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: BrandColors.border,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: BrandColors.border,
+  },
+  detailLabel: {
+    ...Typography.bodySmall,
+    color: BrandColors.mutedForeground,
+  },
+  detailValue: {
+    ...Typography.label,
+    color: BrandColors.foreground,
+    maxWidth: '55%',
+    textAlign: 'right',
+  },
+  modalReco: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 16,
+    backgroundColor: BrandColors.amberLight,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.15)',
+    marginBottom: 16,
+  },
+  modalRecoIconBg: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: 'rgba(245,158,11,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalRecoText: {
+    flex: 1,
+    ...Typography.bodySmall,
+    color: BrandColors.amberDark,
+    lineHeight: 20,
+  },
+  modalActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: BrandColors.indigo,
+    paddingVertical: 14,
+    borderRadius: BorderRadius.lg,
+    marginTop: 4,
+    marginBottom: 16,
+    ...Shadows.glow(BrandColors.indigo),
+  },
+  modalActionBtnText: {
+    color: BrandColors.white,
+    fontWeight: '700',
+    fontSize: 15,
+  },
 });
