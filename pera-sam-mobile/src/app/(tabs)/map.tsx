@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useAuth } from '../../lib/AuthContext';
+import { useThemeContext } from '../../lib/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import {
   BrandColors,
@@ -68,6 +69,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function MapScreen() {
   const { user } = useAuth();
+  const { colors } = useThemeContext();
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -388,9 +390,9 @@ export default function MapScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+      <Animated.View entering={FadeInDown.duration(400)} style={[styles.header, { backgroundColor: colors.card }]}>
         {/* Gradient accent bar */}
         <View style={styles.headerGradient}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.blue }]} />

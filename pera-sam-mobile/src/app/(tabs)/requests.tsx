@@ -14,6 +14,7 @@ import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../lib/AuthContext';
+import { useThemeContext } from '../../lib/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import {
   BrandColors,
@@ -74,6 +75,7 @@ function parseDescription(desc: string): Record<string, string> {
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function RequestsScreen() {
   const { user } = useAuth();
+  const { colors } = useThemeContext();
   const params = useLocalSearchParams<{ requestProviderId?: string; requestProviderName?: string }>();
   const [requests, setRequests] = useState<RepairRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,7 +256,7 @@ export default function RequestsScreen() {
             </View>
 
             {/* Issue preview */}
-            <Text style={styles.issuePreview} numberOfLines={isExpanded ? undefined : 1}>
+            <Text style={[styles.issuePreview, { color: colors.foreground }]} numberOfLines={isExpanded ? undefined : 1}>
               {parsed['Issue'] || (item.description?.includes(':') ? 'Tap to view details' : item.description || 'No description')}
             </Text>
 
@@ -361,7 +363,7 @@ export default function RequestsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={BrandColors.indigo} />
           <Text style={styles.loadingText}>Loading requests...</Text>
@@ -371,9 +373,9 @@ export default function RequestsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+      <Animated.View entering={FadeInDown.duration(400)} style={[styles.header, { backgroundColor: colors.card }]}>
         {/* Gradient accent bar */}
         <View style={styles.headerGradient}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple }]} />

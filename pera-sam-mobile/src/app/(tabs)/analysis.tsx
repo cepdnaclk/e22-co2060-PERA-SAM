@@ -22,6 +22,7 @@ import {
 } from 'expo-audio';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../lib/AuthContext';
+import { useThemeContext } from '../../lib/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { getMlApiConfigError, getMlApiErrorMessage, mlApiUrl } from '../../lib/mlApi';
 import {
@@ -56,6 +57,7 @@ type AudioInput = {
 
 export default function AnalysisScreen() {
   const { user } = useAuth();
+  const { colors } = useThemeContext();
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const audioRecorderState = useAudioRecorderState(audioRecorder);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -244,9 +246,9 @@ export default function AnalysisScreen() {
   const recordingDuration = Math.max(0, Math.floor(audioRecorderState.durationMillis / 1000));
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+      <Animated.View entering={FadeInDown.duration(400)} style={[styles.header, { backgroundColor: colors.card }]}>
         {/* Gradient accent bar */}
         <View style={styles.headerGradient}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.accent }]} />
@@ -256,7 +258,7 @@ export default function AnalysisScreen() {
           <View style={styles.headerIconBg}>
             <Ionicons name="mic" size={18} color={BrandColors.white} />
           </View>
-          <Text style={styles.headerTitle}>Audio Analysis</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Audio Analysis</Text>
         </View>
         {result && (
           <TouchableOpacity style={styles.resetBtn} onPress={resetAnalysis}>
@@ -272,7 +274,7 @@ export default function AnalysisScreen() {
             {/* Step 1: Select Category */}
             <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.stepRow}>
               <StepBadge number={1} color={BrandColors.orange} />
-              <Text style={styles.stepTitle}>Select Equipment Type</Text>
+              <Text style={[styles.stepTitle, { color: colors.foreground }]}>Select Equipment Type</Text>
             </Animated.View>
             <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.categoryGrid}>
               {MachineCategories.map((cat) => (

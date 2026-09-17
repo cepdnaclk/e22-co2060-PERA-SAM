@@ -10,6 +10,7 @@ import {
   Modal,
   Pressable,
   FlatList,
+  ImageBackground,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { router } from 'expo-router';
@@ -27,6 +28,8 @@ import {
 import { FloatingOrb } from '../../components/AnimatedUI';
 import { useThemeContext } from '../../lib/ThemeContext';
 import { ThemeToggle } from '../../components/ThemeToggle';
+
+const dashboardBg = require('../../../assets/images/Dashboardbg.png');
 
 interface AnalysisRecord {
   id: string;
@@ -202,6 +205,15 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+      {/* Background Image Effect (matching website dashboard) */}
+      <ImageBackground
+        source={dashboardBg}
+        style={StyleSheet.absoluteFill}
+        imageStyle={{
+          opacity: isDark ? 0.08 : 0.04,
+          resizeMode: 'cover',
+        }}
+      />
       {/* Header */}
       <Animated.View entering={FadeInDown.duration(500).delay(50)} style={[styles.header, { backgroundColor: colors.card }]}>
         {/* Gradient accent bar */}

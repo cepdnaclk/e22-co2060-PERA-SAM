@@ -20,6 +20,8 @@ import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { BrandColors, BorderRadius } from '../constants/theme';
+import { useThemeContext } from '../lib/ThemeContext';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const WELCOME_STORAGE_KEY = '@perasam:welcomed';
@@ -90,6 +92,7 @@ function PulsingGlow() {
 }
 
 export default function WelcomeScreen() {
+  const { colors, isDark } = useThemeContext();
   const [step, setStep] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -130,12 +133,19 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Skip button */}
-      <TouchableOpacity style={styles.skipBtn} onPress={handleSkip} activeOpacity={0.75}>
-        <Text style={styles.skipText}>Skip</Text>
-        <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.6)" />
-      </TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: isDark ? '#0f172a' : colors.background }]}>
+      {/* Top right controls: ThemeToggle and Skip */}
+      <View style={styles.topControls}>
+        <ThemeToggle size={18} />
+        <TouchableOpacity
+          style={[styles.skipBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.06)' }]}
+          onPress={handleSkip}
+          activeOpacity={0.75}
+        >
+          <Text style={[styles.skipText, { color: isDark ? 'rgba(255,255,255,0.8)' : colors.foreground }]}>Skip</Text>
+          <Ionicons name="chevron-forward" size={14} color={isDark ? 'rgba(255,255,255,0.6)' : colors.mutedForeground} />
+        </TouchableOpacity>
+      </View>
 
       {/* Step 0: Mic icon with pulsing glow */}
       {step === 0 && (
@@ -162,12 +172,12 @@ export default function WelcomeScreen() {
           exiting={FadeOut.duration(300)}
           style={styles.stepContainer}
         >
-          <Text style={styles.brandTitle}>
+          <Text style={[styles.brandTitle, { color: isDark ? BrandColors.white : colors.foreground }]}>
             PERA
             <Text style={styles.brandDash}>—</Text>
             SAM
           </Text>
-          <Text style={styles.brandSubtitle}>Acoustic Intelligence Systems</Text>
+          <Text style={[styles.brandSubtitle, { color: isDark ? BrandColors.mutedForeground : colors.mutedForeground }]}>Acoustic Intelligence Systems</Text>
           <View style={styles.accentLine} />
         </Animated.View>
       )}
@@ -236,10 +246,13 @@ const styles = StyleSheet.create({
   },
 
   // Skip
+  topControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    zIndex: 10,
+  },
   skipBtn: {
-    position: 'absolute',
-    top: 56,
-    right: 24,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,

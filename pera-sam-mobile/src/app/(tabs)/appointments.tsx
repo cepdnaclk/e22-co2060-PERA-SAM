@@ -15,6 +15,7 @@ import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuth } from '../../lib/AuthContext';
+import { useThemeContext } from '../../lib/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import {
   BrandColors,
@@ -73,6 +74,7 @@ function parseDescription(desc: string): Record<string, string> {
 
 export default function AppointmentsScreen() {
   const { user } = useAuth();
+  const { colors } = useThemeContext();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -188,7 +190,7 @@ export default function AppointmentsScreen() {
     return (
       <Animated.View entering={FadeInRight.duration(400).delay(index * 80)}>
         <TouchableOpacity
-          style={[styles.card, isExpanded && styles.cardExpanded]}
+          style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, isExpanded && styles.cardExpanded]}
           onPress={() => setExpandedId(isExpanded ? null : item.id)}
           activeOpacity={0.7}
         >
@@ -204,7 +206,7 @@ export default function AppointmentsScreen() {
                 />
               </View>
               <View style={styles.cardInfo}>
-                <Text style={styles.clientName} numberOfLines={1}>
+                <Text style={[styles.clientName, { color: colors.foreground }]} numberOfLines={1}>
                   {item.profiles?.name || (isCompany ? 'Client' : 'Service Provider')}
                 </Text>
                 <Text style={styles.machineMeta}>
@@ -232,7 +234,7 @@ export default function AppointmentsScreen() {
               </View>
             </View>
 
-            <Text style={styles.issueText} numberOfLines={isExpanded ? undefined : 2}>
+            <Text style={[styles.issueText, { color: colors.foreground }]} numberOfLines={isExpanded ? undefined : 2}>
               {parsed['Issue'] || item.description || 'General maintenance check'}
             </Text>
 
@@ -308,7 +310,7 @@ export default function AppointmentsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={BrandColors.emerald} />
           <Text style={styles.loadingText}>Loading appointments...</Text>
@@ -318,8 +320,8 @@ export default function AppointmentsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+      <Animated.View entering={FadeInDown.duration(400)} style={[styles.header, { backgroundColor: colors.card }]}>
         <View style={styles.headerGradient}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.emerald }]} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.accent, opacity: 0.5 }]} />
@@ -328,7 +330,7 @@ export default function AppointmentsScreen() {
           <View style={styles.headerIconBg}>
             <Ionicons name="calendar" size={18} color={BrandColors.white} />
           </View>
-          <Text style={styles.headerTitle}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
             {isCompany ? 'Service Appointments' : 'My Appointments'}
           </Text>
         </View>
@@ -337,7 +339,7 @@ export default function AppointmentsScreen() {
         </View>
       </Animated.View>
 
-      <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.dateStripWrap}>
+      <Animated.View entering={FadeInDown.duration(500).delay(100)} style={[styles.dateStripWrap, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateStrip}>
           <TouchableOpacity
             style={[styles.dateChip, selectedDate === 'all' && styles.dateChipActive]}
@@ -360,15 +362,15 @@ export default function AppointmentsScreen() {
       </Animated.View>
 
       <Animated.View entering={FadeInDown.duration(500).delay(150)} style={styles.statsRow}>
-        <View style={[styles.statCard, { borderLeftColor: BrandColors.amber }]}>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.amber }]}>
           <Text style={[styles.statNumber, { color: BrandColors.amber }]}>{stats.pending}</Text>
           <Text style={styles.statLabel}>Pending</Text>
         </View>
-        <View style={[styles.statCard, { borderLeftColor: BrandColors.blue }]}>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.blue }]}>
           <Text style={[styles.statNumber, { color: BrandColors.blue }]}>{stats.accepted}</Text>
           <Text style={styles.statLabel}>Confirmed</Text>
         </View>
-        <View style={[styles.statCard, { borderLeftColor: BrandColors.emerald }]}>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.emerald }]}>
           <Text style={[styles.statNumber, { color: BrandColors.emerald }]}>{stats.completed}</Text>
           <Text style={styles.statLabel}>Done</Text>
         </View>
@@ -406,7 +408,7 @@ export default function AppointmentsScreen() {
             <View style={styles.emptyIconCircle}>
               <Ionicons name="calendar-outline" size={44} color={BrandColors.emerald} />
             </View>
-            <Text style={styles.emptyTitle}>No appointments found</Text>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No appointments found</Text>
             <Text style={styles.emptyDesc}>
               {selectedFilter !== 'all' || selectedDate !== 'all'
                 ? 'Try adjusting your date or status filters.'

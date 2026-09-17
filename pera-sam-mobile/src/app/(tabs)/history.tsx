@@ -15,6 +15,7 @@ import {
 import Animated, { FadeInRight, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../lib/AuthContext';
+import { useThemeContext } from '../../lib/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import {
   BrandColors,
@@ -46,6 +47,7 @@ interface AnalysisRecord {
 
 export default function HistoryScreen() {
   const { user } = useAuth();
+  const { colors } = useThemeContext();
   const [records, setRecords] = useState<AnalysisRecord[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<AnalysisRecord | null>(null);
@@ -97,7 +99,7 @@ export default function HistoryScreen() {
     return (
       <Animated.View entering={FadeInRight.duration(400).delay(index * 80)}>
         <TouchableOpacity
-          style={styles.card}
+          style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
           onPress={() => setSelectedRecord(item)}
           activeOpacity={0.7}
         >
@@ -107,7 +109,7 @@ export default function HistoryScreen() {
           <View style={styles.cardBody}>
             <View style={styles.cardTop}>
               <View style={styles.cardInfo}>
-                <Text style={styles.cardCategory}>
+                <Text style={[styles.cardCategory, { color: colors.foreground }]}>
                   {item.category?.charAt(0).toUpperCase() + item.category?.slice(1) || 'Unknown'}
                 </Text>
                 <Text style={styles.cardMachine}>
@@ -153,7 +155,7 @@ export default function HistoryScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
       <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
         {/* Gradient accent bar */}
