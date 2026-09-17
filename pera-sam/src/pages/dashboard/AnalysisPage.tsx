@@ -30,11 +30,11 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 
-const categories = [
+const defaultCategories = [
   { id: 'fan',             label: 'Industrial Fan',    ids: ['00', '02', '04', '06'], modelStatus: 'calibrated' },
-  { id: 'pump',            label: 'Industrial Pump',   ids: ['00', '02', '04', '06'], modelStatus: 'fallback'   },
-  { id: 'slider',          label: 'Slide Rail',        ids: ['00', '02', '04', '06'], modelStatus: 'fallback'   },
-  { id: 'valve',           label: 'Industrial Valve',  ids: ['00', '02', '04', '06'], modelStatus: 'fallback'   },
+  { id: 'pump',            label: 'Industrial Pump',   ids: ['00', '02', '04', '06'], modelStatus: 'calibrated' },
+  { id: 'slider',          label: 'Slide Rail',        ids: ['00', '02', '04', '06'], modelStatus: 'calibrated' },
+  { id: 'valve',           label: 'Industrial Valve',  ids: ['00', '02', '04', '06'], modelStatus: 'calibrated' },
   { id: 'vehicle_bearing', label: 'Vehicle Bearing',   ids: ['00'],                   modelStatus: 'fallback'   },
 ];
 
@@ -86,6 +86,44 @@ export const AnalysisPage = () => {
       }
     };
   }, [audioUrl]);
+
+  const [categories, setCategories] = useState(defaultCategories);
+
+  useEffect(() => {
+    const fetchModelStatus = async () => {
+      const configuredUrl = (import.meta.env.VITE_ML_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+      const localUrl = 'http://localhost:8000';
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const candidates = isLocalhost
+        ? [localUrl, configuredUrl].filter((u, i, a) => u && a.indexOf(u) === i)
+        : [configuredUrl, localUrl].filter((u, i, a) => u && a.indexOf(u) === i);
+
+      for (const apiUrl of candidates) {
+        try {
+          const res = await fetch(`${apiUrl}/models`, { signal: AbortSignal.timeout(2000) });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.supported_categories) {
+              setCategories(prev => prev.map(cat => {
+                const info = data.supported_categories[cat.id];
+                if (info) {
+                  return {
+                    ...cat,
+                    modelStatus: info.status as 'calibrated' | 'fallback',
+                  };
+                }
+                return cat;
+              }));
+              break;
+            }
+          }
+        } catch (err) {
+          // try next candidate
+        }
+      }
+    };
+    fetchModelStatus();
+  }, []);
 
   const selectedCategory = categories.find(c => c.id === category);
 
@@ -172,28 +210,51 @@ export const AnalysisPage = () => {
       formData.append('category', category);
       if (machineId) formData.append('machine_id', machineId);
 
-      const mlApiUrl = import.meta.env.VITE_ML_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${mlApiUrl}/analyze`, {
-        method: 'POST',
-        body: formData,
-      });
+      const configuredUrl = (import.meta.env.VITE_ML_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+      const localUrl = 'http://localhost:8000';
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
+      const endpointsToTry: string[] = isLocalhost
+        ? [localUrl, configuredUrl].filter((u, i, a) => u && a.indexOf(u) === i)
+        : [configuredUrl, localUrl].filter((u, i, a) => u && a.indexOf(u) === i);
+
+      let data: any = null;
+      let lastError: Error | null = null;
+
+      for (const targetUrl of endpointsToTry) {
+        try {
+          const response = await fetch(`${targetUrl}/analyze`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error(`Server at ${targetUrl} responded with ${response.status}`);
+          }
+
+          const resData = await response.json();
+
+          if (resData.status === 'Error') {
+            throw new Error(resData.message);
+          }
+
+          if (resData.analysis && resData.analysis.status === 'No Model') {
+            throw new Error(resData.analysis.message);
+          }
+
+          data = resData;
+          break;
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`Analysis failed on ${targetUrl}, trying fallback if available:`, err.message);
+        }
       }
 
-      const data = await response.json();
-
-      if (data.status === 'Error') {
-        throw new Error(data.message);
+      if (!data) {
+        throw lastError || new Error('All analysis backends unavailable');
       }
 
       const analysis = data.analysis;
-
-      // Handle the case where the model might not be found
-      if (analysis.status === 'No Model') {
-        throw new Error(analysis.message);
-      }
 
       const status: 'normal' | 'warning' | 'abnormal' =
         analysis.status === 'Normal' ? 'normal' :
@@ -266,7 +327,7 @@ export const AnalysisPage = () => {
       }
     } catch (error: any) {
       console.error('Analysis failed:', error);
-      toast.error(`Backend Error: ${error.message}. Make sure server is running on ${import.meta.env.VITE_ML_API_URL || 'http://localhost:8000'}`);
+      toast.error(error.message || 'Analysis failed. Please check backend connection.');
     } finally {
       setIsAnalyzing(false);
       console.log("AnalysisPage: Analysis process finished.");

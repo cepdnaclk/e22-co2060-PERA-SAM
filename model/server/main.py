@@ -134,20 +134,25 @@ async def root():
 
 @app.get("/models", summary="Available Models")
 async def get_models():
-    """Returns all available machine categories and their associated IDs."""
+    """Returns all supported machine categories, their IDs, and model availability status."""
     if not analyzer:
-        return {"categories": {}, "metrics_available": []}
+        return {"categories": {}, "metrics_available": [], "supported_categories": {}}
 
-    model_structure = {}
+    # Supported categories with live availability info
+    supported = analyzer.get_supported_categories()
+
+    # Also expose which raw model files are actually loaded
+    loaded_models = {}
     for category, ids in analyzer.models.items():
         if category == "default":
-            model_structure["default"] = ["Standard"]
+            loaded_models["default"] = ["Standard"]
         else:
-            model_structure[category] = list(ids.keys())
+            loaded_models[category] = list(ids.keys())
 
     return {
-        "categories": model_structure,
-        "metrics_available": list(analyzer.metrics.keys()),
+        "categories":          loaded_models,
+        "supported_categories": supported,
+        "metrics_available":   list(analyzer.metrics.keys()),
     }
 
 
