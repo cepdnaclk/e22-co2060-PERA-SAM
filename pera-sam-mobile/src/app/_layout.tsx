@@ -30,6 +30,9 @@ function RootNavigator() {
       <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
         <Stack.Screen name="index" options={{ title: 'Login' }} />
         <Stack.Screen name="register" options={{ title: 'Register' }} />
+        <Stack.Screen name="forgot-password" options={{ title: 'Forgot Password', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="reset-password" options={{ title: 'Reset Password', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="welcome" options={{ title: 'Welcome', animation: 'fade' }} />
         <Stack.Screen name="(tabs)" options={{ title: 'Home' }} />
         <Stack.Screen
           name="chat"

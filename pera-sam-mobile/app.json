@@ -8,9 +8,11 @@
     "scheme": "perasammobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "com.perasam.mobile",
+      "icon": "./assets/images/icon.png"
     },
     "android": {
+      "package": "com.perasam.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -38,6 +40,13 @@
       "expo-font",
       "expo-web-browser",
       "expo-document-picker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow PERA-SAM to access your photos to update your profile picture.",
+          "cameraPermission": "Allow PERA-SAM to access your camera to take a profile picture."
+        }
+      ],
       [
         "expo-audio",
         {

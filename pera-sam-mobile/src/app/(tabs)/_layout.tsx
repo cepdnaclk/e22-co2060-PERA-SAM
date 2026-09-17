@@ -6,7 +6,6 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
-  interpolateColor,
 } from 'react-native-reanimated';
 import { BrandColors } from '../../constants/theme';
 import { useEffect, useState } from 'react';
@@ -30,7 +29,7 @@ const TAB_ITEMS: {
 ];
 
 // Hidden tabs that remain navigable but don't show in the bottom bar
-const HIDDEN_TABS = ['history'];
+const HIDDEN_TABS = ['history', 'appointments'];
 
 // ── Animated Badge ──────────────────────────────────────────────────────────
 function AnimatedBadge({ count }: { count: number }) {

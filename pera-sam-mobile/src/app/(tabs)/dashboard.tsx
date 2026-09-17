@@ -331,6 +331,18 @@ export default function DashboardScreen() {
             <Text style={styles.actionTitle}>Services</Text>
             <Text style={styles.actionDesc}>Find nearby</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => router.push('/(tabs)/appointments' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: BrandColors.emeraldLight }]}>
+              <Ionicons name="calendar" size={24} color={BrandColors.emerald} />
+            </View>
+            <Text style={styles.actionTitle}>Appointments</Text>
+            <Text style={styles.actionDesc}>Schedule & track</Text>
+          </TouchableOpacity>
         </Animated.View>
 
         {/* Recent Activity */}
@@ -620,12 +632,12 @@ const styles = StyleSheet.create({
   },
 
   // Actions
-  actionsRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
+  actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 28 },
   actionCard: {
-    flex: 1,
+    width: '48%',
     backgroundColor: BrandColors.card,
     borderRadius: BorderRadius.lg,
-    padding: 18,
+    padding: 16,
     alignItems: 'center',
     ...Shadows.md,
     borderWidth: 1,
