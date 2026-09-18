@@ -27,6 +27,7 @@ import {
   Shadows,
 } from '../../constants/theme';
 import { useScalePress } from '../../components/AnimatedUI';
+import { ThemeToggle } from '../../components/ThemeToggle';
 
 
 
@@ -69,7 +70,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function MapScreen() {
   const { user } = useAuth();
-  const { colors } = useThemeContext();
+  const { colors, isDark } = useThemeContext();
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -271,7 +272,11 @@ export default function MapScreen() {
     return (
       <Animated.View entering={FadeInRight.duration(400).delay(index * 100)}>
         <TouchableOpacity
-          style={[styles.providerCard, isExpanded && styles.providerCardExpanded]}
+          style={[
+            styles.providerCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            isExpanded && [styles.providerCardExpanded, { borderColor: BrandColors.indigo + '50' }],
+          ]}
           onPress={() => setExpandedId(isExpanded ? null : item.id)}
           activeOpacity={0.7}
         >
@@ -283,10 +288,10 @@ export default function MapScreen() {
               </Text>
             </View>
             <View style={styles.providerInfo}>
-              <Text style={styles.providerName} numberOfLines={1}>{item.name}</Text>
+              <Text style={[styles.providerName, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
               <View style={styles.providerMeta}>
-                <Ionicons name="location-outline" size={12} color={BrandColors.mutedForeground} />
-                <Text style={styles.providerAddress} numberOfLines={1}>{item.address}</Text>
+                <Ionicons name="location-outline" size={12} color={colors.mutedForeground} />
+                <Text style={[styles.providerAddress, { color: colors.mutedForeground }]} numberOfLines={1}>{item.address}</Text>
               </View>
             </View>
             <View style={styles.distanceBadge}>
@@ -299,8 +304,8 @@ export default function MapScreen() {
           <View style={styles.providerDetails}>
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={14} color={BrandColors.amber} />
-              <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
-              <Text style={styles.reviewsText}>({item.reviews})</Text>
+              <Text style={[styles.ratingText, { color: colors.foreground }]}>{item.rating.toFixed(1)}</Text>
+              <Text style={[styles.reviewsText, { color: colors.mutedForeground }]}>({item.reviews})</Text>
             </View>
             <ScrollView
               horizontal
@@ -311,27 +316,27 @@ export default function MapScreen() {
                 const catConfig = SERVICE_CATEGORIES.find(c => c.id === cat);
                 return (
                   <View key={cat} style={[styles.categoryPill, { backgroundColor: (catConfig?.color || BrandColors.muted) + '15' }]}>
-                    <Text style={[styles.categoryPillText, { color: catConfig?.color || BrandColors.mutedForeground }]}>
+                    <Text style={[styles.categoryPillText, { color: catConfig?.color || colors.mutedForeground }]}>
                       {cat.charAt(0).toUpperCase() + cat.slice(1).replace('_', ' ')}
                     </Text>
                   </View>
                 );
               })}
               {item.categories.length > 3 && (
-                <Text style={styles.moreCats}>+{item.categories.length - 3}</Text>
+                <Text style={[styles.moreCats, { color: colors.mutedForeground }]}>+{item.categories.length - 3}</Text>
               )}
             </ScrollView>
           </View>
 
           {/* Expanded Actions */}
           {isExpanded && (
-            <View style={styles.expandedSection}>
+            <View style={[styles.expandedSection, { borderTopColor: colors.border }]}>
               {/* Contact info */}
               <View style={styles.contactRow}>
                 <View style={styles.contactIconBg}>
                   <Ionicons name="call-outline" size={14} color={BrandColors.emerald} />
                 </View>
-                <Text style={styles.contactText}>{item.phone}</Text>
+                <Text style={[styles.contactText, { color: colors.foreground }]}>{item.phone}</Text>
               </View>
 
               {/* Action Buttons */}
@@ -356,7 +361,7 @@ export default function MapScreen() {
                 </Animated.View>
 
                 <TouchableOpacity
-                  style={styles.actionBtnSecondary}
+                  style={[styles.actionBtnSecondary, { backgroundColor: colors.card }]}
                   onPress={() => openInMaps(item.lat, item.lng, item.name)}
                 >
                   <Ionicons name="map-outline" size={16} color={BrandColors.blue} />
@@ -366,7 +371,7 @@ export default function MapScreen() {
 
               {item.phone !== 'N/A' && (
                 <TouchableOpacity
-                  style={styles.callBtn}
+                  style={[styles.callBtn, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}
                   onPress={() => Linking.openURL(`tel:${item.phone}`)}
                 >
                   <Ionicons name="call" size={14} color={BrandColors.emerald} />
@@ -381,7 +386,7 @@ export default function MapScreen() {
             <Ionicons
               name={isExpanded ? 'chevron-up' : 'chevron-down'}
               size={16}
-              color={BrandColors.border}
+              color={colors.mutedForeground}
             />
           </View>
         </TouchableOpacity>
@@ -402,38 +407,41 @@ export default function MapScreen() {
           <View style={styles.headerIconBg}>
             <Ionicons name="map" size={18} color={BrandColors.white} />
           </View>
-          <Text style={styles.headerTitle}>Find Services</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Find Services</Text>
         </View>
-        <View style={[styles.locationBadge, { backgroundColor: locationStatus === 'granted' ? BrandColors.emeraldLight : BrandColors.muted }]}>
-          <Ionicons
-            name={locationStatus === 'granted' ? 'location' : 'location-outline'}
-            size={14}
-            color={locationStatus === 'granted' ? BrandColors.emerald : BrandColors.mutedForeground}
-          />
-          <Text style={[
-            styles.locationText,
-            { color: locationStatus === 'granted' ? BrandColors.emerald : BrandColors.mutedForeground },
-          ]}>
-            {locationStatus === 'granted' ? 'GPS Active' : 'Default'}
-          </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <ThemeToggle />
+          <View style={[styles.locationBadge, { backgroundColor: locationStatus === 'granted' ? BrandColors.emeraldLight : (isDark ? colors.background : BrandColors.muted) }]}>
+            <Ionicons
+              name={locationStatus === 'granted' ? 'location' : 'location-outline'}
+              size={14}
+              color={locationStatus === 'granted' ? BrandColors.emerald : colors.mutedForeground}
+            />
+            <Text style={[
+              styles.locationText,
+              { color: locationStatus === 'granted' ? BrandColors.emerald : colors.mutedForeground },
+            ]}>
+              {locationStatus === 'granted' ? 'GPS Active' : 'Default'}
+            </Text>
+          </View>
         </View>
       </Animated.View>
 
       {/* Search */}
       <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.searchSection}>
-        <View style={styles.searchWrap}>
+        <View style={[styles.searchWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Ionicons name="search-outline" size={18} color={BrandColors.indigo} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.foreground }]}
             placeholder="Search by name or location..."
-            placeholderTextColor={BrandColors.mutedForeground}
+            placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color={BrandColors.mutedForeground} />
+              <Ionicons name="close-circle" size={18} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
@@ -451,7 +459,8 @@ export default function MapScreen() {
               key={cat.id}
               style={[
                 styles.catChip,
-                selectedCategory === cat.id && { backgroundColor: cat.color },
+                { backgroundColor: colors.card, borderColor: colors.border },
+                selectedCategory === cat.id && { backgroundColor: cat.color, borderColor: cat.color },
               ]}
               onPress={() => setSelectedCategory(cat.id)}
             >
@@ -463,6 +472,7 @@ export default function MapScreen() {
               <Text
                 style={[
                   styles.catChipText,
+                  { color: colors.mutedForeground },
                   selectedCategory === cat.id && styles.catChipTextActive,
                 ]}
               >
@@ -475,7 +485,7 @@ export default function MapScreen() {
 
       {/* Results count */}
       <View style={styles.resultsBar}>
-        <Text style={styles.resultsText}>
+        <Text style={[styles.resultsText, { color: colors.mutedForeground }]}>
           {filteredProviders.length} provider{filteredProviders.length !== 1 ? 's' : ''} found
         </Text>
       </View>
@@ -505,8 +515,8 @@ export default function MapScreen() {
               <View style={styles.emptyIconBg}>
                 <Ionicons name="search-outline" size={44} color={BrandColors.indigo} />
               </View>
-              <Text style={styles.emptyTitle}>No providers found</Text>
-              <Text style={styles.emptyDesc}>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No providers found</Text>
+              <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>
                 {searchQuery
                   ? 'Try a different search term or category.'
                   : 'No service providers registered yet.'}

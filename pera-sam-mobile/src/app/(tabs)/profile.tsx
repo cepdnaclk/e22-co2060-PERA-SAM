@@ -29,6 +29,8 @@ import {
   MachineCategories,
 } from '../../constants/theme';
 import { FloatingOrb } from '../../components/AnimatedUI';
+import { useThemeContext } from '../../lib/ThemeContext';
+import { ThemeToggle } from '../../components/ThemeToggle';
 import {
   fetchProfile,
   updateProfile,
@@ -66,6 +68,7 @@ const SECTIONS: { key: SectionKey; label: string; icon: string; color: string }[
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const { colors, isDark } = useThemeContext();
   const mlApiConfigError = getMlApiConfigError();
 
   // Active settings tab
@@ -287,13 +290,13 @@ export default function ProfileScreen() {
   // ────────────────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: colors.background }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* ── Header ──────────────────────────────────────────────────────── */}
-        <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+        <Animated.View entering={FadeInDown.duration(400)} style={[styles.header, { backgroundColor: colors.card, justifyContent: 'space-between' }]}>
           {/* Teal gradient accent bar */}
           <View style={styles.headerAccentBar}>
             <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.accent }]} />
@@ -306,12 +309,13 @@ export default function ProfileScreen() {
               <Ionicons name="person" size={18} color={BrandColors.white} />
             </View>
             <View>
-              <Text style={styles.headerTitle}>Profile & Settings</Text>
-              <Text style={styles.headerSub} numberOfLines={1}>
+              <Text style={[styles.headerTitle, { color: colors.foreground }]}>Profile & Settings</Text>
+              <Text style={[styles.headerSub, { color: colors.mutedForeground }]} numberOfLines={1}>
                 {email}
               </Text>
             </View>
           </View>
+          <ThemeToggle />
         </Animated.View>
 
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
@@ -385,6 +389,7 @@ export default function ProfileScreen() {
                     key={s.key}
                     style={[
                       styles.tabChip,
+                      { backgroundColor: colors.card, borderColor: colors.border },
                       active && { backgroundColor: s.color, borderColor: s.color },
                     ]}
                     onPress={() => setActiveSection(s.key)}
@@ -393,9 +398,9 @@ export default function ProfileScreen() {
                     <Ionicons
                       name={s.icon as any}
                       size={14}
-                      color={active ? BrandColors.white : BrandColors.mutedForeground}
+                      color={active ? BrandColors.white : colors.mutedForeground}
                     />
-                    <Text style={[styles.tabChipText, active && { color: BrandColors.white }]}>
+                    <Text style={[styles.tabChipText, { color: colors.mutedForeground }, active && { color: BrandColors.white }]}>
                       {s.label}
                     </Text>
                   </TouchableOpacity>
@@ -473,8 +478,8 @@ export default function ProfileScreen() {
                             style={[
                               styles.categoryChip,
                               {
-                                borderColor: selected ? cat.color : BrandColors.border,
-                                backgroundColor: selected ? cat.bg : BrandColors.card,
+                                borderColor: selected ? cat.color : colors.border,
+                                backgroundColor: selected ? cat.bg : colors.card,
                               },
                             ]}
                             onPress={() => toggleCategory(cat.value)}
@@ -483,12 +488,12 @@ export default function ProfileScreen() {
                             <Ionicons
                               name={cat.icon as any}
                               size={16}
-                              color={selected ? cat.color : BrandColors.mutedForeground}
+                              color={selected ? cat.color : colors.mutedForeground}
                             />
                             <Text
                               style={[
                                 styles.categoryChipText,
-                                { color: selected ? cat.color : BrandColors.mutedForeground },
+                                { color: selected ? cat.color : colors.mutedForeground },
                               ]}
                             >
                               {cat.label}
@@ -532,62 +537,62 @@ export default function ProfileScreen() {
               <SectionCard title="Change Password" icon="lock-closed-outline" iconColor={BrandColors.purple}>
                 <FieldLabel>New Password</FieldLabel>
                 <View style={styles.passwordRow}>
-                  <View style={[styles.inputWrapper, { flex: 1 }]}>
+                  <View style={[styles.inputWrapper, { flex: 1, backgroundColor: isDark ? colors.background : BrandColors.muted, borderColor: colors.border }]}>
                     <Ionicons
                       name="lock-closed-outline"
                       size={16}
-                      color={BrandColors.mutedForeground}
+                      color={colors.mutedForeground}
                       style={styles.inputIcon}
                     />
                     <TextInput
-                      style={styles.textInputInner}
+                      style={[styles.textInputInner, { color: colors.foreground }]}
                       value={newPassword}
                       onChangeText={setNewPassword}
                       placeholder="Min. 6 characters"
-                      placeholderTextColor={BrandColors.mutedForeground}
+                      placeholderTextColor={colors.mutedForeground}
                       secureTextEntry={!showNewPassword}
                       autoCapitalize="none"
                     />
                   </View>
                   <TouchableOpacity
-                    style={styles.eyeBtn}
+                    style={[styles.eyeBtn, { backgroundColor: isDark ? colors.background : BrandColors.muted, borderColor: colors.border }]}
                     onPress={() => setShowNewPassword((v) => !v)}
                   >
                     <Ionicons
                       name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
                       size={20}
-                      color={BrandColors.mutedForeground}
+                      color={colors.mutedForeground}
                     />
                   </TouchableOpacity>
                 </View>
 
                 <FieldLabel>Confirm New Password</FieldLabel>
                 <View style={styles.passwordRow}>
-                  <View style={[styles.inputWrapper, { flex: 1 }]}>
+                  <View style={[styles.inputWrapper, { flex: 1, backgroundColor: isDark ? colors.background : BrandColors.muted, borderColor: colors.border }]}>
                     <Ionicons
                       name="lock-closed-outline"
                       size={16}
-                      color={BrandColors.mutedForeground}
+                      color={colors.mutedForeground}
                       style={styles.inputIcon}
                     />
                     <TextInput
-                      style={styles.textInputInner}
+                      style={[styles.textInputInner, { color: colors.foreground }]}
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
                       placeholder="Repeat new password"
-                      placeholderTextColor={BrandColors.mutedForeground}
+                      placeholderTextColor={colors.mutedForeground}
                       secureTextEntry={!showConfirmPassword}
                       autoCapitalize="none"
                     />
                   </View>
                   <TouchableOpacity
-                    style={styles.eyeBtn}
+                    style={[styles.eyeBtn, { backgroundColor: isDark ? colors.background : BrandColors.muted, borderColor: colors.border }]}
                     onPress={() => setShowConfirmPassword((v) => !v)}
                   >
                     <Ionicons
                       name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
                       size={20}
-                      color={BrandColors.mutedForeground}
+                      color={colors.mutedForeground}
                     />
                   </TouchableOpacity>
                 </View>
@@ -742,12 +747,12 @@ export default function ProfileScreen() {
               </SectionCard>
 
               {/* Tech Stack */}
-              <Text style={styles.sectionLabel}>Technologies</Text>
+              <Text style={[styles.sectionLabel, { color: colors.foreground }]}>Technologies</Text>
               <View style={styles.techGrid}>
                 {TECH_ITEMS.map((tech) => (
                   <View
                     key={tech.name}
-                    style={[styles.techChip, { borderColor: `${tech.color}30` }]}
+                    style={[styles.techChip, { backgroundColor: colors.card, borderColor: `${tech.color}40` }]}
                   >
                     <Ionicons name={tech.icon as any} size={14} color={tech.color} />
                     <Text style={[styles.techChipText, { color: tech.color }]}>{tech.name}</Text>
@@ -808,7 +813,10 @@ export default function ProfileScreen() {
 
               {/* Sign Out */}
               <TouchableOpacity
-                style={styles.signOutBtn}
+                style={[
+                  styles.signOutBtn,
+                  isDark && { backgroundColor: 'rgba(244,63,94,0.12)', borderColor: 'rgba(244,63,94,0.3)' },
+                ]}
                 onPress={handleSignOut}
                 activeOpacity={0.85}
               >
@@ -819,7 +827,7 @@ export default function ProfileScreen() {
           )}
 
           {/* Footer */}
-          <Text style={styles.footer}>
+          <Text style={[styles.footer, { color: colors.mutedForeground }]}>
             PERA-SAM — Predictive Equipment Reliability{'\n'}& Acoustics Sound Analysis Manager
           </Text>
         </ScrollView>
@@ -841,21 +849,23 @@ function SectionCard({
   iconColor?: string;
   children: React.ReactNode;
 }) {
+  const { colors } = useThemeContext();
   return (
     <>
       <View style={styles.sectionHeaderRow}>
         <View style={[styles.sectionIconBg, { backgroundColor: (iconColor || BrandColors.indigo) + '18' }]}>
           <Ionicons name={icon as any} size={15} color={iconColor || BrandColors.indigo} />
         </View>
-        <Text style={styles.sectionLabel}>{title}</Text>
+        <Text style={[styles.sectionLabel, { color: colors.foreground }]}>{title}</Text>
       </View>
-      <View style={styles.card}>{children}</View>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>{children}</View>
     </>
   );
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.fieldLabel}>{children}</Text>;
+  const { colors } = useThemeContext();
+  return <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{children}</Text>;
 }
 
 function StyledInput({
@@ -873,22 +883,36 @@ function StyledInput({
   keyboardType?: any;
   multiline?: boolean;
 }) {
+  const { colors, isDark } = useThemeContext();
   return (
-    <View style={[styles.inputWrapper, multiline && { height: 72, alignItems: 'flex-start' }]}>
+    <View
+      style={[
+        styles.inputWrapper,
+        {
+          backgroundColor: isDark ? colors.background : BrandColors.muted,
+          borderColor: colors.border,
+        },
+        multiline && { height: 72, alignItems: 'flex-start' },
+      ]}
+    >
       {icon && (
         <Ionicons
           name={icon as any}
           size={16}
-          color={BrandColors.mutedForeground}
+          color={colors.mutedForeground}
           style={[styles.inputIcon, multiline && { marginTop: 14 }]}
         />
       )}
       <TextInput
-        style={[styles.textInputInner, multiline && { height: 60, textAlignVertical: 'top' }]}
+        style={[
+          styles.textInputInner,
+          { color: colors.foreground },
+          multiline && { height: 60, textAlignVertical: 'top' },
+        ]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={BrandColors.mutedForeground}
+        placeholderTextColor={colors.mutedForeground}
         keyboardType={keyboardType}
         multiline={multiline}
         autoCapitalize="none"
@@ -914,21 +938,22 @@ function ToggleRow({
   onValueChange: (v: boolean) => void;
   last?: boolean;
 }) {
+  const { colors } = useThemeContext();
   return (
-    <View style={[styles.toggleRow, last && { borderBottomWidth: 0 }]}>
+    <View style={[styles.toggleRow, { borderBottomColor: colors.border }, last && { borderBottomWidth: 0 }]}>
       <View style={[styles.settingsIconBg, { backgroundColor: (iconColor || BrandColors.indigo) + '18' }]}>
         <Ionicons name={icon as any} size={16} color={iconColor || BrandColors.indigo} />
       </View>
       <View style={styles.toggleLabelBlock}>
-        <Text style={styles.toggleLabel}>{label}</Text>
-        <Text style={styles.toggleDesc}>{description}</Text>
+        <Text style={[styles.toggleLabel, { color: colors.foreground }]}>{label}</Text>
+        <Text style={[styles.toggleDesc, { color: colors.mutedForeground }]}>{description}</Text>
       </View>
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: BrandColors.border, true: BrandColors.indigo + '80' }}
-        thumbColor={value ? BrandColors.indigo : BrandColors.mutedForeground}
-        ios_backgroundColor={BrandColors.border}
+        trackColor={{ false: colors.border, true: BrandColors.indigo + '80' }}
+        thumbColor={value ? BrandColors.indigo : colors.mutedForeground}
+        ios_backgroundColor={colors.border}
       />
     </View>
   );
@@ -949,16 +974,17 @@ function InfoRow({
   iconColor?: string;
   last?: boolean;
 }) {
+  const { colors } = useThemeContext();
   return (
-    <View style={[styles.infoRow, last && { borderBottomWidth: 0 }]}>
+    <View style={[styles.infoRow, { borderBottomColor: colors.border }, last && { borderBottomWidth: 0 }]}>
       <View style={styles.settingsLeft}>
-        <View style={[styles.settingsIconBg, { backgroundColor: (iconColor || BrandColors.mutedForeground) + '15' }]}>
-          <Ionicons name={icon as any} size={16} color={iconColor || BrandColors.mutedForeground} />
+        <View style={[styles.settingsIconBg, { backgroundColor: (iconColor || colors.mutedForeground) + '15' }]}>
+          <Ionicons name={icon as any} size={16} color={iconColor || colors.mutedForeground} />
         </View>
-        <Text style={styles.infoLabel}>{label}</Text>
+        <Text style={[styles.infoLabel, { color: colors.foreground }]}>{label}</Text>
       </View>
       <Text
-        style={[styles.infoValue, valueColor ? { color: valueColor } : {}]}
+        style={[styles.infoValue, { color: valueColor || colors.mutedForeground }]}
         numberOfLines={1}
       >
         {value}
@@ -984,13 +1010,14 @@ function StatusRow({
   iconColor?: string;
   last?: boolean;
 }) {
+  const { colors } = useThemeContext();
   return (
-    <View style={[styles.infoRow, last && { borderBottomWidth: 0 }]}>
+    <View style={[styles.infoRow, { borderBottomColor: colors.border }, last && { borderBottomWidth: 0 }]}>
       <View style={styles.settingsLeft}>
-        <View style={[styles.settingsIconBg, { backgroundColor: (iconColor || BrandColors.mutedForeground) + '15' }]}>
-          <Ionicons name={icon as any} size={16} color={iconColor || BrandColors.mutedForeground} />
+        <View style={[styles.settingsIconBg, { backgroundColor: (iconColor || colors.mutedForeground) + '15' }]}>
+          <Ionicons name={icon as any} size={16} color={iconColor || colors.mutedForeground} />
         </View>
-        <Text style={styles.infoLabel}>{label}</Text>
+        <Text style={[styles.infoLabel, { color: colors.foreground }]}>{label}</Text>
       </View>
       <View style={[styles.statusPill, { backgroundColor: ok ? BrandColors.emeraldLight : BrandColors.amberLight }]}>
         <View style={[styles.statusDot, { backgroundColor: ok ? BrandColors.emerald : BrandColors.amber }]} />
@@ -1015,9 +1042,10 @@ function NavRow({
   onPress: () => void;
   last?: boolean;
 }) {
+  const { colors } = useThemeContext();
   return (
     <TouchableOpacity
-      style={[styles.navRow, last && { borderBottomWidth: 0 }]}
+      style={[styles.navRow, { borderBottomColor: colors.border }, last && { borderBottomWidth: 0 }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -1025,9 +1053,9 @@ function NavRow({
         <View style={[styles.settingsIconBg, { backgroundColor: (iconColor || BrandColors.indigo) + '18' }]}>
           <Ionicons name={icon as any} size={16} color={iconColor || BrandColors.indigo} />
         </View>
-        <Text style={styles.infoLabel}>{label}</Text>
+        <Text style={[styles.infoLabel, { color: colors.foreground }]}>{label}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={16} color={BrandColors.mutedForeground} />
+      <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
     </TouchableOpacity>
   );
 }

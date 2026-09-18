@@ -17,6 +17,7 @@ import { router } from 'expo-router';
 import { useAuth } from '../../lib/AuthContext';
 import { useThemeContext } from '../../lib/ThemeContext';
 import { supabase } from '../../lib/supabase';
+import { ThemeToggle } from '../../components/ThemeToggle';
 import {
   BrandColors,
   Typography,
@@ -334,28 +335,39 @@ export default function AppointmentsScreen() {
             {isCompany ? 'Service Appointments' : 'My Appointments'}
           </Text>
         </View>
-        <View style={styles.headerBadge}>
-          <Text style={styles.headerBadgeText}>{appointments.length} total</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={styles.headerBadge}>
+            <Text style={styles.headerBadgeText}>{appointments.length} total</Text>
+          </View>
+          <ThemeToggle />
         </View>
       </Animated.View>
 
       <Animated.View entering={FadeInDown.duration(500).delay(100)} style={[styles.dateStripWrap, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateStrip}>
           <TouchableOpacity
-            style={[styles.dateChip, selectedDate === 'all' && styles.dateChipActive]}
+            style={[
+              styles.dateChip,
+              { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 },
+              selectedDate === 'all' && styles.dateChipActive,
+            ]}
             onPress={() => setSelectedDate('all')}
           >
-            <Text style={[styles.dateChipLabel, selectedDate === 'all' && styles.dateChipTextActive]}>All</Text>
-            <Text style={[styles.dateChipNum, selectedDate === 'all' && styles.dateChipTextActive]}>📅</Text>
+            <Text style={[styles.dateChipLabel, { color: colors.mutedForeground }, selectedDate === 'all' && styles.dateChipTextActive]}>All</Text>
+            <Text style={[styles.dateChipNum, { color: colors.foreground }, selectedDate === 'all' && styles.dateChipTextActive]}>📅</Text>
           </TouchableOpacity>
           {dateStrip.map((d) => (
             <TouchableOpacity
               key={d.dateStr}
-              style={[styles.dateChip, selectedDate === d.dateStr && styles.dateChipActive]}
+              style={[
+                styles.dateChip,
+                { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 },
+                selectedDate === d.dateStr && styles.dateChipActive,
+              ]}
               onPress={() => setSelectedDate(d.dateStr)}
             >
-              <Text style={[styles.dateChipLabel, selectedDate === d.dateStr && styles.dateChipTextActive]}>{d.label}</Text>
-              <Text style={[styles.dateChipNum, selectedDate === d.dateStr && styles.dateChipTextActive]}>{d.dayNum}</Text>
+              <Text style={[styles.dateChipLabel, { color: colors.mutedForeground }, selectedDate === d.dateStr && styles.dateChipTextActive]}>{d.label}</Text>
+              <Text style={[styles.dateChipNum, { color: colors.foreground }, selectedDate === d.dateStr && styles.dateChipTextActive]}>{d.dayNum}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -364,15 +376,15 @@ export default function AppointmentsScreen() {
       <Animated.View entering={FadeInDown.duration(500).delay(150)} style={styles.statsRow}>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.amber }]}>
           <Text style={[styles.statNumber, { color: BrandColors.amber }]}>{stats.pending}</Text>
-          <Text style={styles.statLabel}>Pending</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Pending</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.blue }]}>
           <Text style={[styles.statNumber, { color: BrandColors.blue }]}>{stats.accepted}</Text>
-          <Text style={styles.statLabel}>Confirmed</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Confirmed</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.emerald }]}>
           <Text style={[styles.statNumber, { color: BrandColors.emerald }]}>{stats.completed}</Text>
-          <Text style={styles.statLabel}>Done</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Done</Text>
         </View>
       </Animated.View>
 
@@ -380,10 +392,20 @@ export default function AppointmentsScreen() {
         {FILTERS.map((f) => (
           <TouchableOpacity
             key={f.id}
-            style={[styles.filterChip, selectedFilter === f.id && { backgroundColor: f.color }]}
+            style={[
+              styles.filterChip,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              selectedFilter === f.id && { backgroundColor: f.color, borderColor: f.color },
+            ]}
             onPress={() => setSelectedFilter(f.id)}
           >
-            <Text style={[styles.filterChipText, selectedFilter === f.id && styles.filterChipTextActive]}>
+            <Text
+              style={[
+                styles.filterChipText,
+                { color: colors.mutedForeground },
+                selectedFilter === f.id && styles.filterChipTextActive,
+              ]}
+            >
               {f.label}
             </Text>
           </TouchableOpacity>

@@ -35,17 +35,18 @@ import {
   AnalysisStatus,
 } from '../../constants/theme';
 import { StepBadge, useScalePress, usePulse } from '../../components/AnimatedUI';
+import { ThemeToggle } from '../../components/ThemeToggle';
 
 
 
-interface AnalysisResult {
+type AnalysisResult = {
   status: AnalysisStatus;
   confidence: number;
   anomaly_score: number;
   category: string;
   machine_id: string;
   recommendation: string;
-}
+};
 
 type AudioInput = {
   uri: string;
@@ -57,7 +58,7 @@ type AudioInput = {
 
 export default function AnalysisScreen() {
   const { user } = useAuth();
-  const { colors } = useThemeContext();
+  const { colors, isDark } = useThemeContext();
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const audioRecorderState = useAudioRecorderState(audioRecorder);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -260,12 +261,15 @@ export default function AnalysisScreen() {
           </View>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Audio Analysis</Text>
         </View>
-        {result && (
-          <TouchableOpacity style={styles.resetBtn} onPress={resetAnalysis}>
-            <Ionicons name="refresh" size={16} color={BrandColors.indigo} />
-            <Text style={styles.resetText}>New</Text>
-          </TouchableOpacity>
-        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <ThemeToggle />
+          {result && (
+            <TouchableOpacity style={styles.resetBtn} onPress={resetAnalysis}>
+              <Ionicons name="refresh" size={16} color={BrandColors.indigo} />
+              <Text style={styles.resetText}>New</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -282,21 +286,23 @@ export default function AnalysisScreen() {
                   key={cat.value}
                   style={[
                     styles.categoryCard,
+                    { backgroundColor: colors.card, borderColor: colors.border },
                     selectedCategory === cat.value && [styles.categoryCardActive, { borderColor: cat.color, backgroundColor: cat.bg }],
                   ]}
                   onPress={() => setSelectedCategory(cat.value)}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.categoryIconWrap, { backgroundColor: selectedCategory === cat.value ? cat.color + '20' : BrandColors.muted }]}>
+                  <View style={[styles.categoryIconWrap, { backgroundColor: selectedCategory === cat.value ? cat.color + '20' : (isDark ? colors.background : BrandColors.muted) }]}>
                     <Ionicons
                       name={cat.icon as any}
                       size={22}
-                      color={selectedCategory === cat.value ? cat.color : BrandColors.mutedForeground}
+                      color={selectedCategory === cat.value ? cat.color : colors.mutedForeground}
                     />
                   </View>
                   <Text
                     style={[
                       styles.categoryLabel,
+                      { color: colors.foreground },
                       selectedCategory === cat.value && { color: cat.color, fontWeight: '700' },
                     ]}
                   >
@@ -309,11 +315,15 @@ export default function AnalysisScreen() {
             {/* Step 2: Capture Audio */}
             <Animated.View entering={FadeInDown.duration(500).delay(300)} style={styles.stepRow}>
               <StepBadge number={2} color={BrandColors.blue} />
-              <Text style={styles.stepTitle}>Capture or Upload Audio</Text>
+              <Text style={[styles.stepTitle, { color: colors.foreground }]}>Capture or Upload Audio</Text>
             </Animated.View>
             <Animated.View entering={FadeInDown.duration(500).delay(400)}>
               <TouchableOpacity
-                style={[styles.uploadZone, audioFile && styles.uploadZoneActive]}
+                style={[
+                  styles.uploadZone,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  audioFile && [styles.uploadZoneActive, { borderColor: BrandColors.indigo }],
+                ]}
                 onPress={pickAudio}
                 activeOpacity={0.7}
               >
@@ -323,10 +333,10 @@ export default function AnalysisScreen() {
                       <Ionicons name="musical-notes" size={26} color={BrandColors.indigo} />
                     </View>
                     <View style={styles.fileDetails}>
-                      <Text style={styles.fileName} numberOfLines={1}>
+                      <Text style={[styles.fileName, { color: colors.foreground }]} numberOfLines={1}>
                         {audioFile.name}
                       </Text>
-                      <Text style={styles.fileSize}>
+                      <Text style={[styles.fileSize, { color: colors.mutedForeground }]}>
                         {audioFile.source === 'recording'
                           ? 'Recorded on this device'
                           : audioFile.size
@@ -340,11 +350,11 @@ export default function AnalysisScreen() {
                   </View>
                 ) : (
                   <>
-                    <View style={styles.uploadIconCircle}>
+                    <View style={[styles.uploadIconCircle, isDark && { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
                       <Ionicons name="cloud-upload-outline" size={32} color={BrandColors.indigo} />
                     </View>
-                    <Text style={styles.uploadTitle}>Tap to select audio file</Text>
-                    <Text style={styles.uploadHint}>WAV, MP3, M4A supported</Text>
+                    <Text style={[styles.uploadTitle, { color: colors.foreground }]}>Tap to select audio file</Text>
+                    <Text style={[styles.uploadHint, { color: colors.mutedForeground }]}>WAV, MP3, M4A supported</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -352,7 +362,11 @@ export default function AnalysisScreen() {
 
             <Animated.View entering={FadeInDown.duration(500).delay(500)} style={isRecording ? pulseStyle : undefined}>
               <TouchableOpacity
-                style={[styles.recordBtn, isRecording && styles.recordBtnActive]}
+                style={[
+                  styles.recordBtn,
+                  { backgroundColor: colors.card },
+                  isRecording && styles.recordBtnActive,
+                ]}
                 onPress={isRecording ? stopRecording : startRecording}
                 disabled={loading}
                 activeOpacity={0.85}
@@ -371,7 +385,7 @@ export default function AnalysisScreen() {
             {/* Step 3: Analyze */}
             <Animated.View entering={FadeInDown.duration(500).delay(600)} style={styles.stepRow}>
               <StepBadge number={3} color={BrandColors.emerald} />
-              <Text style={styles.stepTitle}>Analyze</Text>
+              <Text style={[styles.stepTitle, { color: colors.foreground }]}>Analyze</Text>
             </Animated.View>
             <Animated.View entering={FadeInDown.duration(500).delay(700)}>
               <Animated.View style={analyzeBtnAnim}>
@@ -433,25 +447,25 @@ export default function AnalysisScreen() {
 
             {/* Scores */}
             <Animated.View entering={FadeInDown.duration(500).delay(250)} style={styles.scoresRow}>
-              <View style={styles.scoreCard}>
+              <View style={[styles.scoreCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Text style={[styles.scoreValue, { color: BrandColors.indigo }]}>{result.confidence.toFixed(1)}%</Text>
-                <Text style={styles.scoreLabel}>Health Score</Text>
+                <Text style={[styles.scoreLabel, { color: colors.mutedForeground }]}>Health Score</Text>
               </View>
-              <View style={styles.scoreCard}>
+              <View style={[styles.scoreCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Text style={[styles.scoreValue, { color: BrandColors.purple }]}>{result.anomaly_score.toFixed(3)}</Text>
-                <Text style={styles.scoreLabel}>Anomaly Score</Text>
+                <Text style={[styles.scoreLabel, { color: colors.mutedForeground }]}>Anomaly Score</Text>
               </View>
             </Animated.View>
 
             {/* Recommendation */}
-            <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.recoCard}>
+            <Animated.View entering={FadeInDown.duration(500).delay(400)} style={[styles.recoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.recoHeader}>
                 <View style={styles.recoIconBg}>
                   <Ionicons name="bulb" size={18} color={BrandColors.amber} />
                 </View>
-                <Text style={styles.recoTitle}>Recommendation</Text>
+                <Text style={[styles.recoTitle, { color: colors.foreground }]}>Recommendation</Text>
               </View>
-              <Text style={styles.recoText}>{result.recommendation}</Text>
+              <Text style={[styles.recoText, { color: colors.mutedForeground }]}>{result.recommendation}</Text>
             </Animated.View>
 
             {/* Actions */}
@@ -477,7 +491,7 @@ export default function AnalysisScreen() {
                   )}
                 </TouchableOpacity>
               </Animated.View>
-              <TouchableOpacity style={styles.newBtn} onPress={resetAnalysis}>
+              <TouchableOpacity style={[styles.newBtn, { backgroundColor: colors.card }]} onPress={resetAnalysis}>
                 <Ionicons name="add-circle-outline" size={18} color={BrandColors.indigo} />
                 <Text style={styles.newBtnText}>New Analysis</Text>
               </TouchableOpacity>

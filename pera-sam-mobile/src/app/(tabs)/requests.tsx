@@ -22,6 +22,7 @@ import {
   BorderRadius,
   Shadows,
 } from '../../constants/theme';
+import { ThemeToggle } from '../../components/ThemeToggle';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type RequestStatus = 'pending' | 'accepted' | 'completed' | 'declined';
@@ -34,34 +35,31 @@ interface RepairRequest {
   brand: string;
   status: RequestStatus;
   description: string;
-  analysis_id: string | null;
   created_at: string;
   profiles?: {
     name: string;
-    phone: string;
+    phone?: string;
   };
 }
 
-const STATUS_CONFIG: Record<RequestStatus, { color: string; bg: string; icon: string; label: string }> = {
-  pending: { color: BrandColors.amber, bg: BrandColors.amberLight, icon: 'time-outline', label: 'Pending' },
-  accepted: { color: BrandColors.blue, bg: BrandColors.blueLight, icon: 'checkmark-circle-outline', label: 'Accepted' },
-  completed: { color: BrandColors.emerald, bg: BrandColors.emeraldLight, icon: 'checkmark-done-circle', label: 'Completed' },
-  declined: { color: BrandColors.rose, bg: BrandColors.roseLight, icon: 'close-circle-outline', label: 'Declined' },
+const STATUS_CONFIG: Record<RequestStatus, { label: string; color: string; bg: string; icon: string }> = {
+  pending: { label: 'Pending', color: BrandColors.amber, bg: BrandColors.amberLight, icon: 'time' },
+  accepted: { label: 'Accepted', color: BrandColors.blue, bg: BrandColors.blueLight, icon: 'checkmark-circle' },
+  completed: { label: 'Completed', color: BrandColors.emerald, bg: BrandColors.emeraldLight, icon: 'checkmark-done-circle' },
+  declined: { label: 'Declined', color: BrandColors.rose, bg: BrandColors.roseLight, icon: 'close-circle' },
 };
 
-const FILTERS: { id: string; label: string; color: string }[] = [
+const FILTERS = [
   { id: 'all', label: 'All', color: BrandColors.indigo },
   { id: 'pending', label: 'Pending', color: BrandColors.amber },
-  { id: 'accepted', label: 'In Progress', color: BrandColors.blue },
-  { id: 'completed', label: 'Completed', color: BrandColors.emerald },
-  { id: 'declined', label: 'Declined', color: BrandColors.rose },
+  { id: 'accepted', label: 'Accepted', color: BrandColors.blue },
+  { id: 'completed', label: 'Done', color: BrandColors.emerald },
 ];
 
-// Parse multi-line description into key-value pairs
-function parseDescription(desc: string): Record<string, string> {
+function parseDescription(raw: string): Record<string, string> {
   const result: Record<string, string> = {};
-  if (!desc) return result;
-  desc.split('\n').forEach((line) => {
+  if (!raw) return result;
+  raw.split('\n').forEach((line) => {
     const idx = line.indexOf(':');
     if (idx > -1) {
       const key = line.slice(0, idx).trim();
@@ -75,7 +73,7 @@ function parseDescription(desc: string): Record<string, string> {
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function RequestsScreen() {
   const { user } = useAuth();
-  const { colors } = useThemeContext();
+  const { colors, isDark } = useThemeContext();
   const params = useLocalSearchParams<{ requestProviderId?: string; requestProviderName?: string }>();
   const [requests, setRequests] = useState<RepairRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -224,7 +222,11 @@ export default function RequestsScreen() {
     return (
       <Animated.View entering={FadeInRight.duration(400).delay(index * 80)}>
         <TouchableOpacity
-          style={[styles.requestCard, isExpanded && styles.requestCardExpanded]}
+          style={[
+            styles.requestCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            isExpanded && styles.requestCardExpanded,
+          ]}
           onPress={() => setExpandedId(isExpanded ? null : item.id)}
           activeOpacity={0.7}
         >
@@ -242,10 +244,10 @@ export default function RequestsScreen() {
                 />
               </View>
               <View style={styles.requestInfo}>
-                <Text style={styles.requestName} numberOfLines={1}>
+                <Text style={[styles.requestName, { color: colors.foreground }]} numberOfLines={1}>
                   {item.profiles?.name || (isCompany ? 'Unknown User' : 'Unknown Company')}
                 </Text>
-                <Text style={styles.requestMeta}>
+                <Text style={[styles.requestMeta, { color: colors.mutedForeground }]}>
                   {item.machine_type} {item.brand ? `• ${item.brand}` : ''}
                 </Text>
               </View>
@@ -262,26 +264,26 @@ export default function RequestsScreen() {
 
             {/* Date */}
             <View style={styles.dateRow}>
-              <Ionicons name="calendar-outline" size={12} color={BrandColors.mutedForeground} />
-              <Text style={styles.dateText}>
+              <Ionicons name="calendar-outline" size={12} color={colors.mutedForeground} />
+              <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
                 {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
               </Text>
-              <Ionicons name="time-outline" size={12} color={BrandColors.mutedForeground} />
-              <Text style={styles.dateText}>
+              <Ionicons name="time-outline" size={12} color={colors.mutedForeground} />
+              <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
                 {date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
               </Text>
             </View>
 
             {/* Expanded details */}
             {isExpanded && (
-              <View style={styles.expandedDetails}>
+              <View style={[styles.expandedDetails, { borderTopColor: colors.border }]}>
                 {/* Contact */}
                 {item.profiles?.phone && (
                   <View style={styles.detailItem}>
                     <View style={styles.detailIconBg}>
                       <Ionicons name="call-outline" size={12} color={BrandColors.emerald} />
                     </View>
-                    <Text style={styles.detailText}>{item.profiles.phone}</Text>
+                    <Text style={[styles.detailText, { color: colors.foreground }]}>{item.profiles.phone}</Text>
                   </View>
                 )}
 
@@ -290,7 +292,7 @@ export default function RequestsScreen() {
                     <View style={[styles.detailIconBg, { backgroundColor: BrandColors.blueLight }]}>
                       <Ionicons name="location-outline" size={12} color={BrandColors.blue} />
                     </View>
-                    <Text style={styles.detailText}>{parsed['Customer Address']}</Text>
+                    <Text style={[styles.detailText, { color: colors.foreground }]}>{parsed['Customer Address']}</Text>
                   </View>
                 )}
 
@@ -299,8 +301,8 @@ export default function RequestsScreen() {
                   .filter(([k]) => !['Issue', 'Customer Address', 'Customer Phone', 'Photos'].includes(k))
                   .map(([key, val]) => (
                     <View key={key} style={styles.detailItem}>
-                      <Text style={styles.detailLabel}>{key}:</Text>
-                      <Text style={styles.detailValue}>{val}</Text>
+                      <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>{key}:</Text>
+                      <Text style={[styles.detailValue, { color: colors.foreground }]}>{val}</Text>
                     </View>
                   ))}
 
@@ -308,7 +310,7 @@ export default function RequestsScreen() {
                 <View style={styles.expandedActions}>
                   {/* Chat button (for both user and company) */}
                   <TouchableOpacity
-                    style={styles.chatBtn}
+                    style={[styles.chatBtn, { backgroundColor: colors.card }]}
                     onPress={() => {
                       router.push({
                         pathname: '/chat',
@@ -366,7 +368,7 @@ export default function RequestsScreen() {
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={BrandColors.indigo} />
-          <Text style={styles.loadingText}>Loading requests...</Text>
+          <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Loading requests...</Text>
         </View>
       </SafeAreaView>
     );
@@ -385,28 +387,31 @@ export default function RequestsScreen() {
           <View style={styles.headerIconBg}>
             <Ionicons name="chatbubbles" size={18} color={BrandColors.white} />
           </View>
-          <Text style={styles.headerTitle}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
             {isCompany ? 'Repair Requests' : 'My Requests'}
           </Text>
         </View>
-        <View style={styles.headerCountBadge}>
-          <Text style={styles.headerCount}>{requests.length} total</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <ThemeToggle />
+          <View style={[styles.headerCountBadge, isDark && { backgroundColor: 'rgba(139, 92, 246, 0.2)' }]}>
+            <Text style={styles.headerCount}>{requests.length} total</Text>
+          </View>
         </View>
       </Animated.View>
 
       {/* Stats Row */}
       <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.statsRow}>
-        <View style={[styles.statCard, { borderLeftColor: BrandColors.amber }]}>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.amber }]}>
           <Text style={[styles.statNumber, { color: BrandColors.amber }]}>{stats.pending}</Text>
-          <Text style={styles.statLabel}>Pending</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Pending</Text>
         </View>
-        <View style={[styles.statCard, { borderLeftColor: BrandColors.blue }]}>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.blue }]}>
           <Text style={[styles.statNumber, { color: BrandColors.blue }]}>{stats.accepted}</Text>
-          <Text style={styles.statLabel}>Active</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Active</Text>
         </View>
-        <View style={[styles.statCard, { borderLeftColor: BrandColors.emerald }]}>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.emerald }]}>
           <Text style={[styles.statNumber, { color: BrandColors.emerald }]}>{stats.completed}</Text>
-          <Text style={styles.statLabel}>Done</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Done</Text>
         </View>
       </Animated.View>
 
@@ -415,11 +420,19 @@ export default function RequestsScreen() {
         {FILTERS.map((f) => (
           <TouchableOpacity
             key={f.id}
-            style={[styles.filterChip, selectedFilter === f.id && { backgroundColor: f.color }]}
+            style={[
+              styles.filterChip,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              selectedFilter === f.id && { backgroundColor: f.color, borderColor: f.color },
+            ]}
             onPress={() => setSelectedFilter(f.id)}
           >
             <Text
-              style={[styles.filterChipText, selectedFilter === f.id && styles.filterChipTextActive]}
+              style={[
+                styles.filterChipText,
+                { color: colors.mutedForeground },
+                selectedFilter === f.id && styles.filterChipTextActive,
+              ]}
             >
               {f.label}
             </Text>
@@ -446,8 +459,8 @@ export default function RequestsScreen() {
             <View style={styles.emptyIconBg}>
               <Ionicons name="chatbubbles-outline" size={44} color={BrandColors.indigo} />
             </View>
-            <Text style={styles.emptyTitle}>No requests</Text>
-            <Text style={styles.emptyDesc}>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No requests</Text>
+            <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>
               {selectedFilter !== 'all'
                 ? `No ${selectedFilter} requests found.`
                 : isCompany
