@@ -12,6 +12,7 @@ import {
   Linking,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,6 +45,7 @@ interface ServiceProvider {
   available: boolean;
   lat: number;
   lng: number;
+  avatar_url?: string; // company profile photo
 }
 
 const SERVICE_CATEGORIES = [
@@ -83,27 +85,39 @@ export default function MapScreen() {
   const { animatedStyle: repairBtnAnim, onPressIn: repairIn, onPressOut: repairOut } = useScalePress();
 
   // ── Get user location ──────────────────────────────────────────────────
-  useEffect(() => {
-    (async () => {
-      try {
+  const requestLocation = useCallback(async () => {
+    try {
+      setLocationStatus('loading');
+      // Check current permission status first — avoid a double dialog
+      const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
+
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          setLocationStatus('denied');
-          // Default to Peradeniya, Sri Lanka
-          setUserLocation({ lat: 7.2525, lng: 80.5925 });
-          return;
-        }
-        setLocationStatus('granted');
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-      } catch {
-        setLocationStatus('denied');
-        setUserLocation({ lat: 7.2525, lng: 80.5925 });
+        finalStatus = status;
       }
-    })();
+
+      if (finalStatus !== 'granted') {
+        setLocationStatus('denied');
+        // Default to Peradeniya, Sri Lanka
+        setUserLocation({ lat: 7.2525, lng: 80.5925 });
+        return;
+      }
+
+      setLocationStatus('granted');
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    } catch {
+      setLocationStatus('denied');
+      setUserLocation({ lat: 7.2525, lng: 80.5925 });
+    }
   }, []);
+
+  useEffect(() => {
+    requestLocation();
+  }, [requestLocation]);
 
   // ── Fetch providers ────────────────────────────────────────────────────
   const fetchProviders = useCallback(async () => {
@@ -134,6 +148,7 @@ export default function MapScreen() {
           available: true,
           lat,
           lng,
+          avatar_url: p.avatar_url || null,
         };
       });
 
@@ -282,11 +297,20 @@ export default function MapScreen() {
         >
           {/* Provider Header */}
           <View style={styles.providerHeader}>
-            <View style={styles.providerAvatar}>
-              <Text style={styles.providerAvatarText}>
-                {item.name.charAt(0).toUpperCase()}
-              </Text>
-            </View>
+            {/* Company profile photo or initial letter fallback */}
+            {item.avatar_url ? (
+              <Image
+                source={{ uri: item.avatar_url }}
+                style={styles.providerAvatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.providerAvatar}>
+                <Text style={styles.providerAvatarText}>
+                  {item.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
             <View style={styles.providerInfo}>
               <Text style={[styles.providerName, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
               <View style={styles.providerMeta}>
@@ -294,9 +318,21 @@ export default function MapScreen() {
                 <Text style={[styles.providerAddress, { color: colors.mutedForeground }]} numberOfLines={1}>{item.address}</Text>
               </View>
             </View>
-            <View style={styles.distanceBadge}>
-              <Ionicons name="navigate-outline" size={12} color={BrandColors.indigo} />
-              <Text style={styles.distanceText}>{item.distance} km</Text>
+            <View style={[
+              styles.distanceBadge,
+              locationStatus === 'granted' && { backgroundColor: BrandColors.emeraldLight },
+            ]}>
+              <Ionicons
+                name="navigate-outline"
+                size={12}
+                color={locationStatus === 'granted' ? BrandColors.emerald : BrandColors.indigo}
+              />
+              <Text style={[
+                styles.distanceText,
+                locationStatus === 'granted' && { color: BrandColors.emerald },
+              ]}>
+                {locationStatus === 'loading' ? '...' : `${item.distance} km`}
+              </Text>
             </View>
           </View>
 
@@ -426,6 +462,22 @@ export default function MapScreen() {
           </View>
         </View>
       </Animated.View>
+
+      {/* Location permission denied banner */}
+      {locationStatus === 'denied' && (
+        <View style={[styles.locationBanner, { backgroundColor: isDark ? '#2a1a0a' : '#fef3c7', borderColor: BrandColors.amber }]}>
+          <Ionicons name="location-outline" size={16} color={BrandColors.amber} />
+          <Text style={[styles.locationBannerText, { color: isDark ? BrandColors.amber : '#92400e' }]}>
+            Using default location (Peradeniya). Enable GPS for accurate distances.
+          </Text>
+          <TouchableOpacity
+            style={styles.locationBannerBtn}
+            onPress={() => Linking.openSettings()}
+          >
+            <Text style={styles.locationBannerBtnText}>Grant Access</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Search */}
       <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.searchSection}>
@@ -639,6 +691,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  providerAvatarImage: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    backgroundColor: BrandColors.muted,
+  },
   providerAvatarText: {
     fontSize: 18,
     fontWeight: '800',
@@ -756,4 +814,31 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...Typography.h3, color: BrandColors.foreground, marginBottom: 8 },
   emptyDesc: { ...Typography.body, color: BrandColors.mutedForeground, textAlign: 'center', lineHeight: 22 },
+
+  // Location denied banner
+  locationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  locationBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 16,
+  },
+  locationBannerBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: BrandColors.amber,
+    borderRadius: BorderRadius.sm,
+  },
+  locationBannerBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: BrandColors.white,
+  },
 });

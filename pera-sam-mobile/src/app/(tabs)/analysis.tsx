@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import {
   setAudioModeAsync,
   useAudioRecorder,
   useAudioRecorderState,
+  createAudioPlayer,
 } from 'expo-audio';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../lib/AuthContext';
@@ -37,6 +38,22 @@ import {
 import { StepBadge, useScalePress, usePulse } from '../../components/AnimatedUI';
 import { ThemeToggle } from '../../components/ThemeToggle';
 
+// ── MIME type helper ──────────────────────────────────────────────────────────
+function mimeTypeFromName(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+  const map: Record<string, string> = {
+    wav: 'audio/wav',
+    wave: 'audio/wav',
+    mp3: 'audio/mpeg',
+    m4a: 'audio/m4a',
+    aac: 'audio/aac',
+    ogg: 'audio/ogg',
+    flac: 'audio/flac',
+    webm: 'audio/webm',
+    caf: 'audio/x-caf',
+  };
+  return map[ext] ?? 'audio/wav';
+}
 
 
 type AnalysisResult = {
@@ -66,29 +83,76 @@ export default function AnalysisScreen() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [saving, setSaving] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const playerRef = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
 
   const { animatedStyle: analyzeBtnAnim, onPressIn: analyzeIn, onPressOut: analyzeOut } = useScalePress();
   const { animatedStyle: saveBtnAnim, onPressIn: saveIn, onPressOut: saveOut } = useScalePress();
   const isRecording = audioRecorderState.isRecording;
   const pulseStyle = usePulse(isRecording);
 
+  // ── Cleanup audio player on unmount ────────────────────────────────────────
+  const cleanupPlayer = () => {
+    if (playerRef.current) {
+      try { playerRef.current.remove(); } catch {}
+      playerRef.current = null;
+    }
+    setIsPlaying(false);
+  };
+
+  // ── Toggle playback preview ────────────────────────────────────────────────
+  async function togglePlayback() {
+    if (!audioFile) return;
+    try {
+      if (playerRef.current && isPlaying) {
+        playerRef.current.pause();
+        setIsPlaying(false);
+        return;
+      }
+      // Create a fresh player each time play starts
+      cleanupPlayer();
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+      const player = createAudioPlayer({ uri: audioFile.uri });
+      playerRef.current = player;
+      player.play();
+      setIsPlaying(true);
+      // Poll playing state to detect natural end (every 500ms)
+      const interval = setInterval(() => {
+        if (!player.playing) {
+          setIsPlaying(false);
+          clearInterval(interval);
+        }
+      }, 500);
+    } catch {
+      setIsPlaying(false);
+      Alert.alert('Playback Error', 'Could not play this audio file on your device.');
+    }
+  }
+
   async function pickAudio() {
+    cleanupPlayer();
     try {
       const res = await DocumentPicker.getDocumentAsync({
-        type: ['audio/*', 'audio/wav', 'audio/wave', 'audio/x-wav'],
+        type: 'audio/*',
         copyToCacheDirectory: true,
       });
 
       if (!res.canceled && res.assets.length > 0) {
         const asset = res.assets[0];
+        const name = asset.name || 'audio.wav';
+        // Prefer the picker-reported MIME; fall back to extension-based detection
+        const mimeType = (asset.mimeType && asset.mimeType !== 'application/octet-stream')
+          ? asset.mimeType
+          : mimeTypeFromName(name);
         setAudioFile({
           uri: asset.uri,
-          name: asset.name || 'audio.wav',
-          mimeType: asset.mimeType || 'audio/wav',
+          name,
+          mimeType,
           size: asset.size,
           source: 'file',
         });
         setResult(null);
+
       }
     } catch {
       Alert.alert('Error', 'Could not pick audio file.');
@@ -142,7 +206,7 @@ export default function AnalysisScreen() {
 
   async function analyzeAudio() {
     if (!audioFile) {
-      Alert.alert('No File', 'Please select an audio file first.');
+      Alert.alert('No Audio File', 'Please select or record an audio file first.');
       return;
     }
 
@@ -152,6 +216,24 @@ export default function AnalysisScreen() {
       return;
     }
 
+    // Soft warning if no category is selected (still allow analysis)
+    if (!selectedCategory) {
+      await new Promise<void>((resolve) =>
+        Alert.alert(
+          'No Category Selected',
+          'Selecting an equipment category improves accuracy. Continue without one?',
+          [
+            { text: 'Select Category', style: 'cancel', onPress: () => resolve() },
+            { text: 'Continue Anyway', onPress: () => resolve() },
+          ]
+        )
+      );
+      // Check again in case they cancelled
+      if (!audioFile) return;
+    }
+
+    // Stop playback before sending
+    cleanupPlayer();
     setLoading(true);
     setResult(null);
 
@@ -161,13 +243,14 @@ export default function AnalysisScreen() {
         const res = await fetch(audioFile.uri);
         const blob = await res.blob();
         const file = new File([blob], audioFile.name || 'audio.wav', {
-          type: audioFile.mimeType || 'audio/wav',
+          type: audioFile.mimeType,
         });
         formData.append('file', file);
       } else {
+        // React Native native fetch FormData file object
         formData.append('file', {
           uri: audioFile.uri,
-          type: audioFile.mimeType || 'audio/wav',
+          type: audioFile.mimeType,
           name: audioFile.name || 'audio.wav',
         } as any);
       }
@@ -178,12 +261,20 @@ export default function AnalysisScreen() {
 
       const response = await fetch(`${mlApiUrl}/analyze`, {
         method: 'POST',
+        // Do NOT set Content-Type manually — let fetch set multipart/form-data boundary
         body: formData,
       });
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(`Server returned status ${response.status} with non-JSON body.`);
+      }
+
       if (!response.ok || data.status === 'Error' || data.analysis?.status === 'Error' || data.analysis?.status === 'No Model') {
-        throw new Error(data.detail || data.message || data.analysis?.message || 'The selected model is unavailable.');
+        const msg = data.detail || data.message || data.analysis?.message || `HTTP ${response.status}`;
+        throw new Error(msg);
       }
 
       const rawStatus = String(data.analysis?.status || data.status || '').toLowerCase();
@@ -238,6 +329,7 @@ export default function AnalysisScreen() {
   }
 
   function resetAnalysis() {
+    cleanupPlayer();
     setAudioFile(null);
     setResult(null);
     setSelectedCategory('');
@@ -338,14 +430,26 @@ export default function AnalysisScreen() {
                       </Text>
                       <Text style={[styles.fileSize, { color: colors.mutedForeground }]}>
                         {audioFile.source === 'recording'
-                          ? 'Recorded on this device'
+                          ? `🎙 Recorded • ${audioFile.mimeType}`
                           : audioFile.size
-                          ? `${(audioFile.size / 1024).toFixed(1)} KB`
-                          : 'Audio file selected'}
+                          ? `${(audioFile.size / 1024).toFixed(1)} KB • ${audioFile.mimeType}`
+                          : audioFile.mimeType}
                       </Text>
                     </View>
-                    <TouchableOpacity onPress={pickAudio}>
-                      <Ionicons name="swap-horizontal" size={20} color={BrandColors.indigo} />
+                    {/* Play/Pause preview button */}
+                    <TouchableOpacity
+                      style={[styles.playBtn, { backgroundColor: BrandColors.indigo + '15' }]}
+                      onPress={(e) => { e.stopPropagation?.(); togglePlayback(); }}
+                    >
+                      <Ionicons
+                        name={isPlaying ? 'pause-circle' : 'play-circle'}
+                        size={28}
+                        color={BrandColors.indigo}
+                      />
+                    </TouchableOpacity>
+                    {/* Swap file */}
+                    <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); pickAudio(); }}>
+                      <Ionicons name="swap-horizontal" size={20} color={BrandColors.mutedForeground} />
                     </TouchableOpacity>
                   </View>
                 ) : (
@@ -354,7 +458,7 @@ export default function AnalysisScreen() {
                       <Ionicons name="cloud-upload-outline" size={32} color={BrandColors.indigo} />
                     </View>
                     <Text style={[styles.uploadTitle, { color: colors.foreground }]}>Tap to select audio file</Text>
-                    <Text style={[styles.uploadHint, { color: colors.mutedForeground }]}>WAV, MP3, M4A supported</Text>
+                    <Text style={[styles.uploadHint, { color: colors.mutedForeground }]}>WAV, MP3, M4A, OGG, FLAC supported</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -780,4 +884,11 @@ const styles = StyleSheet.create({
     borderColor: BrandColors.indigo,
   },
   newBtnText: { ...Typography.button, color: BrandColors.indigo, fontWeight: '700' },
+  playBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
