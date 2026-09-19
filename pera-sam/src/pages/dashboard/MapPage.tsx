@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { RequestRepairModal } from '@/components/RequestRepairModal';
+import { motion } from 'framer-motion';
 import {
   MapPin,
   Filter,
@@ -9,15 +11,15 @@ import {
   MessageSquare,
   Calendar,
   ChevronRight,
-  Laptop,
-  Server,
-  Car,
   Settings,
-  Wind,
   Factory,
   Navigation,
   RefreshCcw,
-  Droplets
+  Droplets,
+  Cog,
+  Gauge,
+  Waves,
+  CircleDot
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -93,13 +95,13 @@ if (typeof window !== 'undefined') {
 }
 
 const serviceCategories = [
-  { id: 'all', label: 'All Services', icon: Settings },
-  { id: 'laptop', label: 'Laptop/PC', icon: Laptop },
-  { id: 'server', label: 'Servers', icon: Server },
-  { id: 'vehicle', label: 'Vehicles', icon: Car },
-  { id: 'hvac', label: 'HVAC', icon: Wind },
-  { id: 'pump', label: 'Pumps', icon: Droplets },
-  { id: 'industrial', label: 'Industrial', icon: Factory },
+  { id: 'all',             label: 'All Services',        icon: Settings },
+  { id: 'fan',             label: 'Industrial Fan',      icon: Waves },
+  { id: 'pump',            label: 'Industrial Pump',     icon: Droplets },
+  { id: 'slider',          label: 'Slide Rail',          icon: Cog },
+  { id: 'valve',           label: 'Industrial Valve',    icon: Gauge },
+  { id: 'vehicle_bearing', label: 'Vehicle Bearing',     icon: CircleDot },
+  { id: 'industrial',      label: 'Industrial (General)',icon: Factory },
 ];
 
 interface ServiceProvider {
@@ -114,6 +116,8 @@ interface ServiceProvider {
   available: boolean;
   lat: number;
   lng: number;
+  locationApproximate: boolean;
+  avatarUrl?: string;
 }
 
 // Routing component for path visualization (Temporarily disabled for debugging)
@@ -152,16 +156,35 @@ const OneTimeRecenter = ({ lat, lng }: { lat: number; lng: number }) => {
 };
 
 export const MapPage = () => {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [repairModalProvider, setRepairModalProvider] = useState<ServiceProvider | null>(null);
+  const [providerDistances, setProviderDistances] = useState<Record<string, string>>({});
 
 
   // Fetch providers from Supabase
+  // Helper: geocode an address string using OpenStreetMap Nominatim
+  const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
+    try {
+      const query = encodeURIComponent(`${address}, Sri Lanka`);
+      const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1&countrycodes=lk`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      if (!res.ok) return null;
+      const results = await res.json();
+      if (results && results.length > 0) {
+        return { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
+      }
+    } catch {
+      // silently ignore network errors for individual geocoding
+    }
+    return null;
+  };
+
   useEffect(() => {
     const fetchProviders = async () => {
       setLoading(true);
@@ -177,33 +200,59 @@ export const MapPage = () => {
           throw error;
         }
 
-
         // Filter for companies in JS - more robust than DB-level filtering with Enums
         const companyProfiles = (data || []).filter(p => String(p.role).toLowerCase() === 'company');
 
         // Filter out current company user if applicable
         const filteredData = companyProfiles.filter(p => !user || p.id !== user.id);
 
-        // Map data with fallbacks
-        const mappedProviders: ServiceProvider[] = filteredData.map(p => {
-          // If they are a company but missing lat/lng, provide a default so they show up!
-          const lat = p.location_lat || 7.2525;
-          const lng = p.location_lng || 80.5925;
+        // The old registration code stored the registrar's GPS (not address-based).
+        // Detect companies that still have the exact Peradeniya default (7.2525, 80.5925)
+        // and try to geocode their address to get a real location.
+        const DEFAULT_LAT = 7.2525;
+        const DEFAULT_LNG = 80.5925;
+        const EPSILON = 0.0001;
+        const isDefaultCoord = (lat: number, lng: number) =>
+          Math.abs(lat - DEFAULT_LAT) < EPSILON && Math.abs(lng - DEFAULT_LNG) < EPSILON;
 
-          return {
-            id: p.id,
-            name: p.company_name || p.name || 'Service Provider',
-            address: p.address || 'Address not listed',
-            rating: 4.5 + (p.id.charCodeAt(0) % 10) / 20, // Deterministic random-looking rating
-            reviews: (p.id.charCodeAt(1) % 100) + 10,
-            phone: p.contact_numbers?.[0] || p.phone || 'N/A',
-            categories: p.service_categories || ['Equipment'],
-            distance: '---',
-            available: true,
-            lat,
-            lng,
-          };
-        });
+        const mappedProviders: ServiceProvider[] = await Promise.all(
+          filteredData.map(async p => {
+            let lat: number = p.location_lat || DEFAULT_LAT;
+            let lng: number = p.location_lng || DEFAULT_LNG;
+            let locationApproximate = false;
+
+            // If coordinates are missing or are still the old Peradeniya placeholder,
+            // attempt to geocode the address to get the real location.
+            const needsGeocode = !p.location_lat || !p.location_lng || isDefaultCoord(lat, lng);
+            if (needsGeocode && p.address && p.address !== 'Address not listed') {
+              const geocoded = await geocodeAddress(p.address);
+              if (geocoded) {
+                lat = geocoded.lat;
+                lng = geocoded.lng;
+              } else {
+                locationApproximate = true; // Could not resolve address
+              }
+            } else if (!p.location_lat || !p.location_lng) {
+              locationApproximate = true; // No address and no coords
+            }
+
+            return {
+              id: p.id,
+              name: p.company_name || p.name || 'Service Provider',
+              address: p.address || 'Address not listed',
+              rating: 4.5 + (p.id.charCodeAt(0) % 10) / 20,
+              reviews: (p.id.charCodeAt(1) % 100) + 10,
+              phone: p.contact_numbers?.[0] || p.phone || 'N/A',
+              categories: p.service_categories || ['Equipment'],
+              distance: '---',
+              available: true,
+              lat,
+              lng,
+              locationApproximate,
+              avatarUrl: p.avatar_url ?? undefined,
+            };
+          })
+        );
 
         setProviders(mappedProviders);
       } catch (err) {
@@ -216,13 +265,36 @@ export const MapPage = () => {
     fetchProviders();
   }, [user]);
 
+  const userRef = useRef(user);
+  const updateProfileRef = useRef(updateProfile);
+
+  useEffect(() => {
+    userRef.current = user;
+    updateProfileRef.current = updateProfile;
+  }, [user, updateProfile]);
+
   // Get user location with fallback (single snapshot)
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           console.log("User location acquired:", position.coords);
-          setUserLocation([position.coords.latitude, position.coords.longitude]);
+          const newLat = position.coords.latitude;
+          const newLng = position.coords.longitude;
+          setUserLocation([newLat, newLng]);
+          
+          const currentUser = userRef.current;
+          if (currentUser) {
+            const currentLat = currentUser.location?.lat;
+            const currentLng = currentUser.location?.lng;
+            
+            // Only update if coordinates significantly changed
+            if (!currentLat || !currentLng || Math.abs(currentLat - newLat) > 0.0001 || Math.abs(currentLng - newLng) > 0.0001) {
+              updateProfileRef.current({ location_lat: newLat, location_lng: newLng }).catch(err => {
+                console.error("Failed to sync location to profile", err);
+              });
+            }
+          }
         },
         (error) => {
           console.warn("Geolocation failed or denied. Using default location (Peradeniya).", error.message);
@@ -238,16 +310,74 @@ export const MapPage = () => {
     }
   }, []);
 
-  // Calculate distances if user location is available
+  // Calculate distances using Haversine formula (km) as fallback
+  const haversineKm = useCallback((lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }, []);
+
+  // Fetch real-world driving distances
+  useEffect(() => {
+    if (!userLocation || providers.length === 0) return;
+
+    const fetchRealWorldDistances = async () => {
+      try {
+        // Prepare coordinates for OSRM: format is {lng},{lat}
+        // First coordinate is the user (source)
+        const coords = [`${userLocation[1]},${userLocation[0]}`];
+        
+        // Add all providers up to API limit (100 total coords usually, so 99 destinations max)
+        const providersToFetch = providers.slice(0, 99);
+        providersToFetch.forEach(p => {
+          coords.push(`${p.lng},${p.lat}`);
+        });
+
+        const url = `https://router.project-osrm.org/table/v1/driving/${coords.join(';')}?sources=0&annotations=distance`;
+        
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.distances && data.distances[0]) {
+            const newDistances: Record<string, string> = {};
+            
+            providers.forEach((p, index) => {
+              if (index < 99 && data.distances[0][index + 1] !== null && data.distances[0][index + 1] !== undefined) {
+                const distMeters = data.distances[0][index + 1];
+                newDistances[p.id] = `${(distMeters / 1000).toFixed(1)} km`;
+              } else {
+                // Fallback to haversine for missing routes or out of bounds providers
+                const d = haversineKm(userLocation[0], userLocation[1], p.lat, p.lng);
+                newDistances[p.id] = `${d.toFixed(1)} km`;
+              }
+            });
+            
+            setProviderDistances(newDistances);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching real-world distances, falling back to Haversine", err);
+      }
+
+      // Fallback if API fails
+      const fallbackDistances: Record<string, string> = {};
+      providers.forEach(p => {
+        const d = haversineKm(userLocation[0], userLocation[1], p.lat, p.lng);
+        fallbackDistances[p.id] = `${d.toFixed(1)} km`;
+      });
+      setProviderDistances(fallbackDistances);
+    };
+
+    fetchRealWorldDistances();
+  }, [userLocation, providers, haversineKm]);
+
   const providersWithDistance = providers.map(p => {
     if (!userLocation) return p;
-
-    // Simple Euclidean distance for demo (actually should use Haversine)
-    const d = Math.sqrt(Math.pow(p.lat - userLocation[0], 2) + Math.pow(p.lng - userLocation[1], 2)) * 69; // rough mi conversion
-    return {
-      ...p,
-      distance: `${d.toFixed(1)} mi`
-    };
+    return { ...p, distance: providerDistances[p.id] || '...' };
   });
 
   const filteredProviders = providersWithDistance.filter(provider => {
@@ -264,21 +394,19 @@ export const MapPage = () => {
 
   const selectedProviderData = providers.find(p => p.id === selectedProvider);
 
-  console.log("MapPage: Final Render Check", {
-    hasProviders: providers.length > 0,
-    hasFiltered: filteredProviders.length > 0,
-    hasLocation: !!userLocation,
-    selectedProvider
-  });
 
   return (
     <div className="space-y-6 min-h-[500px]">
       <div id="debug-map-page" style={{ display: 'none' }}>Map page reached render phase</div>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Find Service Providers</h1>
+          <h1 className="text-3xl font-bold text-foreground">
+            {user?.role === 'company' ? 'Service Provider Map' : 'Find Service Providers'}
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Locate certified technicians and repair services near you
+            {user?.role === 'company'
+              ? 'View other registered service providers across Sri Lanka'
+              : 'Locate certified technicians and repair services near you'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -406,8 +534,20 @@ export const MapPage = () => {
                 >
                   <Popup>
                     <div className="p-1">
-                      <h4 className="font-bold text-accent">{provider.name}</h4>
+                      <div className="flex items-center gap-2 mb-1">
+                        {provider.avatarUrl && (
+                          <img
+                            src={provider.avatarUrl}
+                            alt={provider.name}
+                            className="w-8 h-8 rounded-full object-cover border border-gray-200 flex-shrink-0"
+                          />
+                        )}
+                        <h4 className="font-bold text-accent">{provider.name}</h4>
+                      </div>
                       <p className="text-xs text-muted-foreground mt-1">{provider.address}</p>
+                      {provider.locationApproximate && (
+                        <p className="text-[9px] text-orange-400 mt-1 font-medium">⚠ Approx. location (address not resolved)</p>
+                      )}
                       <div className="flex flex-wrap gap-1 mt-2">
                         {provider.categories.map(cat => (
                           <span key={cat} className="px-1.5 py-0.5 bg-accent/10 text-accent text-[8px] rounded uppercase font-bold">
@@ -490,9 +630,21 @@ export const MapPage = () => {
                     }`}
                 >
                   <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${selectedProvider === provider.id ? 'bg-accent text-white' : 'bg-accent/10 text-accent group-hover:bg-accent group-hover:text-white'
+                    <div className={`w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center transition-colors ${selectedProvider === provider.id ? 'bg-accent text-white' : 'bg-accent/10 text-accent group-hover:bg-accent group-hover:text-white'
                       }`}>
-                      <MapPin className="h-6 w-6" />
+                      {provider.avatarUrl ? (
+                        <img
+                          src={provider.avatarUrl}
+                          alt={provider.name}
+                          className="w-full h-full object-cover"
+                          onError={e => {
+                            (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            (e.currentTarget.parentElement as HTMLElement).innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
+                          }}
+                        />
+                      ) : (
+                        <MapPin className="h-6 w-6" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
@@ -502,6 +654,9 @@ export const MapPage = () => {
                           <span className="text-xs font-bold">{provider.rating.toFixed(1)}</span>
                         </div>
                       </div>
+                      {provider.locationApproximate && (
+                        <p className="text-[9px] text-orange-400 mt-0.5 font-medium">⚠ Approx. location</p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{provider.address}</p>
 
                       <div className="flex flex-wrap gap-1.5 mt-3">
@@ -537,33 +692,14 @@ export const MapPage = () => {
                             variant="accent"
                             size="sm"
                             className="w-full"
-                            onClick={async (e) => {
+                            id={`request-repair-${provider.id}`}
+                            onClick={(e) => {
                               e.stopPropagation();
-                              if (!supabase.auth.getUser()) {
+                              if (!user) {
                                 toast.error("Please login to request repair");
                                 return;
                               }
-                              try {
-                                const { data: { user } } = await supabase.auth.getUser();
-                                if (!user) throw new Error("No user");
-
-                                const { error } = await (supabase as any)
-                                  .from('repair_requests')
-                                  .insert({
-                                    user_id: user.id,
-                                    company_id: provider.id,
-                                    machine_type: provider.categories[0] || 'Equipment',
-                                    brand: 'Inquiry',
-                                    description: `Repair request via Map for ${provider.name}`,
-                                    status: 'pending'
-                                  });
-
-                                if (error) throw error;
-                                toast.success("Repair request sent successfully!");
-                              } catch (err) {
-                                console.error("Error creating request:", err);
-                                toast.error("Failed to send request");
-                              }
+                              setRepairModalProvider(provider);
                             }}
                           >
                             <Calendar className="h-3.5 w-3.5 mr-2" />
@@ -587,6 +723,17 @@ export const MapPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Repair Request Modal */}
+      <AnimatePresence>
+        {repairModalProvider && (
+          <RequestRepairModal
+            provider={repairModalProvider}
+            onClose={() => setRepairModalProvider(null)}
+            onSuccess={() => setRepairModalProvider(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

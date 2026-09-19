@@ -30,13 +30,12 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 
-const categories = [
-  { id: 'fan', label: 'Industrial Fan', ids: ['00', '02', '04', '06'] },
-  { id: 'laptop', label: 'Laptop Fan', ids: ['Standard'] },
-  { id: 'server', label: 'Server Fan', ids: ['Rack-Unit-1'] },
-  { id: 'pump', label: 'Pump/Pipeline', ids: ['P1', 'P2'] },
-  { id: 'vehicle', label: 'Vehicle Engine', ids: ['V6', 'V8'] },
-  { id: 'hvac', label: 'HVAC System', ids: ['Central'] },
+const defaultCategories = [
+  { id: 'fan',             label: 'Industrial Fan',    ids: ['00', '02', '04', '06'], modelStatus: 'calibrated' },
+  { id: 'pump',            label: 'Industrial Pump',   ids: ['00', '02', '04', '06'], modelStatus: 'calibrated' },
+  { id: 'slider',          label: 'Slide Rail',        ids: ['00', '02', '04', '06'], modelStatus: 'calibrated' },
+  { id: 'valve',           label: 'Industrial Valve',  ids: ['00', '02', '04', '06'], modelStatus: 'calibrated' },
+  { id: 'vehicle_bearing', label: 'Vehicle Bearing',   ids: ['00'],                   modelStatus: 'fallback'   },
 ];
 
 interface AnalysisResult {
@@ -56,6 +55,8 @@ interface AnalysisResult {
   identified_category?: string;
   identified_id?: string;
   anomaly_score?: number;
+  fallback_mode?: string | null;
+  fallback_note?: string;
 }
 
 export const AnalysisPage = () => {
@@ -85,6 +86,44 @@ export const AnalysisPage = () => {
       }
     };
   }, [audioUrl]);
+
+  const [categories, setCategories] = useState(defaultCategories);
+
+  useEffect(() => {
+    const fetchModelStatus = async () => {
+      const configuredUrl = (import.meta.env.VITE_ML_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+      const localUrl = 'http://localhost:8000';
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const candidates = isLocalhost
+        ? [localUrl, configuredUrl].filter((u, i, a) => u && a.indexOf(u) === i)
+        : [configuredUrl, localUrl].filter((u, i, a) => u && a.indexOf(u) === i);
+
+      for (const apiUrl of candidates) {
+        try {
+          const res = await fetch(`${apiUrl}/models`, { signal: AbortSignal.timeout(2000) });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.supported_categories) {
+              setCategories(prev => prev.map(cat => {
+                const info = data.supported_categories[cat.id];
+                if (info) {
+                  return {
+                    ...cat,
+                    modelStatus: info.status as 'calibrated' | 'fallback',
+                  };
+                }
+                return cat;
+              }));
+              break;
+            }
+          }
+        } catch (err) {
+          // try next candidate
+        }
+      }
+    };
+    fetchModelStatus();
+  }, []);
 
   const selectedCategory = categories.find(c => c.id === category);
 
@@ -171,28 +210,51 @@ export const AnalysisPage = () => {
       formData.append('category', category);
       if (machineId) formData.append('machine_id', machineId);
 
-      const mlApiUrl = import.meta.env.VITE_ML_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${mlApiUrl}/analyze`, {
-        method: 'POST',
-        body: formData,
-      });
+      const configuredUrl = (import.meta.env.VITE_ML_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+      const localUrl = 'http://localhost:8000';
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
+      const endpointsToTry: string[] = isLocalhost
+        ? [localUrl, configuredUrl].filter((u, i, a) => u && a.indexOf(u) === i)
+        : [configuredUrl, localUrl].filter((u, i, a) => u && a.indexOf(u) === i);
+
+      let data: any = null;
+      let lastError: Error | null = null;
+
+      for (const targetUrl of endpointsToTry) {
+        try {
+          const response = await fetch(`${targetUrl}/analyze`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error(`Server at ${targetUrl} responded with ${response.status}`);
+          }
+
+          const resData = await response.json();
+
+          if (resData.status === 'Error') {
+            throw new Error(resData.message);
+          }
+
+          if (resData.analysis && resData.analysis.status === 'No Model') {
+            throw new Error(resData.analysis.message);
+          }
+
+          data = resData;
+          break;
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`Analysis failed on ${targetUrl}, trying fallback if available:`, err.message);
+        }
       }
 
-      const data = await response.json();
-
-      if (data.status === 'Error') {
-        throw new Error(data.message);
+      if (!data) {
+        throw lastError || new Error('All analysis backends unavailable');
       }
 
       const analysis = data.analysis;
-
-      // Handle the case where the model might not be found
-      if (analysis.status === 'No Model') {
-        throw new Error(analysis.message);
-      }
 
       const status: 'normal' | 'warning' | 'abnormal' =
         analysis.status === 'Normal' ? 'normal' :
@@ -219,10 +281,12 @@ export const AnalysisPage = () => {
           amplitude: Math.abs(v) + 0.2,
           frequency: 800 + (analysis.score * 50) + (Math.abs(v) * 200),
         })),
-        machine_id: analysis.machine_id,
+        machine_id:          analysis.machine_id,
         identified_category: analysis.machine_category,
-        identified_id: analysis.machine_id,
-        anomaly_score: analysis.score
+        identified_id:       analysis.machine_id,
+        anomaly_score:       analysis.score,
+        fallback_mode:       analysis.fallback_mode ?? null,
+        fallback_note:       analysis.fallback_note,
       });
 
       toast.success('Analysis complete!');
@@ -263,7 +327,7 @@ export const AnalysisPage = () => {
       }
     } catch (error: any) {
       console.error('Analysis failed:', error);
-      toast.error(`Backend Error: ${error.message}. Make sure server is running on ${import.meta.env.VITE_ML_API_URL || 'http://localhost:8000'}`);
+      toast.error(error.message || 'Analysis failed. Please check backend connection.');
     } finally {
       setIsAnalyzing(false);
       console.log("AnalysisPage: Analysis process finished.");
@@ -526,11 +590,25 @@ export const AnalysisPage = () => {
                   <SelectContent>
                     {categories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
-                        {cat.label}
+                        <span className="flex items-center gap-2">
+                          {cat.label}
+                          {cat.modelStatus === 'calibrated' ? (
+                            <span className="text-[9px] font-bold uppercase tracking-wide text-green-500">Calibrated</span>
+                          ) : (
+                            <span className="text-[9px] font-bold uppercase tracking-wide text-yellow-500">Fallback</span>
+                          )}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedCategory && selectedCategory.modelStatus === 'fallback' && (
+                  <p className="mt-2 text-xs text-yellow-500/90 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
+                    ⚠️ No dedicated model trained yet for <strong>{selectedCategory.label}</strong>. Analysis will use a
+                    cross-category fan model as a proxy — results are indicative only.
+                    Train a dedicated model via <code className="font-mono">cloud_trainer.ipynb</code> for full accuracy.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -631,6 +709,14 @@ export const AnalysisPage = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Fallback Model Notice */}
+              {result.fallback_note && (
+                <div className="flex items-start gap-3 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-400">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{result.fallback_note}</span>
+                </div>
+              )}
 
               {/* Waveform Visualization */}
               <div className="glass-card rounded-xl p-6">

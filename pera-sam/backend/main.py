@@ -26,7 +26,7 @@ import uvicorn
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 SERVER_DIR  = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(SERVER_DIR, "config.yaml")
+CONFIG_PATH = os.path.join(SERVER_DIR, "config.yaml") if os.path.exists(os.path.join(SERVER_DIR, "config.yaml")) else os.path.join(SERVER_DIR, "config.yml")
 ASSETS_DIR  = os.path.join(SERVER_DIR, "assets")
 os.makedirs(ASSETS_DIR, exist_ok=True)
 
@@ -106,7 +106,15 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://red-mushroom-094aece00.7.azurestaticapps.net"],
+    allow_origins=[
+        "https://proud-glacier-05c9fb600.7.azurestaticapps.net",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -134,20 +142,25 @@ async def root():
 
 @app.get("/models", summary="Available Models")
 async def get_models():
-    """Returns all available machine categories and their associated IDs."""
+    """Returns all supported machine categories, their IDs, and model availability status."""
     if not analyzer:
-        return {"categories": {}, "metrics_available": []}
+        return {"categories": {}, "metrics_available": [], "supported_categories": {}}
 
-    model_structure = {}
+    # Supported categories with live availability info
+    supported = analyzer.get_supported_categories()
+
+    # Also expose which raw model files are actually loaded
+    loaded_models = {}
     for category, ids in analyzer.models.items():
         if category == "default":
-            model_structure["default"] = ["Standard"]
+            loaded_models["default"] = ["Standard"]
         else:
-            model_structure[category] = list(ids.keys())
+            loaded_models[category] = list(ids.keys())
 
     return {
-        "categories": model_structure,
-        "metrics_available": list(analyzer.metrics.keys()),
+        "categories":          loaded_models,
+        "supported_categories": supported,
+        "metrics_available":   list(analyzer.metrics.keys()),
     }
 
 

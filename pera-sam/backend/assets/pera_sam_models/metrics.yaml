@@ -1,0 +1,36 @@
+pump_id_00_dataset:
+  AUC: 0.5
+  threshold: 13.528692467484476
+pump_id_02_dataset:
+  AUC: 0.5
+  threshold: 14.390409495268944
+pump_id_04_dataset:
+  AUC: 0.5
+  threshold: 13.87543953649784
+pump_id_06_dataset:
+  AUC: 0.5
+  threshold: 13.724415971843165
+slider_id_00_dataset:
+  AUC: 0.5
+  threshold: 13.551913066236702
+slider_id_02_dataset:
+  AUC: 0.5
+  threshold: 15.54282744919866
+slider_id_04_dataset:
+  AUC: 0.5
+  threshold: 22.487396732500187
+slider_id_06_dataset:
+  AUC: 0.5
+  threshold: 15.250149179662152
+valve_id_00_dataset:
+  AUC: 0.5
+  threshold: 13.971115233646323
+valve_id_02_dataset:
+  AUC: 0.5
+  threshold: 20.915669937194583
+valve_id_04_dataset:
+  AUC: 0.5
+  threshold: 17.89977343565888
+valve_id_06_dataset:
+  AUC: 0.5
+  threshold: 16.095980785739204

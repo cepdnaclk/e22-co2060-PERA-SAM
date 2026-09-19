@@ -22,6 +22,7 @@ import { SettingsPage } from "@/pages/dashboard/SettingsPage.tsx";
 import { AboutPage } from "@/pages/dashboard/AboutPage.tsx";
 import { RequestsPage } from "@/pages/dashboard/RequestsPage.tsx";
 import { AppointmentsPage } from "@/pages/dashboard/AppointmentsPage.tsx";
+import { HistoryPage } from "@/pages/dashboard/HistoryPage.tsx";
 import NotFound from "@/pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,8 @@ const App = () => (
                             <Route path="/" element={<LandingPage />} />
                             <Route path="/login" element={<LoginPage />} />
                             <Route path="/register" element={<RegisterPage />} />
+                            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                             {/* Welcome Screen */}
                             <Route
@@ -117,6 +120,16 @@ const App = () => (
                                     <ProtectedRoute>
                                         <DashboardLayout>
                                             <AppointmentsPage />
+                                        </DashboardLayout>
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/dashboard/history"
+                                element={
+                                    <ProtectedRoute>
+                                        <DashboardLayout>
+                                            <HistoryPage />
                                         </DashboardLayout>
                                     </ProtectedRoute>
                                 }

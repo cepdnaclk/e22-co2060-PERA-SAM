@@ -29,7 +29,7 @@ A HTML template integrated with the given GitHub repository templates, based on 
 ---
 
 ## Team
--  E/22/184, Karunanayake K.P.B.P. , [email](mailto:e22184@eng.pdn.ac.lk)
+-  [E/22/184, Karunanayake K.P.B.P.](https://zerokali20.github.io/zerokali20/) , [email](mailto:e22184@eng.pdn.ac.lk)
 -  E/22/396, Thilakarathna M. A. P. P., [email](mailto:e22396@eng.pdn.ac.lk)
 -  E/22/188, Kavindya R. M. D. , [email](mailto:e22188@eng.pdn.ac.lk)
 -  E/22/336, Sadaruwan D. M. D. , [email](mailto:e22336@eng.pdn.ac.lk)
@@ -90,8 +90,9 @@ The backend ML API is highly modularized, strictly separating the heavy Machine 
     *   `trainer.py`: Encapsulates all logic for loading datasets, extracting features, and training models.
     *   `inference.py`: Contains the `SoundAnalyzer` logic dedicated purely to predicting anomalies.
 *   **Singleton Pattern (Model Loading):** Machine learning models (`.h5` files) are large and slow to load. The `SoundAnalyzer` acts as a Singleton during the FastAPI `lifespan`. Models are loaded into memory *once* at server startup, enabling extremely fast, sub-second responses for subsequent `/analyze` requests.
-### 3. API & Machine Learning Design Strategy
 
+
+### 3. API & Machine Learning Design Strategy
 *   **Façade Pattern (API):** The `/analyze` API endpoint acts as a Façade. The client simply sends an audio file, completely unaware of the complex pipeline beneath (Librosa Mel-spectrogram extraction, MSE calculation, and threshold comparison).
 *   **Dynamic Thresholding:** Rather than hardcoding what constitutes an "anomaly," the system dynamically calculates thresholds based on the 90th percentile of reconstruction errors during training.
 *   **Auto-Initialization Strategy:** To ensure a smooth developer experience, the system implements an auto-bootstrap mechanism. If the server boots and detects no trained models, it automatically scans the raw dataset, extracts features, trains the autoencoders, and calibrates thresholds before opening the port for traffic.
@@ -105,10 +106,45 @@ The backend ML API is highly modularized, strictly separating the heavy Machine 
 
 
 ## Testing
+The PERA-SAM application employs a comprehensive, multi-layered testing architecture to ensure reliability across the frontend, backend, and API integrations. Our approach separates testing into distinct areas to maintain code quality without disrupting the production structure.
+### Testing Overview
+| Testing Phase | Framework/Tool | Target Scope | Execution / Location | Primary Focus |
+| :--- | :--- | :--- | :--- | :--- |
+| **Backend Testing** | Pytest + httpx | FastAPI Backend | `python -m pytest tests/ -v` (in `model/`) | API logic, validation errors, and Python integration via `TestClient`. |
+| **Frontend Unit** | Vitest | React Utilities | `npm run test` (in root) | Isolated testing of pure utility functions, hooks, and uncoupled logic. |
+| **Frontend Integration**| React Testing Library | UI Components | `npm run test` (in root) | DOM rendering, component interactions, and simulated user workflows. |
+| **API Endpoints** | Postman | Live Server | Postman Runner | Automated post-request assertions (status codes, timings, payloads). |
+### Backend Testing (Pytest + FastAPI)
+The standard and most robust way to test the FastAPI backend is using `pytest` combined with `httpx` (using FastAPI's `TestClient`). This tests the API logic without needing a running server.
+* **Execution:** Navigate to the `model/` directory and run `python -m pytest tests/ -v`.
+* **Scope:** Tests logic, validation errors (e.g., handling missing file uploads), and python integration.
+
+### Frontend Unit Testing (Vitest)
+Vitest is configured for the frontend to handle pure utility functions, hooks, and logic uncoupled from the React UI.
+* **Execution:** Run `npm run test` or `npm run test:watch` in the frontend directory.
+* **Scope:** Tests standalone helper functions (e.g., formatting confidence scores) alongside the files they test (e.g., `utils.ts` -> `utils.test.ts`).
+
+### Frontend Integration Testing (React Testing Library)
+Integration tests ensure that React components render correctly, interact with each other properly, and handle user events as expected.
+* **Execution:** Included in the standard `npm run test` command via jsdom environment.
+* **Scope:** Tests DOM rendering, simulated user workflows, and state changes (e.g., file upload component behavior and error messages).
+
+### API Endpoints Unit Testing (Postman)
+Postman allows writing JavaScript assertions that run after an API request completes, making it ideal for automating API endpoint testing.
+* **Execution:** Import the `PERA-SAM API Tests` collection into Postman, set the `base_url` environment variable (e.g., `http://localhost:8000`), and run the collection.
+* **Scope:** End-to-end integration test from the client's perspective to a live server, validating status codes, response times, and correct JSON payloads.
+
+
+
+
+
+
 
 
 
 ## Conclusion
+**PERA-SAM** represents a significant shift in industrial maintenance—moving away from reactive repairs to intelligent, proactive monitoring. By successfully leveraging acoustic signatures and machine learning (Autoencoders, FFT, and MFCC), this system proves that we can accurately detect the subtle early warning signs of equipment degradation before a catastrophic failure occurs.
+While currently prototyped and validated on cooling fans and small-scale motors, the architecture is inherently scalable. The ultimate vision for PERA-SAM is to be deployed across heavy manufacturing facilities, automotive fleets, and large-scale industrial plants—serving as the continuous, automated "ears" for mission-critical infrastructure, reducing unexpected downtime, and saving significant maintenance costs.
 
 
 

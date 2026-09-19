@@ -10,7 +10,21 @@
     <meta property="og:title" content="PERA-SAM" />
     <meta property="og:description" content="AI-Powered Mechanical Acoustic Diagnostics" />
     <meta property="og:type" content="website" />
+
+    <!-- Anti-FOUC: apply saved theme before first paint -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('pera-sam-theme');
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (t === 'dark' || (!t && prefersDark)) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (_) {}
+      })();
+    </script>
   </head>
+
 
   <body>
     <div id="root"></div>

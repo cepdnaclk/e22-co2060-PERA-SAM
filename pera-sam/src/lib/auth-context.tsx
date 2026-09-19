@@ -9,6 +9,7 @@ export interface User {
   email: string;
   role: UserRole;
   name: string;
+  avatarUrl?: string;
   // Normal user fields
   age?: number;
   address?: string;
@@ -29,7 +30,9 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (data: Partial<User>) => Promise<void>;
+  updateProfile: (data: Partial<User> & { location_lat?: number; location_lng?: number; contactNumbers?: string[] }) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -77,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: data.email,
         role: data.role as UserRole,
         name: data.name,
+        avatarUrl: (data as any).avatar_url ?? undefined,
         age: data.age ?? undefined,
         address: data.address ?? undefined,
         phone: data.phone ?? undefined,
@@ -212,15 +216,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   };
 
-  const updateProfile = async (updates: Partial<User>) => {
+  const resetPassword = async (email: string) => {
+    setIsLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setIsLoading(false);
+    if (error) throw error;
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    setIsLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setIsLoading(false);
+    if (error) throw error;
+  };
+
+  const updateProfile = async (updates: Partial<User> & { location_lat?: number; location_lng?: number; contactNumbers?: string[] }) => {
     if (!supabaseUser) return;
 
     try {
       const dbUpdates: Record<string, any> = {};
+      // Normal user fields
       if (updates.name !== undefined) dbUpdates.name = updates.name;
       if (updates.address !== undefined) dbUpdates.address = updates.address;
       if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
       if (updates.age !== undefined) dbUpdates.age = updates.age;
+      if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
+      // Company-specific fields
+      if (updates.companyName !== undefined) dbUpdates.company_name = updates.companyName;
+      if (updates.technicianName !== undefined) dbUpdates.technician_name = updates.technicianName;
+      if (updates.serviceCategories !== undefined) dbUpdates.service_categories = updates.serviceCategories;
+      if (updates.contactNumbers !== undefined) dbUpdates.contact_numbers = updates.contactNumbers;
+      if ((updates as any).location_lat !== undefined) dbUpdates.location_lat = (updates as any).location_lat;
+      if ((updates as any).location_lng !== undefined) dbUpdates.location_lng = (updates as any).location_lng;
 
       if (Object.keys(dbUpdates).length === 0) return;
 
@@ -250,6 +279,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       register,
       logout,
       updateProfile,
+      resetPassword,
+      updatePassword,
       isAuthenticated: !!user
     }}>
       {children}

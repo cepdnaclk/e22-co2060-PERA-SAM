@@ -1,0 +1,19 @@
+name: Sync Wiki
+
+on:
+  push:
+    branches: [main]
+    paths: ["wiki/**"]
+
+jobs:
+  wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Push to wiki
+        uses: Andrew-Chen-Wang/github-wiki-action@v4
+        with:
+          path: wiki/          # folder in your main repo with .md files
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "docs: sync wiki from main"
