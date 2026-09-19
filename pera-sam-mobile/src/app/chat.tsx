@@ -24,8 +24,6 @@ import {
 } from '../constants/theme';
 import { useScalePress } from '../components/AnimatedUI';
 
-
-
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Message {
   id: string;
@@ -345,7 +343,6 @@ export default function ChatScreen() {
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: BrandColors.background },
 
