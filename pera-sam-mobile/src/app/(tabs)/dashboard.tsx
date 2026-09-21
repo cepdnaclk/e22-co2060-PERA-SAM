@@ -15,6 +15,7 @@ import {
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabase';
 import {
@@ -52,6 +53,7 @@ export interface AppNotification {
   isRead: boolean;
   route?: string;
   params?: any;
+  rawTimestamp?: number;
 }
 
 export default function DashboardScreen() {
@@ -67,17 +69,27 @@ export default function DashboardScreen() {
   // Notification state
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifFilter, setNotifFilter] = useState<'all' | 'unread'>('all');
 
   // ── Fetch Dashboard Data & Notifications ──────────────────────────────
   const fetchData = useCallback(async () => {
     try {
+      const storageKey = `@pera_read_notifs_${user?.id || 'guest'}`;
+      let readIdSet = new Set<string>();
+      try {
+        const saved = await AsyncStorage.getItem(storageKey);
+        if (saved) {
+          readIdSet = new Set(JSON.parse(saved));
+        }
+      } catch {}
+
       // 1. Fetch recent analyses
       const { data, count } = await supabase
         .from('analysis_results')
         .select('*', { count: 'exact' })
         .eq('user_id', user?.id ?? '')
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(10);
 
       if (data) setRecentAnalyses(data as AnalysisRecord[]);
       if (count !== null) setTotalCount(count);
@@ -90,44 +102,91 @@ export default function DashboardScreen() {
         data.forEach((item: any) => {
           if (item.status === 'abnormal' || item.status === 'warning') {
             const isAnomaly = item.status === 'abnormal';
+            const notifId = `analysis-${item.id}`;
             notifList.push({
-              id: `analysis-${item.id}`,
+              id: notifId,
               type: 'anomaly',
               title: isAnomaly ? '⚠️ Anomaly Detected' : '⚡ Warning Alert',
               message: `${item.category?.toUpperCase() || 'Equipment'} (Machine: ${item.machine_id || 'N/A'}) showed ${isAnomaly ? 'anomalous' : 'warning'} acoustic pattern. Health score: ${item.confidence?.toFixed(1)}%.`,
               time: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              isRead: false,
+              isRead: readIdSet.has(notifId),
               route: '/(tabs)/history',
+              rawTimestamp: new Date(item.created_at).getTime(),
             });
           }
         });
       }
 
-      // Add unread repair requests or messages
+      // Add repair request notifications
       if (user) {
         try {
           const { data: reqData } = await (supabase as any)
             .from('repair_requests')
             .select('*')
-            .eq(user.user_metadata?.role === 'company' ? 'company_id' : 'user_id', user.id)
+            .or(`user_id.eq.${user.id},company_id.eq.${user.id},assigned_to.eq.${user.id}`)
             .order('created_at', { ascending: false })
-            .limit(3);
+            .limit(10);
 
           if (reqData) {
             reqData.forEach((req: any) => {
+              const notifId = `req-${req.id}`;
               notifList.push({
-                id: `req-${req.id}`,
+                id: notifId,
                 type: 'repair',
-                title: `Repair Request ${req.status.toUpperCase()}`,
+                title: `Repair Request ${req.status?.toUpperCase() || 'UPDATE'}`,
                 message: `Status updated for ${req.machine_type || 'Equipment repair'}. Tap to view details.`,
                 time: new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                isRead: false,
+                isRead: readIdSet.has(notifId),
                 route: '/(tabs)/requests',
+                rawTimestamp: new Date(req.created_at).getTime(),
               });
             });
           }
         } catch {
           // Table may not exist yet
+        }
+
+        // Add real-time chat messages from technician or client
+        try {
+          const { data: messages } = await (supabase as any)
+            .from('request_messages')
+            .select('id, request_id, sender_id, content, is_read, created_at')
+            .neq('sender_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(25);
+
+          if (messages) {
+            messages.forEach((m: any) => {
+              const notifId = `msg-${m.id}`;
+              const isProposal = m.content?.includes('[[APPOINTMENT_PROPOSAL:');
+              const isAttachment = m.content?.includes('[[ATTACHMENT:');
+              const clean = (m.content || '')
+                .replace(/\[\[APPOINTMENT_PROPOSAL:[\s\S]*?:APPOINTMENT_PROPOSAL\]\]/g, '')
+                .replace(/\[\[ATTACHMENT:[^\]]+\]\]/g, '')
+                .trim();
+
+              let preview = clean;
+              if (!preview && isAttachment) preview = '📷 Sent a photo attachment';
+              if (isProposal && !clean) preview = '📅 Proposed an appointment date & time';
+
+              notifList.push({
+                id: notifId,
+                type: 'message',
+                title: isProposal ? '📅 Appointment Proposal' : '💬 New Chat Message',
+                message: preview || 'New message received',
+                time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                isRead: readIdSet.has(notifId) || m.is_read,
+                route: '/chat',
+                params: {
+                  requestId: m.request_id,
+                  isCompany: user.user_metadata?.role === 'company' ? '1' : '0',
+                },
+                rawTimestamp: new Date(m.created_at).getTime(),
+              });
+            });
+          }
+        } catch (e) {
+          console.warn('Could not query messages for notifications:', e);
         }
       }
 
@@ -139,10 +198,14 @@ export default function DashboardScreen() {
           title: '✨ Welcome to PERA-SAM',
           message: 'Equipment acoustic monitoring models are ready. Upload an audio recording to run analysis.',
           time: 'Just now',
-          isRead: false,
+          isRead: readIdSet.has('system-welcome'),
           route: '/(tabs)/analysis',
+          rawTimestamp: Date.now(),
         });
       }
+
+      // Sort notifications by timestamp descending (newest first)
+      notifList.sort((a, b) => (b.rawTimestamp || 0) - (a.rawTimestamp || 0));
 
       setNotifications(notifList);
     } catch {
@@ -175,6 +238,11 @@ export default function DashboardScreen() {
         { event: '*', schema: 'public', table: 'request_messages' },
         () => fetchData()
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'repair_requests' },
+        () => fetchData()
+      )
       .subscribe();
 
     return () => {
@@ -188,12 +256,25 @@ export default function DashboardScreen() {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    const storageKey = `@pera_read_notifs_${user?.id || 'guest'}`;
+    const allIds = notifications.map((n) => n.id);
+    try {
+      await AsyncStorage.setItem(storageKey, JSON.stringify(allIds));
+    } catch {}
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
-  const handleNotifPress = (notif: AppNotification) => {
-    // Mark item as read
+  const handleNotifPress = async (notif: AppNotification) => {
+    const storageKey = `@pera_read_notifs_${user?.id || 'guest'}`;
+    try {
+      const saved = await AsyncStorage.getItem(storageKey);
+      const set = new Set<string>(saved ? JSON.parse(saved) : []);
+      set.add(notif.id);
+      await AsyncStorage.setItem(storageKey, JSON.stringify(Array.from(set)));
+    } catch {}
+
+    // Mark item as read in state so it stays permanently in the list!
     setNotifications((prev) =>
       prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
     );
@@ -475,74 +556,122 @@ export default function DashboardScreen() {
               </View>
             </View>
 
+            {/* Filter Tabs: All vs Unread */}
+            <View style={[styles.notifTabBar, { backgroundColor: isDark ? '#1e293b' : BrandColors.muted }]}>
+              <TouchableOpacity
+                style={[
+                  styles.notifTab,
+                  notifFilter === 'all' && [styles.notifTabActive, { backgroundColor: colors.card }],
+                ]}
+                onPress={() => setNotifFilter('all')}
+              >
+                <Text
+                  style={[
+                    styles.notifTabText,
+                    { color: colors.mutedForeground },
+                    notifFilter === 'all' && { color: colors.foreground, fontWeight: '700' },
+                  ]}
+                >
+                  All ({notifications.length})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.notifTab,
+                  notifFilter === 'unread' && [styles.notifTabActive, { backgroundColor: colors.card }],
+                ]}
+                onPress={() => setNotifFilter('unread')}
+              >
+                <Text
+                  style={[
+                    styles.notifTabText,
+                    { color: colors.mutedForeground },
+                    notifFilter === 'unread' && { color: colors.foreground, fontWeight: '700' },
+                  ]}
+                >
+                  Unread ({unreadCount})
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             {/* Notification List */}
-            {notifications.length === 0 ? (
-              <View style={styles.notifEmpty}>
-                <Ionicons name="notifications-off-outline" size={40} color={BrandColors.border} />
-                <Text style={styles.notifEmptyTitle}>No notifications</Text>
-                <Text style={styles.notifEmptySub}>You are all caught up!</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={notifications}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.notifList}
-                renderItem={({ item }) => {
-                  const iconName =
-                    item.type === 'anomaly'
-                      ? 'warning'
-                      : item.type === 'message'
-                      ? 'chatbubble-ellipses'
-                      : item.type === 'repair'
-                      ? 'construct'
-                      : 'sparkles';
+            {(() => {
+              const displayedNotifs = notifications.filter((n) =>
+                notifFilter === 'unread' ? !n.isRead : true
+              );
 
-                  const iconColor =
-                    item.type === 'anomaly'
-                      ? BrandColors.rose
-                      : item.type === 'message'
-                      ? BrandColors.indigo
-                      : item.type === 'repair'
-                      ? BrandColors.blue
-                      : BrandColors.purple;
+              return displayedNotifs.length === 0 ? (
+                <View style={styles.notifEmpty}>
+                  <Ionicons name="notifications-off-outline" size={40} color={BrandColors.border} />
+                  <Text style={[styles.notifEmptyTitle, { color: colors.foreground }]}>
+                    {notifFilter === 'unread' ? 'No unread notifications' : 'No notifications'}
+                  </Text>
+                  <Text style={[styles.notifEmptySub, { color: colors.mutedForeground }]}>
+                    {notifFilter === 'unread' ? 'All notifications have been read!' : 'You are all caught up!'}
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={displayedNotifs}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={styles.notifList}
+                  renderItem={({ item }) => {
+                    const iconName =
+                      item.type === 'anomaly'
+                        ? 'warning'
+                        : item.type === 'message'
+                        ? 'chatbubble-ellipses'
+                        : item.type === 'repair'
+                        ? 'construct'
+                        : 'sparkles';
 
-                  const bgStyle =
-                    item.type === 'anomaly'
-                      ? BrandColors.roseLight
-                      : item.type === 'message'
-                      ? BrandColors.indigoLight
-                      : item.type === 'repair'
-                      ? BrandColors.blueLight
-                      : BrandColors.purpleLight;
+                    const iconColor =
+                      item.type === 'anomaly'
+                        ? BrandColors.rose
+                        : item.type === 'message'
+                        ? BrandColors.indigo
+                        : item.type === 'repair'
+                        ? BrandColors.blue
+                        : BrandColors.purple;
 
-                  return (
-                    <TouchableOpacity
-                      style={[
-                        styles.notifCard,
-                        { backgroundColor: colors.card, borderColor: colors.border },
-                        !item.isRead && styles.notifCardUnread,
-                      ]}
-                      onPress={() => handleNotifPress(item)}
-                      activeOpacity={0.8}
-                    >
-                      {!item.isRead && <View style={styles.unreadIndicator} />}
-                      <View style={[styles.notifIconBg, { backgroundColor: bgStyle }]}>
-                        <Ionicons name={iconName} size={20} color={iconColor} />
-                      </View>
-                      <View style={styles.notifBody}>
-                        <View style={styles.notifTopRow}>
-                          <Text style={[styles.notifTitle, { color: colors.foreground }]}>{item.title}</Text>
-                          <Text style={styles.notifTime}>{item.time}</Text>
+                    const bgStyle =
+                      item.type === 'anomaly'
+                        ? BrandColors.roseLight
+                        : item.type === 'message'
+                        ? BrandColors.indigoLight
+                        : item.type === 'repair'
+                        ? BrandColors.blueLight
+                        : BrandColors.purpleLight;
+
+                    return (
+                      <TouchableOpacity
+                        style={[
+                          styles.notifCard,
+                          { backgroundColor: colors.card, borderColor: colors.border },
+                          !item.isRead && styles.notifCardUnread,
+                        ]}
+                        onPress={() => handleNotifPress(item)}
+                        activeOpacity={0.8}
+                      >
+                        {!item.isRead && <View style={styles.unreadIndicator} />}
+                        <View style={[styles.notifIconBg, { backgroundColor: bgStyle }]}>
+                          <Ionicons name={iconName} size={20} color={iconColor} />
                         </View>
-                        <Text style={styles.notifMsg} numberOfLines={2}>
-                          {item.message}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                }}
-              />
-            )}
+                        <View style={styles.notifBody}>
+                          <View style={styles.notifTopRow}>
+                            <Text style={[styles.notifTitle, { color: colors.foreground }]}>{item.title}</Text>
+                            <Text style={styles.notifTime}>{item.time}</Text>
+                          </View>
+                          <Text style={styles.notifMsg} numberOfLines={2}>
+                            {item.message}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              );
+            })()}
           </Pressable>
         </Pressable>
       </Modal>
@@ -934,7 +1063,29 @@ const styles = StyleSheet.create({
   markReadBtn: { paddingVertical: 4, paddingHorizontal: 8 },
   markReadText: { fontSize: 13, fontWeight: '700', color: BrandColors.indigo },
 
-  notifList: { paddingTop: 14, paddingBottom: 10 },
+  notifTabBar: {
+    flexDirection: 'row',
+    borderRadius: BorderRadius.md,
+    padding: 3,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  notifTab: {
+    flex: 1,
+    paddingVertical: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.sm,
+  },
+  notifTabActive: {
+    ...Shadows.sm,
+  },
+  notifTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  notifList: { paddingTop: 10, paddingBottom: 10 },
   notifCard: {
     flexDirection: 'row',
     padding: 14,

@@ -13,6 +13,7 @@ import {
   Platform,
   ScrollView,
   Image,
+  Alert,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -270,6 +271,73 @@ export default function MapScreen() {
     return matchCategory && matchSearch;
   });
 
+  const [chatLoadingId, setChatLoadingId] = useState<string | null>(null);
+
+  // ── Open or initiate chat with provider ──────────────────────────────
+  const handleOpenChat = async (provider: ServiceProvider) => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to message service providers.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign In', onPress: () => router.push('/(auth)/login' as any) },
+      ]);
+      return;
+    }
+
+    setChatLoadingId(provider.id);
+    try {
+      // Check if an inquiry or request already exists for this provider
+      const { data: existing, error: searchErr } = await (supabase as any)
+        .from('repair_requests')
+        .select('id')
+        .eq('user_id', user.id)
+        .or(`company_id.eq.${provider.id},assigned_to.eq.${provider.id}`)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (!searchErr && existing && existing.length > 0) {
+        router.push({
+          pathname: '/chat',
+          params: {
+            requestId: existing[0].id,
+            isCompany: '0',
+            otherPartyName: provider.name,
+          },
+        } as any);
+        return;
+      }
+
+      // Create a lightweight inquiry request so chat can begin immediately
+      const { data: newReq, error: insertErr } = await (supabase as any)
+        .from('repair_requests')
+        .insert({
+          user_id: user.id,
+          company_id: provider.id,
+          assigned_to: provider.id,
+          machine_type: 'General Service Inquiry',
+          description: `Direct inquiry initiated via Find Service map with ${provider.name}.`,
+          status: 'pending',
+          priority: 'medium',
+        })
+        .select('id')
+        .single();
+
+      if (insertErr) throw insertErr;
+
+      router.push({
+        pathname: '/chat',
+        params: {
+          requestId: newReq.id,
+          isCompany: '0',
+          otherPartyName: provider.name,
+        },
+      } as any);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Could not initiate conversation with provider.');
+    } finally {
+      setChatLoadingId(null);
+    }
+  };
+
   // ── Open in maps app ──────────────────────────────────────────────────
   const openInMaps = (lat: number, lng: number, name: string) => {
     const scheme = Platform.OS === 'ios'
@@ -377,6 +445,22 @@ export default function MapScreen() {
 
               {/* Action Buttons */}
               <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={[styles.actionBtnChat, { backgroundColor: BrandColors.indigo + '15', borderColor: BrandColors.indigo + '40' }]}
+                  onPress={() => handleOpenChat(item)}
+                  disabled={chatLoadingId === item.id}
+                  activeOpacity={0.7}
+                >
+                  {chatLoadingId === item.id ? (
+                    <ActivityIndicator size="small" color={BrandColors.indigo} />
+                  ) : (
+                    <>
+                      <Ionicons name="chatbubble-ellipses-outline" size={15} color={BrandColors.indigo} />
+                      <Text style={[styles.actionBtnChatText, { color: BrandColors.indigo }]}>Message</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
                 <Animated.View style={[{ flex: 1 }, repairBtnAnim]}>
                   <TouchableOpacity
                     style={styles.actionBtnPrimary}
@@ -391,8 +475,8 @@ export default function MapScreen() {
                   >
                     <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo, borderRadius: BorderRadius.md }]} />
                     <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.4, borderRadius: BorderRadius.md }]} />
-                    <Ionicons name="construct-outline" size={16} color={BrandColors.white} />
-                    <Text style={styles.actionBtnPrimaryText}>Request Repair</Text>
+                    <Ionicons name="construct-outline" size={15} color={BrandColors.white} />
+                    <Text style={styles.actionBtnPrimaryText}>Repair</Text>
                   </TouchableOpacity>
                 </Animated.View>
 
@@ -400,8 +484,8 @@ export default function MapScreen() {
                   style={[styles.actionBtnSecondary, { backgroundColor: colors.card }]}
                   onPress={() => openInMaps(item.lat, item.lng, item.name)}
                 >
-                  <Ionicons name="map-outline" size={16} color={BrandColors.blue} />
-                  <Text style={styles.actionBtnSecondaryText}>Directions</Text>
+                  <Ionicons name="map-outline" size={15} color={BrandColors.blue} />
+                  <Text style={styles.actionBtnSecondaryText}>Route</Text>
                 </TouchableOpacity>
               </View>
 
@@ -757,7 +841,18 @@ const styles = StyleSheet.create({
   },
   contactText: { ...Typography.bodySmall, color: BrandColors.foreground, fontWeight: '600' },
 
-  actionRow: { flexDirection: 'row', gap: 10 },
+  actionRow: { flexDirection: 'row', gap: 8 },
+  actionBtnChat: {
+    flex: 1,
+    flexDirection: 'row',
+    height: 46,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1.5,
+  },
+  actionBtnChatText: { fontSize: 13, fontWeight: '700' },
   actionBtnPrimary: {
     flex: 1,
     flexDirection: 'row',

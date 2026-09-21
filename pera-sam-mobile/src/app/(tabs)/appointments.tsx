@@ -24,6 +24,7 @@ import {
   BorderRadius,
   Shadows,
 } from '../../constants/theme';
+import { getScheduledInfo } from '../../lib/appointmentUtils';
 
 type AppointmentStatus = 'pending' | 'accepted' | 'completed' | 'declined';
 
@@ -36,6 +37,8 @@ interface Appointment {
   status: AppointmentStatus;
   description: string;
   analysis_id: string | null;
+  scheduled_date?: string | null;
+  scheduled_time_slot?: string | null;
   created_at: string;
   profiles?: {
     name: string;
@@ -171,8 +174,12 @@ export default function AppointmentsScreen() {
 
   const filteredAppointments = appointments.filter((a) => {
     const matchFilter = selectedFilter === 'all' || a.status === selectedFilter;
-    const matchDate = selectedDate === 'all' || a.created_at.startsWith(selectedDate);
-    return matchFilter && matchDate;
+    if (!matchFilter) return false;
+    if (selectedDate === 'all') return true;
+
+    const sched = getScheduledInfo(a);
+    const dStr = sched.date ? sched.date.toISOString().split('T')[0] : a.created_at.split('T')[0];
+    return dStr === selectedDate;
   });
 
   const stats = {
@@ -186,7 +193,8 @@ export default function AppointmentsScreen() {
     const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
     const isExpanded = expandedId === item.id;
     const parsed = parseDescription(item.description);
-    const date = new Date(item.created_at);
+    const sched = getScheduledInfo(item);
+    const date = sched.date || new Date(item.created_at);
 
     return (
       <Animated.View entering={FadeInRight.duration(400).delay(index * 80)}>
@@ -214,6 +222,21 @@ export default function AppointmentsScreen() {
                   {item.machine_type} {item.brand ? `• ${item.brand}` : ''}
                 </Text>
               </View>
+              <TouchableOpacity
+                style={{ padding: 6, borderRadius: 8, backgroundColor: BrandColors.indigo + '15', marginRight: 4 }}
+                onPress={() => {
+                  router.push({
+                    pathname: '/chat',
+                    params: {
+                      requestId: item.id,
+                      isCompany: isCompany ? '1' : '0',
+                      otherPartyName: item.profiles?.name || (isCompany ? 'User' : 'Company'),
+                    },
+                  } as any);
+                }}
+              >
+                <Ionicons name="chatbubble-ellipses-outline" size={14} color={BrandColors.indigo} />
+              </TouchableOpacity>
               <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
                 <Ionicons name={cfg.icon as any} size={12} color={cfg.color} />
                 <Text style={[styles.statusBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
@@ -222,17 +245,22 @@ export default function AppointmentsScreen() {
 
             <View style={styles.dateTimeRow}>
               <View style={styles.metaItem}>
-                <Ionicons name="calendar-outline" size={13} color={BrandColors.emerald} />
-                <Text style={styles.metaText}>
+                <Ionicons name="calendar-outline" size={13} color={sched.isExplicit ? BrandColors.emerald : BrandColors.indigo} />
+                <Text style={[styles.metaText, sched.isExplicit && { color: BrandColors.emerald, fontWeight: '700' }]}>
                   {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                 </Text>
               </View>
               <View style={styles.metaItem}>
-                <Ionicons name="time-outline" size={13} color={BrandColors.mutedForeground} />
-                <Text style={styles.metaText}>
-                  {date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                <Ionicons name="time-outline" size={13} color={sched.timeSlot ? BrandColors.emerald : BrandColors.mutedForeground} />
+                <Text style={[styles.metaText, sched.timeSlot ? { color: BrandColors.emerald, fontWeight: '700' } : null]}>
+                  {sched.timeSlot || date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                 </Text>
               </View>
+              {sched.isExplicit && (
+                <View style={{ backgroundColor: BrandColors.emeraldLight, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, marginLeft: 'auto' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: BrandColors.emerald }}>Scheduled</Text>
+                </View>
+              )}
             </View>
 
             <Text style={[styles.issueText, { color: colors.foreground }]} numberOfLines={isExpanded ? undefined : 2}>

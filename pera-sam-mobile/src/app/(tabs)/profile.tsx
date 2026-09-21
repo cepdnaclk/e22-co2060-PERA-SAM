@@ -162,6 +162,9 @@ export default function ProfileScreen() {
       .catch(() => {});
   }, []);
 
+  const [savingNotif, setSavingNotif] = useState(false);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+
   // ── Save notification preferences ───────────────────────────────────────
   const saveNotifPrefs = useCallback(
     async (key: string, value: boolean) => {
@@ -177,6 +180,27 @@ export default function ProfileScreen() {
     [emailNotifs, pushNotifs, analysisAlerts, messageAlerts]
   );
 
+  const handleSaveAllNotifPrefs = async () => {
+    setSavingNotif(true);
+    try {
+      const current = {
+        emailNotifs,
+        pushNotifs,
+        analysisAlerts,
+        messageAlerts,
+      };
+      await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(current));
+      await supabase.auth.updateUser({
+        data: { notification_preferences: current },
+      }).catch(() => {});
+      Alert.alert('Preferences Saved', 'Your notification preferences have been saved successfully.');
+    } catch (err) {
+      Alert.alert('Save Failed', err instanceof Error ? err.message : 'Could not save preferences.');
+    } finally {
+      setSavingNotif(false);
+    }
+  };
+
   // ── Save privacy preferences ─────────────────────────────────────────────
   const savePrivacyPrefs = useCallback(
     async (key: string, value: boolean) => {
@@ -189,6 +213,25 @@ export default function ProfileScreen() {
     },
     [shareReports, publicProfile]
   );
+
+  const handleSaveAllPrivacyPrefs = async () => {
+    setSavingPrivacy(true);
+    try {
+      const current = {
+        shareReports,
+        publicProfile,
+      };
+      await AsyncStorage.setItem(PRIVACY_PREFS_KEY, JSON.stringify(current));
+      await supabase.auth.updateUser({
+        data: { privacy_preferences: current },
+      }).catch(() => {});
+      Alert.alert('Settings Saved', 'Your privacy settings have been saved successfully.');
+    } catch (err) {
+      Alert.alert('Save Failed', err instanceof Error ? err.message : 'Could not save privacy settings.');
+    } finally {
+      setSavingPrivacy(false);
+    }
+  };
 
   // ── Avatar upload ────────────────────────────────────────────────────────
   const handleAvatarPress = async () => {
@@ -236,6 +279,15 @@ export default function ProfileScreen() {
       }
 
       await updateProfile(user.id, updates);
+      await supabase.auth.updateUser({
+        data: {
+          full_name: name.trim(),
+          name: name.trim(),
+          phone: phone.trim(),
+          address: address.trim(),
+        },
+      }).catch(() => {});
+
       Alert.alert('Profile Updated', 'Your profile has been saved successfully.');
     } catch (err) {
       Alert.alert('Save Failed', err instanceof Error ? err.message : 'Could not save profile.');
@@ -674,6 +726,22 @@ export default function ProfileScreen() {
                   }}
                   last
                 />
+
+                <TouchableOpacity
+                  style={[styles.primaryBtn, { backgroundColor: BrandColors.blue, marginTop: 14 }]}
+                  onPress={handleSaveAllNotifPrefs}
+                  disabled={savingNotif}
+                  activeOpacity={0.85}
+                >
+                  {savingNotif ? (
+                    <ActivityIndicator size={18} color={BrandColors.white} />
+                  ) : (
+                    <>
+                      <Ionicons name="save-outline" size={18} color={BrandColors.white} />
+                      <Text style={styles.primaryBtnText}>Save Notification Preferences</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </SectionCard>
             </Animated.View>
           )}
@@ -707,6 +775,22 @@ export default function ProfileScreen() {
                   }}
                   last
                 />
+
+                <TouchableOpacity
+                  style={[styles.primaryBtn, { backgroundColor: BrandColors.emerald, marginTop: 14 }]}
+                  onPress={handleSaveAllPrivacyPrefs}
+                  disabled={savingPrivacy}
+                  activeOpacity={0.85}
+                >
+                  {savingPrivacy ? (
+                    <ActivityIndicator size={18} color={BrandColors.white} />
+                  ) : (
+                    <>
+                      <Ionicons name="shield-checkmark-outline" size={18} color={BrandColors.white} />
+                      <Text style={styles.primaryBtnText}>Save Privacy Settings</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </SectionCard>
             </Animated.View>
           )}
