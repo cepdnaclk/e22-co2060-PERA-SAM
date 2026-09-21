@@ -880,7 +880,6 @@ export default function ChatScreen() {
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: BrandColors.background },
 
