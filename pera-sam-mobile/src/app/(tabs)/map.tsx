@@ -12,12 +12,15 @@ import {
   Linking,
   Platform,
   ScrollView,
+  Image,
+  Alert,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useAuth } from '../../lib/AuthContext';
+import { useThemeContext } from '../../lib/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import {
   BrandColors,
@@ -26,6 +29,7 @@ import {
   Shadows,
 } from '../../constants/theme';
 import { useScalePress } from '../../components/AnimatedUI';
+import { ThemeToggle } from '../../components/ThemeToggle';
 
 
 
@@ -42,6 +46,7 @@ interface ServiceProvider {
   available: boolean;
   lat: number;
   lng: number;
+  avatar_url?: string; // company profile photo
 }
 
 const SERVICE_CATEGORIES = [
@@ -68,6 +73,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function MapScreen() {
   const { user } = useAuth();
+  const { colors, isDark } = useThemeContext();
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -80,27 +86,39 @@ export default function MapScreen() {
   const { animatedStyle: repairBtnAnim, onPressIn: repairIn, onPressOut: repairOut } = useScalePress();
 
   // ── Get user location ──────────────────────────────────────────────────
-  useEffect(() => {
-    (async () => {
-      try {
+  const requestLocation = useCallback(async () => {
+    try {
+      setLocationStatus('loading');
+      // Check current permission status first — avoid a double dialog
+      const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
+
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          setLocationStatus('denied');
-          // Default to Peradeniya, Sri Lanka
-          setUserLocation({ lat: 7.2525, lng: 80.5925 });
-          return;
-        }
-        setLocationStatus('granted');
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-      } catch {
-        setLocationStatus('denied');
-        setUserLocation({ lat: 7.2525, lng: 80.5925 });
+        finalStatus = status;
       }
-    })();
+
+      if (finalStatus !== 'granted') {
+        setLocationStatus('denied');
+        // Default to Peradeniya, Sri Lanka
+        setUserLocation({ lat: 7.2525, lng: 80.5925 });
+        return;
+      }
+
+      setLocationStatus('granted');
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    } catch {
+      setLocationStatus('denied');
+      setUserLocation({ lat: 7.2525, lng: 80.5925 });
+    }
   }, []);
+
+  useEffect(() => {
+    requestLocation();
+  }, [requestLocation]);
 
   // ── Fetch providers ────────────────────────────────────────────────────
   const fetchProviders = useCallback(async () => {
@@ -131,6 +149,7 @@ export default function MapScreen() {
           available: true,
           lat,
           lng,
+          avatar_url: p.avatar_url || null,
         };
       });
 
@@ -252,6 +271,73 @@ export default function MapScreen() {
     return matchCategory && matchSearch;
   });
 
+  const [chatLoadingId, setChatLoadingId] = useState<string | null>(null);
+
+  // ── Open or initiate chat with provider ──────────────────────────────
+  const handleOpenChat = async (provider: ServiceProvider) => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to message service providers.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign In', onPress: () => router.push('/(auth)/login' as any) },
+      ]);
+      return;
+    }
+
+    setChatLoadingId(provider.id);
+    try {
+      // Check if an inquiry or request already exists for this provider
+      const { data: existing, error: searchErr } = await (supabase as any)
+        .from('repair_requests')
+        .select('id')
+        .eq('user_id', user.id)
+        .or(`company_id.eq.${provider.id},assigned_to.eq.${provider.id}`)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (!searchErr && existing && existing.length > 0) {
+        router.push({
+          pathname: '/chat',
+          params: {
+            requestId: existing[0].id,
+            isCompany: '0',
+            otherPartyName: provider.name,
+          },
+        } as any);
+        return;
+      }
+
+      // Create a lightweight inquiry request so chat can begin immediately
+      const { data: newReq, error: insertErr } = await (supabase as any)
+        .from('repair_requests')
+        .insert({
+          user_id: user.id,
+          company_id: provider.id,
+          assigned_to: provider.id,
+          machine_type: 'General Service Inquiry',
+          description: `Direct inquiry initiated via Find Service map with ${provider.name}.`,
+          status: 'pending',
+          priority: 'medium',
+        })
+        .select('id')
+        .single();
+
+      if (insertErr) throw insertErr;
+
+      router.push({
+        pathname: '/chat',
+        params: {
+          requestId: newReq.id,
+          isCompany: '0',
+          otherPartyName: provider.name,
+        },
+      } as any);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Could not initiate conversation with provider.');
+    } finally {
+      setChatLoadingId(null);
+    }
+  };
+
   // ── Open in maps app ──────────────────────────────────────────────────
   const openInMaps = (lat: number, lng: number, name: string) => {
     const scheme = Platform.OS === 'ios'
@@ -269,27 +355,52 @@ export default function MapScreen() {
     return (
       <Animated.View entering={FadeInRight.duration(400).delay(index * 100)}>
         <TouchableOpacity
-          style={[styles.providerCard, isExpanded && styles.providerCardExpanded]}
+          style={[
+            styles.providerCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            isExpanded && [styles.providerCardExpanded, { borderColor: BrandColors.indigo + '50' }],
+          ]}
           onPress={() => setExpandedId(isExpanded ? null : item.id)}
           activeOpacity={0.7}
         >
           {/* Provider Header */}
           <View style={styles.providerHeader}>
-            <View style={styles.providerAvatar}>
-              <Text style={styles.providerAvatarText}>
-                {item.name.charAt(0).toUpperCase()}
-              </Text>
-            </View>
+            {/* Company profile photo or initial letter fallback */}
+            {item.avatar_url ? (
+              <Image
+                source={{ uri: item.avatar_url }}
+                style={styles.providerAvatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.providerAvatar}>
+                <Text style={styles.providerAvatarText}>
+                  {item.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
             <View style={styles.providerInfo}>
-              <Text style={styles.providerName} numberOfLines={1}>{item.name}</Text>
+              <Text style={[styles.providerName, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
               <View style={styles.providerMeta}>
-                <Ionicons name="location-outline" size={12} color={BrandColors.mutedForeground} />
-                <Text style={styles.providerAddress} numberOfLines={1}>{item.address}</Text>
+                <Ionicons name="location-outline" size={12} color={colors.mutedForeground} />
+                <Text style={[styles.providerAddress, { color: colors.mutedForeground }]} numberOfLines={1}>{item.address}</Text>
               </View>
             </View>
-            <View style={styles.distanceBadge}>
-              <Ionicons name="navigate-outline" size={12} color={BrandColors.indigo} />
-              <Text style={styles.distanceText}>{item.distance} km</Text>
+            <View style={[
+              styles.distanceBadge,
+              locationStatus === 'granted' && { backgroundColor: BrandColors.emeraldLight },
+            ]}>
+              <Ionicons
+                name="navigate-outline"
+                size={12}
+                color={locationStatus === 'granted' ? BrandColors.emerald : BrandColors.indigo}
+              />
+              <Text style={[
+                styles.distanceText,
+                locationStatus === 'granted' && { color: BrandColors.emerald },
+              ]}>
+                {locationStatus === 'loading' ? '...' : `${item.distance} km`}
+              </Text>
             </View>
           </View>
 
@@ -297,8 +408,8 @@ export default function MapScreen() {
           <View style={styles.providerDetails}>
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={14} color={BrandColors.amber} />
-              <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
-              <Text style={styles.reviewsText}>({item.reviews})</Text>
+              <Text style={[styles.ratingText, { color: colors.foreground }]}>{item.rating.toFixed(1)}</Text>
+              <Text style={[styles.reviewsText, { color: colors.mutedForeground }]}>({item.reviews})</Text>
             </View>
             <ScrollView
               horizontal
@@ -309,31 +420,47 @@ export default function MapScreen() {
                 const catConfig = SERVICE_CATEGORIES.find(c => c.id === cat);
                 return (
                   <View key={cat} style={[styles.categoryPill, { backgroundColor: (catConfig?.color || BrandColors.muted) + '15' }]}>
-                    <Text style={[styles.categoryPillText, { color: catConfig?.color || BrandColors.mutedForeground }]}>
+                    <Text style={[styles.categoryPillText, { color: catConfig?.color || colors.mutedForeground }]}>
                       {cat.charAt(0).toUpperCase() + cat.slice(1).replace('_', ' ')}
                     </Text>
                   </View>
                 );
               })}
               {item.categories.length > 3 && (
-                <Text style={styles.moreCats}>+{item.categories.length - 3}</Text>
+                <Text style={[styles.moreCats, { color: colors.mutedForeground }]}>+{item.categories.length - 3}</Text>
               )}
             </ScrollView>
           </View>
 
           {/* Expanded Actions */}
           {isExpanded && (
-            <View style={styles.expandedSection}>
+            <View style={[styles.expandedSection, { borderTopColor: colors.border }]}>
               {/* Contact info */}
               <View style={styles.contactRow}>
                 <View style={styles.contactIconBg}>
                   <Ionicons name="call-outline" size={14} color={BrandColors.emerald} />
                 </View>
-                <Text style={styles.contactText}>{item.phone}</Text>
+                <Text style={[styles.contactText, { color: colors.foreground }]}>{item.phone}</Text>
               </View>
 
               {/* Action Buttons */}
               <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={[styles.actionBtnChat, { backgroundColor: BrandColors.indigo + '15', borderColor: BrandColors.indigo + '40' }]}
+                  onPress={() => handleOpenChat(item)}
+                  disabled={chatLoadingId === item.id}
+                  activeOpacity={0.7}
+                >
+                  {chatLoadingId === item.id ? (
+                    <ActivityIndicator size="small" color={BrandColors.indigo} />
+                  ) : (
+                    <>
+                      <Ionicons name="chatbubble-ellipses-outline" size={15} color={BrandColors.indigo} />
+                      <Text style={[styles.actionBtnChatText, { color: BrandColors.indigo }]}>Message</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
                 <Animated.View style={[{ flex: 1 }, repairBtnAnim]}>
                   <TouchableOpacity
                     style={styles.actionBtnPrimary}
@@ -348,23 +475,23 @@ export default function MapScreen() {
                   >
                     <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo, borderRadius: BorderRadius.md }]} />
                     <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.4, borderRadius: BorderRadius.md }]} />
-                    <Ionicons name="construct-outline" size={16} color={BrandColors.white} />
-                    <Text style={styles.actionBtnPrimaryText}>Request Repair</Text>
+                    <Ionicons name="construct-outline" size={15} color={BrandColors.white} />
+                    <Text style={styles.actionBtnPrimaryText}>Repair</Text>
                   </TouchableOpacity>
                 </Animated.View>
 
                 <TouchableOpacity
-                  style={styles.actionBtnSecondary}
+                  style={[styles.actionBtnSecondary, { backgroundColor: colors.card }]}
                   onPress={() => openInMaps(item.lat, item.lng, item.name)}
                 >
-                  <Ionicons name="map-outline" size={16} color={BrandColors.blue} />
-                  <Text style={styles.actionBtnSecondaryText}>Directions</Text>
+                  <Ionicons name="map-outline" size={15} color={BrandColors.blue} />
+                  <Text style={styles.actionBtnSecondaryText}>Route</Text>
                 </TouchableOpacity>
               </View>
 
               {item.phone !== 'N/A' && (
                 <TouchableOpacity
-                  style={styles.callBtn}
+                  style={[styles.callBtn, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}
                   onPress={() => Linking.openURL(`tel:${item.phone}`)}
                 >
                   <Ionicons name="call" size={14} color={BrandColors.emerald} />
@@ -379,7 +506,7 @@ export default function MapScreen() {
             <Ionicons
               name={isExpanded ? 'chevron-up' : 'chevron-down'}
               size={16}
-              color={BrandColors.border}
+              color={colors.mutedForeground}
             />
           </View>
         </TouchableOpacity>
@@ -388,9 +515,9 @@ export default function MapScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+      <Animated.View entering={FadeInDown.duration(400)} style={[styles.header, { backgroundColor: colors.card }]}>
         {/* Gradient accent bar */}
         <View style={styles.headerGradient}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.blue }]} />
@@ -400,38 +527,57 @@ export default function MapScreen() {
           <View style={styles.headerIconBg}>
             <Ionicons name="map" size={18} color={BrandColors.white} />
           </View>
-          <Text style={styles.headerTitle}>Find Services</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Find Services</Text>
         </View>
-        <View style={[styles.locationBadge, { backgroundColor: locationStatus === 'granted' ? BrandColors.emeraldLight : BrandColors.muted }]}>
-          <Ionicons
-            name={locationStatus === 'granted' ? 'location' : 'location-outline'}
-            size={14}
-            color={locationStatus === 'granted' ? BrandColors.emerald : BrandColors.mutedForeground}
-          />
-          <Text style={[
-            styles.locationText,
-            { color: locationStatus === 'granted' ? BrandColors.emerald : BrandColors.mutedForeground },
-          ]}>
-            {locationStatus === 'granted' ? 'GPS Active' : 'Default'}
-          </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <ThemeToggle />
+          <View style={[styles.locationBadge, { backgroundColor: locationStatus === 'granted' ? BrandColors.emeraldLight : (isDark ? colors.background : BrandColors.muted) }]}>
+            <Ionicons
+              name={locationStatus === 'granted' ? 'location' : 'location-outline'}
+              size={14}
+              color={locationStatus === 'granted' ? BrandColors.emerald : colors.mutedForeground}
+            />
+            <Text style={[
+              styles.locationText,
+              { color: locationStatus === 'granted' ? BrandColors.emerald : colors.mutedForeground },
+            ]}>
+              {locationStatus === 'granted' ? 'GPS Active' : 'Default'}
+            </Text>
+          </View>
         </View>
       </Animated.View>
 
+      {/* Location permission denied banner */}
+      {locationStatus === 'denied' && (
+        <View style={[styles.locationBanner, { backgroundColor: isDark ? '#2a1a0a' : '#fef3c7', borderColor: BrandColors.amber }]}>
+          <Ionicons name="location-outline" size={16} color={BrandColors.amber} />
+          <Text style={[styles.locationBannerText, { color: isDark ? BrandColors.amber : '#92400e' }]}>
+            Using default location (Peradeniya). Enable GPS for accurate distances.
+          </Text>
+          <TouchableOpacity
+            style={styles.locationBannerBtn}
+            onPress={() => Linking.openSettings()}
+          >
+            <Text style={styles.locationBannerBtnText}>Grant Access</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Search */}
       <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.searchSection}>
-        <View style={styles.searchWrap}>
+        <View style={[styles.searchWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Ionicons name="search-outline" size={18} color={BrandColors.indigo} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.foreground }]}
             placeholder="Search by name or location..."
-            placeholderTextColor={BrandColors.mutedForeground}
+            placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color={BrandColors.mutedForeground} />
+              <Ionicons name="close-circle" size={18} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
@@ -449,7 +595,8 @@ export default function MapScreen() {
               key={cat.id}
               style={[
                 styles.catChip,
-                selectedCategory === cat.id && { backgroundColor: cat.color },
+                { backgroundColor: colors.card, borderColor: colors.border },
+                selectedCategory === cat.id && { backgroundColor: cat.color, borderColor: cat.color },
               ]}
               onPress={() => setSelectedCategory(cat.id)}
             >
@@ -461,6 +608,7 @@ export default function MapScreen() {
               <Text
                 style={[
                   styles.catChipText,
+                  { color: colors.mutedForeground },
                   selectedCategory === cat.id && styles.catChipTextActive,
                 ]}
               >
@@ -473,7 +621,7 @@ export default function MapScreen() {
 
       {/* Results count */}
       <View style={styles.resultsBar}>
-        <Text style={styles.resultsText}>
+        <Text style={[styles.resultsText, { color: colors.mutedForeground }]}>
           {filteredProviders.length} provider{filteredProviders.length !== 1 ? 's' : ''} found
         </Text>
       </View>
@@ -503,8 +651,8 @@ export default function MapScreen() {
               <View style={styles.emptyIconBg}>
                 <Ionicons name="search-outline" size={44} color={BrandColors.indigo} />
               </View>
-              <Text style={styles.emptyTitle}>No providers found</Text>
-              <Text style={styles.emptyDesc}>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No providers found</Text>
+              <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>
                 {searchQuery
                   ? 'Try a different search term or category.'
                   : 'No service providers registered yet.'}
@@ -627,6 +775,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  providerAvatarImage: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    backgroundColor: BrandColors.muted,
+  },
   providerAvatarText: {
     fontSize: 18,
     fontWeight: '800',
@@ -687,7 +841,18 @@ const styles = StyleSheet.create({
   },
   contactText: { ...Typography.bodySmall, color: BrandColors.foreground, fontWeight: '600' },
 
-  actionRow: { flexDirection: 'row', gap: 10 },
+  actionRow: { flexDirection: 'row', gap: 8 },
+  actionBtnChat: {
+    flex: 1,
+    flexDirection: 'row',
+    height: 46,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1.5,
+  },
+  actionBtnChatText: { fontSize: 13, fontWeight: '700' },
   actionBtnPrimary: {
     flex: 1,
     flexDirection: 'row',
@@ -744,4 +909,31 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...Typography.h3, color: BrandColors.foreground, marginBottom: 8 },
   emptyDesc: { ...Typography.body, color: BrandColors.mutedForeground, textAlign: 'center', lineHeight: 22 },
+
+  // Location denied banner
+  locationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  locationBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 16,
+  },
+  locationBannerBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: BrandColors.amber,
+    borderRadius: BorderRadius.sm,
+  },
+  locationBannerBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: BrandColors.white,
+  },
 });

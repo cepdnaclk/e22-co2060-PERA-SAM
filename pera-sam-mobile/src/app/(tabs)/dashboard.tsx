@@ -10,10 +10,12 @@ import {
   Modal,
   Pressable,
   FlatList,
+  ImageBackground,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabase';
 import {
@@ -25,6 +27,10 @@ import {
   AnalysisStatus,
 } from '../../constants/theme';
 import { FloatingOrb } from '../../components/AnimatedUI';
+import { useThemeContext } from '../../lib/ThemeContext';
+import { ThemeToggle } from '../../components/ThemeToggle';
+
+const dashboardBg = require('../../../assets/images/Dashboardbg.png');
 
 interface AnalysisRecord {
   id: string;
@@ -33,6 +39,9 @@ interface AnalysisRecord {
   status: AnalysisStatus;
   confidence: number;
   machine_id?: string;
+  anomaly_score?: number;
+  recommendation?: string;
+  details?: { filename?: string };
 }
 
 export interface AppNotification {
@@ -44,28 +53,43 @@ export interface AppNotification {
   isRead: boolean;
   route?: string;
   params?: any;
+  rawTimestamp?: number;
 }
 
 export default function DashboardScreen() {
   const { user } = useAuth();
+  const { colors, isDark } = useThemeContext();
   const [refreshing, setRefreshing] = useState(false);
   const [recentAnalyses, setRecentAnalyses] = useState<AnalysisRecord[]>([]);
   const [totalCount, setTotalCount] = useState(0);
 
+  // Detail modal state for recent activity
+  const [selectedRecord, setSelectedRecord] = useState<AnalysisRecord | null>(null);
+
   // Notification state
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifFilter, setNotifFilter] = useState<'all' | 'unread'>('all');
 
   // ── Fetch Dashboard Data & Notifications ──────────────────────────────
   const fetchData = useCallback(async () => {
     try {
+      const storageKey = `@pera_read_notifs_${user?.id || 'guest'}`;
+      let readIdSet = new Set<string>();
+      try {
+        const saved = await AsyncStorage.getItem(storageKey);
+        if (saved) {
+          readIdSet = new Set(JSON.parse(saved));
+        }
+      } catch {}
+
       // 1. Fetch recent analyses
       const { data, count } = await supabase
         .from('analysis_results')
         .select('*', { count: 'exact' })
         .eq('user_id', user?.id ?? '')
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(10);
 
       if (data) setRecentAnalyses(data as AnalysisRecord[]);
       if (count !== null) setTotalCount(count);
@@ -78,44 +102,91 @@ export default function DashboardScreen() {
         data.forEach((item: any) => {
           if (item.status === 'abnormal' || item.status === 'warning') {
             const isAnomaly = item.status === 'abnormal';
+            const notifId = `analysis-${item.id}`;
             notifList.push({
-              id: `analysis-${item.id}`,
+              id: notifId,
               type: 'anomaly',
               title: isAnomaly ? '⚠️ Anomaly Detected' : '⚡ Warning Alert',
               message: `${item.category?.toUpperCase() || 'Equipment'} (Machine: ${item.machine_id || 'N/A'}) showed ${isAnomaly ? 'anomalous' : 'warning'} acoustic pattern. Health score: ${item.confidence?.toFixed(1)}%.`,
               time: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              isRead: false,
+              isRead: readIdSet.has(notifId),
               route: '/(tabs)/history',
+              rawTimestamp: new Date(item.created_at).getTime(),
             });
           }
         });
       }
 
-      // Add unread repair requests or messages
+      // Add repair request notifications
       if (user) {
         try {
           const { data: reqData } = await (supabase as any)
             .from('repair_requests')
             .select('*')
-            .eq(user.user_metadata?.role === 'company' ? 'company_id' : 'user_id', user.id)
+            .or(`user_id.eq.${user.id},company_id.eq.${user.id},assigned_to.eq.${user.id}`)
             .order('created_at', { ascending: false })
-            .limit(3);
+            .limit(10);
 
           if (reqData) {
             reqData.forEach((req: any) => {
+              const notifId = `req-${req.id}`;
               notifList.push({
-                id: `req-${req.id}`,
+                id: notifId,
                 type: 'repair',
-                title: `Repair Request ${req.status.toUpperCase()}`,
+                title: `Repair Request ${req.status?.toUpperCase() || 'UPDATE'}`,
                 message: `Status updated for ${req.machine_type || 'Equipment repair'}. Tap to view details.`,
                 time: new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                isRead: false,
+                isRead: readIdSet.has(notifId),
                 route: '/(tabs)/requests',
+                rawTimestamp: new Date(req.created_at).getTime(),
               });
             });
           }
         } catch {
           // Table may not exist yet
+        }
+
+        // Add real-time chat messages from technician or client
+        try {
+          const { data: messages } = await (supabase as any)
+            .from('request_messages')
+            .select('id, request_id, sender_id, content, is_read, created_at')
+            .neq('sender_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(25);
+
+          if (messages) {
+            messages.forEach((m: any) => {
+              const notifId = `msg-${m.id}`;
+              const isProposal = m.content?.includes('[[APPOINTMENT_PROPOSAL:');
+              const isAttachment = m.content?.includes('[[ATTACHMENT:');
+              const clean = (m.content || '')
+                .replace(/\[\[APPOINTMENT_PROPOSAL:[\s\S]*?:APPOINTMENT_PROPOSAL\]\]/g, '')
+                .replace(/\[\[ATTACHMENT:[^\]]+\]\]/g, '')
+                .trim();
+
+              let preview = clean;
+              if (!preview && isAttachment) preview = '📷 Sent a photo attachment';
+              if (isProposal && !clean) preview = '📅 Proposed an appointment date & time';
+
+              notifList.push({
+                id: notifId,
+                type: 'message',
+                title: isProposal ? '📅 Appointment Proposal' : '💬 New Chat Message',
+                message: preview || 'New message received',
+                time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                isRead: readIdSet.has(notifId) || m.is_read,
+                route: '/chat',
+                params: {
+                  requestId: m.request_id,
+                  isCompany: user.user_metadata?.role === 'company' ? '1' : '0',
+                },
+                rawTimestamp: new Date(m.created_at).getTime(),
+              });
+            });
+          }
+        } catch (e) {
+          console.warn('Could not query messages for notifications:', e);
         }
       }
 
@@ -127,10 +198,14 @@ export default function DashboardScreen() {
           title: '✨ Welcome to PERA-SAM',
           message: 'Equipment acoustic monitoring models are ready. Upload an audio recording to run analysis.',
           time: 'Just now',
-          isRead: false,
+          isRead: readIdSet.has('system-welcome'),
           route: '/(tabs)/analysis',
+          rawTimestamp: Date.now(),
         });
       }
+
+      // Sort notifications by timestamp descending (newest first)
+      notifList.sort((a, b) => (b.rawTimestamp || 0) - (a.rawTimestamp || 0));
 
       setNotifications(notifList);
     } catch {
@@ -163,6 +238,11 @@ export default function DashboardScreen() {
         { event: '*', schema: 'public', table: 'request_messages' },
         () => fetchData()
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'repair_requests' },
+        () => fetchData()
+      )
       .subscribe();
 
     return () => {
@@ -176,12 +256,25 @@ export default function DashboardScreen() {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    const storageKey = `@pera_read_notifs_${user?.id || 'guest'}`;
+    const allIds = notifications.map((n) => n.id);
+    try {
+      await AsyncStorage.setItem(storageKey, JSON.stringify(allIds));
+    } catch {}
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
-  const handleNotifPress = (notif: AppNotification) => {
-    // Mark item as read
+  const handleNotifPress = async (notif: AppNotification) => {
+    const storageKey = `@pera_read_notifs_${user?.id || 'guest'}`;
+    try {
+      const saved = await AsyncStorage.getItem(storageKey);
+      const set = new Set<string>(saved ? JSON.parse(saved) : []);
+      set.add(notif.id);
+      await AsyncStorage.setItem(storageKey, JSON.stringify(Array.from(set)));
+    } catch {}
+
+    // Mark item as read in state so it stays permanently in the list!
     setNotifications((prev) =>
       prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
     );
@@ -198,9 +291,18 @@ export default function DashboardScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+      {/* Background Image Effect (matching website dashboard) */}
+      <ImageBackground
+        source={dashboardBg}
+        style={StyleSheet.absoluteFill}
+        imageStyle={{
+          opacity: isDark ? 0.08 : 0.04,
+          resizeMode: 'cover',
+        }}
+      />
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(500).delay(50)} style={styles.header}>
+      <Animated.View entering={FadeInDown.duration(500).delay(50)} style={[styles.header, { backgroundColor: colors.card }]}>
         {/* Gradient accent bar */}
         <View style={styles.headerGradient}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo }]} />
@@ -210,22 +312,32 @@ export default function DashboardScreen() {
           <View style={styles.logoBox}>
             <Ionicons name="mic" size={18} color={BrandColors.white} />
           </View>
-          <Text style={styles.headerTitle}>PERA-SAM</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>PERA-SAM</Text>
         </View>
 
-        {/* Notification Button */}
-        <TouchableOpacity
-          style={styles.notifBtn}
-          onPress={() => setShowNotifModal(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
-            size={22}
-            color={unreadCount > 0 ? BrandColors.indigo : BrandColors.foreground}
-          />
-          {unreadCount > 0 && <View style={styles.notifDot} />}
-        </TouchableOpacity>
+        {/* Right header actions: Theme Toggle & Notification Button */}
+        <View style={styles.headerRight}>
+          <ThemeToggle />
+          <TouchableOpacity
+            style={[
+              styles.notifBtn,
+              {
+                backgroundColor: isDark ? '#1e293b' : BrandColors.muted,
+                borderWidth: 1,
+                borderColor: isDark ? '#334155' : BrandColors.border,
+              },
+            ]}
+            onPress={() => setShowNotifModal(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
+              size={22}
+              color={unreadCount > 0 ? BrandColors.indigo : colors.foreground}
+            />
+            {unreadCount > 0 && <View style={styles.notifDot} />}
+          </TouchableOpacity>
+        </View>
       </Animated.View>
 
       <ScrollView
@@ -260,7 +372,7 @@ export default function DashboardScreen() {
 
         {/* Quick Stats */}
         <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.statsRow}>
-          <View style={[styles.statCard, { borderLeftColor: BrandColors.indigo }]}>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: BrandColors.indigo }]}>
             <Text style={[styles.statNumber, { color: BrandColors.indigo }]}>{totalCount}</Text>
             <Text style={styles.statLabel}>Total Analyses</Text>
           </View>
@@ -268,6 +380,8 @@ export default function DashboardScreen() {
             style={[
               styles.statCard,
               {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
                 borderLeftColor: lastStatus
                   ? StatusConfig[lastStatus].color
                   : BrandColors.mutedForeground,
@@ -293,49 +407,61 @@ export default function DashboardScreen() {
 
         {/* Quick Actions */}
         <Animated.View entering={FadeInDown.duration(500).delay(300)}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quick Actions</Text>
         </Animated.View>
         <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.actionsRow}>
           <TouchableOpacity
-            style={styles.actionCard}
+            style={styles.actionBtn}
             onPress={() => router.push('/(tabs)/analysis' as any)}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.accentLight }]}>
-              <Ionicons name="mic" size={24} color={BrandColors.accent} />
+              <Ionicons name="mic" size={26} color={BrandColors.accent} />
             </View>
-            <Text style={styles.actionTitle}>New Analysis</Text>
+            <Text style={[styles.actionTitle, { color: colors.foreground }]}>New Analysis</Text>
             <Text style={styles.actionDesc}>Upload audio</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionCard}
+            style={styles.actionBtn}
             onPress={() => router.push('/(tabs)/history' as any)}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.purpleLight }]}>
-              <Ionicons name="time" size={24} color={BrandColors.purple} />
+              <Ionicons name="time" size={26} color={BrandColors.purple} />
             </View>
-            <Text style={styles.actionTitle}>History</Text>
+            <Text style={[styles.actionTitle, { color: colors.foreground }]}>History</Text>
             <Text style={styles.actionDesc}>Past results</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionCard}
+            style={styles.actionBtn}
             onPress={() => router.push('/(tabs)/map' as any)}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.blueLight }]}>
-              <Ionicons name="map" size={24} color={BrandColors.blue} />
+              <Ionicons name="map" size={26} color={BrandColors.blue} />
             </View>
-            <Text style={styles.actionTitle}>Services</Text>
+            <Text style={[styles.actionTitle, { color: colors.foreground }]}>Services</Text>
             <Text style={styles.actionDesc}>Find nearby</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => router.push('/(tabs)/appointments' as any)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: BrandColors.emeraldLight }]}>
+              <Ionicons name="calendar" size={26} color={BrandColors.emerald} />
+            </View>
+            <Text style={[styles.actionTitle, { color: colors.foreground }]}>Appointments</Text>
+            <Text style={styles.actionDesc}>Schedule & track</Text>
           </TouchableOpacity>
         </Animated.View>
 
         {/* Recent Activity */}
         <Animated.View entering={FadeInDown.duration(500).delay(500)} style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Recent Activity</Text>
           {recentAnalyses.length > 0 && (
             <TouchableOpacity onPress={() => router.push('/(tabs)/history' as any)}>
               <Text style={styles.viewAllLink}>View All →</Text>
@@ -343,11 +469,11 @@ export default function DashboardScreen() {
           )}
         </Animated.View>
         {recentAnalyses.length === 0 ? (
-          <Animated.View entering={FadeInDown.duration(500).delay(600)} style={styles.emptyCard}>
+          <Animated.View entering={FadeInDown.duration(500).delay(600)} style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.emptyIconBg}>
               <Ionicons name="analytics-outline" size={40} color={BrandColors.indigo} />
             </View>
-            <Text style={styles.emptyTitle}>No analyses yet</Text>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No analyses yet</Text>
             <Text style={styles.emptyDesc}>
               Upload an audio file to get your first equipment health report.
             </Text>
@@ -365,10 +491,14 @@ export default function DashboardScreen() {
             const cfg = StatusConfig[item.status] || StatusConfig.normal;
             return (
               <Animated.View key={item.id} entering={FadeInRight.duration(400).delay(600 + idx * 100)}>
-                <View style={styles.activityCard}>
+                <TouchableOpacity
+                  style={[styles.activityCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={() => setSelectedRecord(item)}
+                  activeOpacity={0.7}
+                >
                   <View style={[styles.activityDot, { backgroundColor: cfg.color }]} />
                   <View style={styles.activityInfo}>
-                    <Text style={styles.activityCategory}>
+                    <Text style={[styles.activityCategory, { color: colors.foreground }]}>
                       {item.category?.charAt(0).toUpperCase() + item.category?.slice(1) || 'Unknown'}
                     </Text>
                     <Text style={styles.activityDate}>
@@ -385,7 +515,8 @@ export default function DashboardScreen() {
                       {cfg.label}
                     </Text>
                   </View>
-                </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} style={{ marginLeft: 6 }} />
+                </TouchableOpacity>
               </Animated.View>
             );
           })
@@ -400,13 +531,13 @@ export default function DashboardScreen() {
         onRequestClose={() => setShowNotifModal(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowNotifModal(false)}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={[styles.modalContent, { backgroundColor: colors.card }]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHandle} />
 
             {/* Modal Header */}
             <View style={styles.notifHeader}>
               <View style={styles.notifHeaderTitleRow}>
-                <Text style={styles.notifHeaderTitle}>Notifications</Text>
+                <Text style={[styles.notifHeaderTitle, { color: colors.foreground }]}>Notifications</Text>
                 {unreadCount > 0 && (
                   <View style={styles.notifCountBadge}>
                     <Text style={styles.notifCountText}>{unreadCount} new</Text>
@@ -425,74 +556,225 @@ export default function DashboardScreen() {
               </View>
             </View>
 
+            {/* Filter Tabs: All vs Unread */}
+            <View style={[styles.notifTabBar, { backgroundColor: isDark ? '#1e293b' : BrandColors.muted }]}>
+              <TouchableOpacity
+                style={[
+                  styles.notifTab,
+                  notifFilter === 'all' && [styles.notifTabActive, { backgroundColor: colors.card }],
+                ]}
+                onPress={() => setNotifFilter('all')}
+              >
+                <Text
+                  style={[
+                    styles.notifTabText,
+                    { color: colors.mutedForeground },
+                    notifFilter === 'all' && { color: colors.foreground, fontWeight: '700' },
+                  ]}
+                >
+                  All ({notifications.length})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.notifTab,
+                  notifFilter === 'unread' && [styles.notifTabActive, { backgroundColor: colors.card }],
+                ]}
+                onPress={() => setNotifFilter('unread')}
+              >
+                <Text
+                  style={[
+                    styles.notifTabText,
+                    { color: colors.mutedForeground },
+                    notifFilter === 'unread' && { color: colors.foreground, fontWeight: '700' },
+                  ]}
+                >
+                  Unread ({unreadCount})
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             {/* Notification List */}
-            {notifications.length === 0 ? (
-              <View style={styles.notifEmpty}>
-                <Ionicons name="notifications-off-outline" size={40} color={BrandColors.border} />
-                <Text style={styles.notifEmptyTitle}>No notifications</Text>
-                <Text style={styles.notifEmptySub}>You are all caught up!</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={notifications}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.notifList}
-                renderItem={({ item }) => {
-                  const iconName =
-                    item.type === 'anomaly'
-                      ? 'warning'
-                      : item.type === 'message'
-                      ? 'chatbubble-ellipses'
-                      : item.type === 'repair'
-                      ? 'construct'
-                      : 'sparkles';
+            {(() => {
+              const displayedNotifs = notifications.filter((n) =>
+                notifFilter === 'unread' ? !n.isRead : true
+              );
 
-                  const iconColor =
-                    item.type === 'anomaly'
-                      ? BrandColors.rose
-                      : item.type === 'message'
-                      ? BrandColors.indigo
-                      : item.type === 'repair'
-                      ? BrandColors.blue
-                      : BrandColors.purple;
+              return displayedNotifs.length === 0 ? (
+                <View style={styles.notifEmpty}>
+                  <Ionicons name="notifications-off-outline" size={40} color={BrandColors.border} />
+                  <Text style={[styles.notifEmptyTitle, { color: colors.foreground }]}>
+                    {notifFilter === 'unread' ? 'No unread notifications' : 'No notifications'}
+                  </Text>
+                  <Text style={[styles.notifEmptySub, { color: colors.mutedForeground }]}>
+                    {notifFilter === 'unread' ? 'All notifications have been read!' : 'You are all caught up!'}
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={displayedNotifs}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={styles.notifList}
+                  renderItem={({ item }) => {
+                    const iconName =
+                      item.type === 'anomaly'
+                        ? 'warning'
+                        : item.type === 'message'
+                        ? 'chatbubble-ellipses'
+                        : item.type === 'repair'
+                        ? 'construct'
+                        : 'sparkles';
 
-                  const bgStyle =
-                    item.type === 'anomaly'
-                      ? BrandColors.roseLight
-                      : item.type === 'message'
-                      ? BrandColors.indigoLight
-                      : item.type === 'repair'
-                      ? BrandColors.blueLight
-                      : BrandColors.purpleLight;
+                    const iconColor =
+                      item.type === 'anomaly'
+                        ? BrandColors.rose
+                        : item.type === 'message'
+                        ? BrandColors.indigo
+                        : item.type === 'repair'
+                        ? BrandColors.blue
+                        : BrandColors.purple;
 
-                  return (
+                    const bgStyle =
+                      item.type === 'anomaly'
+                        ? BrandColors.roseLight
+                        : item.type === 'message'
+                        ? BrandColors.indigoLight
+                        : item.type === 'repair'
+                        ? BrandColors.blueLight
+                        : BrandColors.purpleLight;
+
+                    return (
+                      <TouchableOpacity
+                        style={[
+                          styles.notifCard,
+                          { backgroundColor: colors.card, borderColor: colors.border },
+                          !item.isRead && styles.notifCardUnread,
+                        ]}
+                        onPress={() => handleNotifPress(item)}
+                        activeOpacity={0.8}
+                      >
+                        {!item.isRead && <View style={styles.unreadIndicator} />}
+                        <View style={[styles.notifIconBg, { backgroundColor: bgStyle }]}>
+                          <Ionicons name={iconName} size={20} color={iconColor} />
+                        </View>
+                        <View style={styles.notifBody}>
+                          <View style={styles.notifTopRow}>
+                            <Text style={[styles.notifTitle, { color: colors.foreground }]}>{item.title}</Text>
+                            <Text style={styles.notifTime}>{item.time}</Text>
+                          </View>
+                          <Text style={styles.notifMsg} numberOfLines={2}>
+                            {item.message}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              );
+            })()}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ─── Analysis Detail Modal ────────────────────────────────────────── */}
+      <Modal
+        visible={!!selectedRecord}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSelectedRecord(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setSelectedRecord(null)}>
+          <Pressable
+            style={[styles.modalContent, { backgroundColor: colors.card, maxHeight: '85%' }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {selectedRecord && (() => {
+              const cfg = StatusConfig[selectedRecord.status] || StatusConfig.normal;
+              return (
+                <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+                  {/* Modal handle */}
+                  <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
+
+                  {/* Modal Header */}
+                  <View style={styles.detailModalHeader}>
+                    <Text style={[styles.detailModalTitle, { color: colors.foreground }]}>Analysis Details</Text>
+                    <TouchableOpacity onPress={() => setSelectedRecord(null)}>
+                      <Ionicons name="close-circle" size={28} color={BrandColors.mutedForeground} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Status Hero */}
+                  <View style={[styles.modalHero, { backgroundColor: cfg.bg }]}>
+                    <View style={[styles.modalHeroIcon, { backgroundColor: cfg.color }]}>
+                      <Ionicons name={cfg.icon as any} size={24} color={BrandColors.white} />
+                    </View>
+                    <Text style={[styles.modalStatus, { color: cfg.color }]}>{cfg.label}</Text>
+                  </View>
+
+                  {/* Details Grid */}
+                  <View style={[styles.detailGrid, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <DetailRow label="Category" value={selectedRecord.category ? selectedRecord.category.charAt(0).toUpperCase() + selectedRecord.category.slice(1) : 'Unknown'} colors={colors} even />
+                    <DetailRow label="Machine ID" value={selectedRecord.machine_id || 'N/A'} colors={colors} />
+                    <DetailRow label="Health Score" value={`${selectedRecord.confidence?.toFixed(1) ?? '—'}%`} colors={colors} even />
+                    <DetailRow label="Anomaly Score" value={selectedRecord.anomaly_score?.toFixed(4) ?? 'N/A'} colors={colors} />
+                    <DetailRow label="File" value={selectedRecord.details?.filename || 'N/A'} colors={colors} even />
+                    <DetailRow
+                      label="Date"
+                      value={new Date(selectedRecord.created_at).toLocaleString()}
+                      colors={colors}
+                    />
+                  </View>
+
+                  {/* Recommendation */}
+                  {selectedRecord.recommendation && (
+                    <View style={styles.modalReco}>
+                      <View style={styles.modalRecoIconBg}>
+                        <Ionicons name="bulb" size={16} color={BrandColors.amber} />
+                      </View>
+                      <Text style={styles.modalRecoText}>{selectedRecord.recommendation}</Text>
+                    </View>
+                  )}
+
+                  {/* Action button to Find Service Provider if not normal */}
+                  {selectedRecord.status !== 'normal' && (
                     <TouchableOpacity
-                      style={[styles.notifCard, !item.isRead && styles.notifCardUnread]}
-                      onPress={() => handleNotifPress(item)}
+                      style={styles.modalActionBtn}
+                      onPress={() => {
+                        setSelectedRecord(null);
+                        router.push('/(tabs)/map' as any);
+                      }}
                       activeOpacity={0.8}
                     >
-                      {!item.isRead && <View style={styles.unreadIndicator} />}
-                      <View style={[styles.notifIconBg, { backgroundColor: bgStyle }]}>
-                        <Ionicons name={iconName} size={20} color={iconColor} />
-                      </View>
-                      <View style={styles.notifBody}>
-                        <View style={styles.notifTopRow}>
-                          <Text style={styles.notifTitle}>{item.title}</Text>
-                          <Text style={styles.notifTime}>{item.time}</Text>
-                        </View>
-                        <Text style={styles.notifMsg} numberOfLines={2}>
-                          {item.message}
-                        </Text>
-                      </View>
+                      <Ionicons name="construct-outline" size={18} color={BrandColors.white} />
+                      <Text style={styles.modalActionBtnText}>Find Service Provider</Text>
                     </TouchableOpacity>
-                  );
-                }}
-              />
-            )}
+                  )}
+                </ScrollView>
+              );
+            })()}
           </Pressable>
         </Pressable>
       </Modal>
     </SafeAreaView>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+  even,
+  colors,
+}: {
+  label: string;
+  value: string;
+  even?: boolean;
+  colors: any;
+}) {
+  return (
+    <View style={[styles.detailRow, { borderBottomColor: colors.border }, even && { backgroundColor: colors.background }]}>
+      <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: colors.foreground }]}>{value}</Text>
+    </View>
   );
 }
 
@@ -519,6 +801,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   logoBox: {
     width: 34,
     height: 34,
@@ -619,34 +902,38 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Actions
-  actionsRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
-  actionCard: {
-    flex: 1,
-    backgroundColor: BrandColors.card,
-    borderRadius: BorderRadius.lg,
-    padding: 18,
+  // Actions (borderless buttons without outer card box)
+  actionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 28,
+  },
+  actionBtn: {
+    width: '48%',
     alignItems: 'center',
-    ...Shadows.md,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    paddingVertical: 12,
+    paddingHorizontal: 6,
   },
   actionIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
+    width: 58,
+    height: 58,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
+    ...Shadows.sm,
   },
   actionTitle: {
     ...Typography.label,
     color: BrandColors.foreground,
     marginBottom: 2,
+    textAlign: 'center',
   },
   actionDesc: {
     ...Typography.caption,
     color: BrandColors.mutedForeground,
+    textAlign: 'center',
   },
 
   // Empty
@@ -776,7 +1063,29 @@ const styles = StyleSheet.create({
   markReadBtn: { paddingVertical: 4, paddingHorizontal: 8 },
   markReadText: { fontSize: 13, fontWeight: '700', color: BrandColors.indigo },
 
-  notifList: { paddingTop: 14, paddingBottom: 10 },
+  notifTabBar: {
+    flexDirection: 'row',
+    borderRadius: BorderRadius.md,
+    padding: 3,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  notifTab: {
+    flex: 1,
+    paddingVertical: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.sm,
+  },
+  notifTabActive: {
+    ...Shadows.sm,
+  },
+  notifTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  notifList: { paddingTop: 10, paddingBottom: 10 },
   notifCard: {
     flexDirection: 'row',
     padding: 14,
@@ -818,4 +1127,104 @@ const styles = StyleSheet.create({
   notifEmpty: { alignItems: 'center', paddingVertical: 40, gap: 8 },
   notifEmptyTitle: { ...Typography.h3, color: BrandColors.foreground },
   notifEmptySub: { ...Typography.bodySmall, color: BrandColors.mutedForeground },
+
+  // ─── Analysis Detail Modal Styles ────────────────────────────────
+  detailModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  detailModalTitle: {
+    ...Typography.h2,
+    color: BrandColors.foreground,
+  },
+  modalHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 18,
+    borderRadius: BorderRadius.xl,
+    marginBottom: 20,
+  },
+  modalHeroIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalStatus: {
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  detailGrid: {
+    backgroundColor: BrandColors.card,
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: BrandColors.border,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: BrandColors.border,
+  },
+  detailLabel: {
+    ...Typography.bodySmall,
+    color: BrandColors.mutedForeground,
+  },
+  detailValue: {
+    ...Typography.label,
+    color: BrandColors.foreground,
+    maxWidth: '55%',
+    textAlign: 'right',
+  },
+  modalReco: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 16,
+    backgroundColor: BrandColors.amberLight,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.15)',
+    marginBottom: 16,
+  },
+  modalRecoIconBg: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: 'rgba(245,158,11,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalRecoText: {
+    flex: 1,
+    ...Typography.bodySmall,
+    color: BrandColors.amberDark,
+    lineHeight: 20,
+  },
+  modalActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: BrandColors.indigo,
+    paddingVertical: 14,
+    borderRadius: BorderRadius.lg,
+    marginTop: 4,
+    marginBottom: 16,
+    ...Shadows.glow(BrandColors.indigo),
+  },
+  modalActionBtnText: {
+    color: BrandColors.white,
+    fontWeight: '700',
+    fontSize: 15,
+  },
 });
