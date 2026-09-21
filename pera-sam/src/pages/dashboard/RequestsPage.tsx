@@ -4,6 +4,7 @@ import {
   MessageSquare,
   Clock,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   User,
   ChevronRight,
@@ -15,6 +16,7 @@ import {
   FileText,
   Tag,
   Building2,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +24,7 @@ import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
 import { RequestChatDialog } from '@/components/RequestChatDialog';
 import { ReportGeneratorModal } from '@/components/ReportGeneratorModal';
+import { getScheduledInfo } from '@/lib/appointment-utils';
 
 interface RepairRequest {
   id: string;
@@ -33,6 +36,8 @@ interface RepairRequest {
   description: string;
   analysis_id: string | null;
   photo_urls?: string[];
+  scheduled_date?: string | null;
+  scheduled_time_slot?: string | null;
   created_at: string;
   profiles: {
     name: string;
@@ -385,6 +390,22 @@ export const RequestsPage = () => {
                 <p className="text-sm text-muted-foreground mt-0.5">
                   {request.machine_type} {request.brand ? `• ${request.brand}` : ''}
                 </p>
+
+                {(() => {
+                  const sched = getScheduledInfo(request);
+                  if (!sched.isExplicit || !sched.date) return null;
+                  return (
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-success font-semibold">
+                      <CalendarIcon className="h-3.5 w-3.5" />
+                      <span>
+                        {isCompany ? 'Scheduled Service:' : 'Approved Repair Date:'}{' '}
+                        {sched.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {sched.timeSlot ? ` (${sched.timeSlot})` : ''}
+                      </span>
+                    </div>
+                  );
+                })()}
+
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
                   {parseDescription(request.description)['Issue'] || (request.description?.includes(':') ? 'Tap to view details' : request.description || 'No description')}
                 </p>
@@ -413,8 +434,30 @@ export const RequestsPage = () => {
                   const detailKeys = Object.entries(parsed).filter(
                     ([k]) => !['Issue', 'Customer Address', 'Customer Phone', 'Photos'].includes(k)
                   );
+                  const sched = getScheduledInfo(request);
                   return (
                     <div className="space-y-4">
+                      {/* Confirmed Schedule Notice */}
+                      {sched.isExplicit && sched.date && (
+                        <div className="p-3 bg-success/10 border border-success/20 rounded-lg flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                            <div>
+                              <p className="text-xs font-bold text-success">
+                                {isCompany ? 'Confirmed Service Appointment' : 'Company Approved Repair Date'}
+                              </p>
+                              <p className="text-xs text-foreground">
+                                {sched.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                                {sched.timeSlot ? ` • ${sched.timeSlot}` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-[10px] uppercase font-bold text-success bg-success/20 px-2 py-0.5 rounded">
+                            Added to Calendar
+                          </span>
+                        </div>
+                      )}
+
                       {/* Issue + Contact */}
                       <div className="grid md:grid-cols-2 gap-3">
                         <div className="p-3 bg-muted/50 rounded-lg">

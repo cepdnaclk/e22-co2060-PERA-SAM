@@ -4,11 +4,22 @@
  */
 
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeContext } from '@/lib/ThemeContext';
 
 export function useTheme() {
-  const scheme = useColorScheme();
-  const theme = scheme ?? 'light';
+  const { colors, isDark } = useThemeContext();
+  const theme = isDark ? 'dark' : 'light';
+  return {
+    ...Colors[theme],
+    ...colors,
+    isDark,
+  };
+}
 
-  return Colors[theme];
+export function useBrandTheme() {
+  const { colors, isDark } = useThemeContext();
+  return {
+    isDark,
+    brandColors: colors,
+  };
 }

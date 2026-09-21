@@ -6,11 +6,11 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
-  interpolateColor,
 } from 'react-native-reanimated';
 import { BrandColors } from '../../constants/theme';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
+import { useThemeContext } from '../../lib/ThemeContext';
 import { supabase } from '../../lib/supabase';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -30,7 +30,7 @@ const TAB_ITEMS: {
 ];
 
 // Hidden tabs that remain navigable but don't show in the bottom bar
-const HIDDEN_TABS = ['history'];
+const HIDDEN_TABS = ['history', 'appointments'];
 
 // ── Animated Badge ──────────────────────────────────────────────────────────
 function AnimatedBadge({ count }: { count: number }) {
@@ -67,7 +67,7 @@ function AnimatedTabIcon({
   unreadCount,
 }: {
   focused: boolean;
-  color: string;
+  color: any;
   tab: (typeof TAB_ITEMS)[number];
   unreadCount: number;
 }) {
@@ -134,6 +134,7 @@ function AnimatedTabIcon({
 // ── Main Layout ─────────────────────────────────────────────────────────────
 export default function TabLayout() {
   const { user } = useAuth();
+  const { isDark } = useThemeContext();
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Fetch unread request messages count
@@ -180,8 +181,15 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: BrandColors.indigo,
-        tabBarInactiveTintColor: BrandColors.mutedForeground,
-        tabBarStyle: styles.tabBar,
+        tabBarInactiveTintColor: isDark ? '#94a3b8' : BrandColors.mutedForeground,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.94)' : 'rgba(255, 255, 255, 0.92)',
+            borderColor: isDark ? 'rgba(51, 65, 85, 0.8)' : 'rgba(255, 255, 255, 0.6)',
+            shadowColor: isDark ? '#000' : '#0f172a',
+          },
+        ],
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,
       }}
@@ -255,7 +263,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   iconActiveBg: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 14,
   },
   activeDot: {

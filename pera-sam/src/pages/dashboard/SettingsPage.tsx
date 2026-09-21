@@ -78,6 +78,8 @@ export const SettingsPage = () => {
   const [passwords, setPasswords] = useState({ current: '', newPwd: '', confirm: '' });
   const [showPwd, setShowPwd]     = useState({ current: false, newPwd: false, confirm: false });
   const [isSavingPwd, setIsSavingPwd] = useState(false);
+  const [isSavingNotif, setIsSavingNotif] = useState(false);
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
 
   // ── Notification toggles ───────────────────────────────────────────────────
   const [notif, setNotif] = useState({
@@ -107,6 +109,26 @@ export const SettingsPage = () => {
         phone2:         user.contactNumbers?.[1] || '',
       });
       setSelectedCategories(user.serviceCategories || []);
+
+      // Load saved notification preferences
+      try {
+        const savedNotif = localStorage.getItem('@perasam:notif-prefs');
+        if (savedNotif) {
+          setNotif(prev => ({ ...prev, ...JSON.parse(savedNotif) }));
+        } else if ((user as any)?.user_metadata?.notification_preferences) {
+          setNotif(prev => ({ ...prev, ...(user as any).user_metadata.notification_preferences }));
+        }
+      } catch {}
+
+      // Load saved privacy preferences
+      try {
+        const savedPrivacy = localStorage.getItem('@perasam:privacy-prefs');
+        if (savedPrivacy) {
+          setPrivacy(prev => ({ ...prev, ...JSON.parse(savedPrivacy) }));
+        } else if ((user as any)?.user_metadata?.privacy_preferences) {
+          setPrivacy(prev => ({ ...prev, ...(user as any).user_metadata.privacy_preferences }));
+        }
+      } catch {}
     }
   }, [user]);
 
@@ -114,6 +136,40 @@ export const SettingsPage = () => {
     setSelectedCategories(prev =>
       prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
     );
+  };
+
+  // ── Save notification preferences ──────────────────────────────────────────
+  const handleSaveNotif = async (customNotif?: typeof notif) => {
+    const toSave = customNotif || notif;
+    setIsSavingNotif(true);
+    try {
+      localStorage.setItem('@perasam:notif-prefs', JSON.stringify(toSave));
+      await supabase.auth.updateUser({
+        data: { notification_preferences: toSave }
+      }).catch(() => {});
+      toast.success('Notification preferences saved successfully!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save notification preferences.');
+    } finally {
+      setIsSavingNotif(false);
+    }
+  };
+
+  // ── Save privacy preferences ───────────────────────────────────────────────
+  const handleSavePrivacy = async (customPrivacy?: typeof privacy) => {
+    const toSave = customPrivacy || privacy;
+    setIsSavingPrivacy(true);
+    try {
+      localStorage.setItem('@perasam:privacy-prefs', JSON.stringify(toSave));
+      await supabase.auth.updateUser({
+        data: { privacy_preferences: toSave }
+      }).catch(() => {});
+      toast.success('Privacy settings saved successfully!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save privacy settings.');
+    } finally {
+      setIsSavingPrivacy(false);
+    }
   };
 
   // ── Save profile ───────────────────────────────────────────────────────────
@@ -143,6 +199,15 @@ export const SettingsPage = () => {
       }
 
       await updateProfile(updates as any);
+      await supabase.auth.updateUser({
+        data: {
+          full_name: profileData.name,
+          name: profileData.name,
+          phone: profileData.phone,
+          address: profileData.address,
+        }
+      }).catch(() => {});
+
       toast.success('Profile saved successfully!');
     } catch (err) {
       console.error('Profile save error:', err);
@@ -604,12 +669,38 @@ export const SettingsPage = () => {
               </div>
               <Switch
                 checked={notif[item.key as keyof typeof notif]}
-                onCheckedChange={checked =>
-                  setNotif(prev => ({ ...prev, [item.key]: checked }))
-                }
+                onCheckedChange={checked => {
+                  const updated = { ...notif, [item.key]: checked };
+                  setNotif(updated);
+                  handleSaveNotif(updated);
+                }}
               />
             </div>
           ))}
+        </div>
+
+        {/* Save Notification Preferences Button */}
+        <div className="flex justify-end mt-6 pt-4 border-t border-border/50">
+          <Button
+            id="save-notif-btn"
+            variant="outline"
+            size="sm"
+            onClick={() => handleSaveNotif()}
+            disabled={isSavingNotif}
+            className="gap-2"
+          >
+            {isSavingNotif ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 text-accent" />
+                Save Notification Preferences
+              </>
+            )}
+          </Button>
         </div>
       </motion.div>
 
@@ -641,12 +732,38 @@ export const SettingsPage = () => {
               </div>
               <Switch
                 checked={privacy[item.key as keyof typeof privacy]}
-                onCheckedChange={checked =>
-                  setPrivacy(prev => ({ ...prev, [item.key]: checked }))
-                }
+                onCheckedChange={checked => {
+                  const updated = { ...privacy, [item.key]: checked };
+                  setPrivacy(updated);
+                  handleSavePrivacy(updated);
+                }}
               />
             </div>
           ))}
+        </div>
+
+        {/* Save Privacy Settings Button */}
+        <div className="flex justify-end mt-6 pt-4 border-t border-border/50">
+          <Button
+            id="save-privacy-btn"
+            variant="outline"
+            size="sm"
+            onClick={() => handleSavePrivacy()}
+            disabled={isSavingPrivacy}
+            className="gap-2"
+          >
+            {isSavingPrivacy ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 text-accent" />
+                Save Privacy Settings
+              </>
+            )}
+          </Button>
         </div>
 
         <div className="mt-5 p-4 bg-muted/50 rounded-lg border border-border/50">

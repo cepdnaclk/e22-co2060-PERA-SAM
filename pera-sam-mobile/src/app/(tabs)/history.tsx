@@ -15,6 +15,7 @@ import {
 import Animated, { FadeInRight, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../lib/AuthContext';
+import { useThemeContext } from '../../lib/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import {
   BrandColors,
@@ -24,6 +25,7 @@ import {
   StatusConfig,
   AnalysisStatus,
 } from '../../constants/theme';
+import { ThemeToggle } from '../../components/ThemeToggle';
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'All', color: BrandColors.indigo },
@@ -46,6 +48,7 @@ interface AnalysisRecord {
 
 export default function HistoryScreen() {
   const { user } = useAuth();
+  const { colors } = useThemeContext();
   const [records, setRecords] = useState<AnalysisRecord[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<AnalysisRecord | null>(null);
@@ -97,7 +100,7 @@ export default function HistoryScreen() {
     return (
       <Animated.View entering={FadeInRight.duration(400).delay(index * 80)}>
         <TouchableOpacity
-          style={styles.card}
+          style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
           onPress={() => setSelectedRecord(item)}
           activeOpacity={0.7}
         >
@@ -107,7 +110,7 @@ export default function HistoryScreen() {
           <View style={styles.cardBody}>
             <View style={styles.cardTop}>
               <View style={styles.cardInfo}>
-                <Text style={styles.cardCategory}>
+                <Text style={[styles.cardCategory, { color: colors.foreground }]}>
                   {item.category?.charAt(0).toUpperCase() + item.category?.slice(1) || 'Unknown'}
                 </Text>
                 <Text style={styles.cardMachine}>
@@ -153,9 +156,9 @@ export default function HistoryScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+      <Animated.View entering={FadeInDown.duration(400)} style={[styles.header, { backgroundColor: colors.card }]}>
         {/* Gradient accent bar */}
         <View style={styles.headerGradient}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple }]} />
@@ -165,28 +168,31 @@ export default function HistoryScreen() {
           <View style={styles.headerIconBg}>
             <Ionicons name="time" size={18} color={BrandColors.white} />
           </View>
-          <Text style={styles.headerTitle}>History</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>History</Text>
         </View>
-        <View style={styles.headerCountBadge}>
-          <Text style={styles.headerCount}>{records.length} records</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <ThemeToggle />
+          <View style={styles.headerCountBadge}>
+            <Text style={styles.headerCount}>{records.length} records</Text>
+          </View>
         </View>
       </Animated.View>
 
       {/* Search Bar */}
       <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.searchSection}>
-        <View style={styles.searchWrap}>
+        <View style={[styles.searchWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Ionicons name="search-outline" size={18} color={BrandColors.indigo} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.foreground }]}
             placeholder="Search by category or machine..."
-            placeholderTextColor={BrandColors.mutedForeground}
+            placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color={BrandColors.mutedForeground} />
+              <Ionicons name="close-circle" size={18} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
@@ -204,13 +210,15 @@ export default function HistoryScreen() {
               key={f.id}
               style={[
                 styles.filterChip,
-                selectedFilter === f.id && { backgroundColor: f.color },
+                { backgroundColor: colors.card, borderColor: colors.border },
+                selectedFilter === f.id && { backgroundColor: f.color, borderColor: f.color },
               ]}
               onPress={() => setSelectedFilter(f.id)}
             >
               <Text
                 style={[
                   styles.filterChipText,
+                  { color: colors.mutedForeground },
                   selectedFilter === f.id && styles.filterChipTextActive,
                 ]}
               >
@@ -240,12 +248,12 @@ export default function HistoryScreen() {
               <View style={styles.emptyIconBg}>
                 <Ionicons name="folder-open-outline" size={44} color={BrandColors.indigo} />
               </View>
-              <Text style={styles.emptyTitle}>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
                 {searchQuery || selectedFilter !== 'all'
                   ? 'No matching results'
                   : 'No history yet'}
               </Text>
-              <Text style={styles.emptyDesc}>
+              <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>
                 {searchQuery || selectedFilter !== 'all'
                   ? 'Try adjusting your search or filters.'
                   : 'Your analysis results will appear here once you run your first analysis.'}
@@ -263,17 +271,17 @@ export default function HistoryScreen() {
         onRequestClose={() => setSelectedRecord(null)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setSelectedRecord(null)}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={[styles.modalContent, { backgroundColor: colors.card, maxHeight: '85%' }]} onPress={(e) => e.stopPropagation()}>
             {selectedRecord && (() => {
               const cfg = StatusConfig[selectedRecord.status] || StatusConfig.normal;
               return (
-                <>
+                <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
                   {/* Modal header */}
-                  <View style={styles.modalHandle} />
+                  <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
                   <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Analysis Details</Text>
+                    <Text style={[styles.modalTitle, { color: colors.foreground }]}>Analysis Details</Text>
                     <TouchableOpacity onPress={() => setSelectedRecord(null)}>
-                      <Ionicons name="close-circle" size={28} color={BrandColors.mutedForeground} />
+                      <Ionicons name="close-circle" size={28} color={colors.mutedForeground} />
                     </TouchableOpacity>
                   </View>
 
@@ -286,15 +294,16 @@ export default function HistoryScreen() {
                   </View>
 
                   {/* Details grid */}
-                  <View style={styles.detailGrid}>
-                    <DetailRow label="Category" value={selectedRecord.category} even />
-                    <DetailRow label="Machine ID" value={selectedRecord.machine_id || 'N/A'} />
-                    <DetailRow label="Health Score" value={`${selectedRecord.confidence?.toFixed(1) ?? '—'}%`} even />
-                    <DetailRow label="Anomaly Score" value={selectedRecord.anomaly_score?.toFixed(4) ?? 'N/A'} />
-                    <DetailRow label="File" value={selectedRecord.details?.filename || 'N/A'} even />
+                  <View style={[styles.detailGrid, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <DetailRow label="Category" value={selectedRecord.category} colors={colors} even />
+                    <DetailRow label="Machine ID" value={selectedRecord.machine_id || 'N/A'} colors={colors} />
+                    <DetailRow label="Health Score" value={`${selectedRecord.confidence?.toFixed(1) ?? '—'}%`} colors={colors} even />
+                    <DetailRow label="Anomaly Score" value={selectedRecord.anomaly_score?.toFixed(4) ?? 'N/A'} colors={colors} />
+                    <DetailRow label="File" value={selectedRecord.details?.filename || 'N/A'} colors={colors} even />
                     <DetailRow
                       label="Date"
                       value={new Date(selectedRecord.created_at).toLocaleString()}
+                      colors={colors}
                     />
                   </View>
 
@@ -307,7 +316,7 @@ export default function HistoryScreen() {
                       <Text style={styles.modalRecoText}>{selectedRecord.recommendation}</Text>
                     </View>
                   )}
-                </>
+                </ScrollView>
               );
             })()}
           </Pressable>
@@ -317,11 +326,11 @@ export default function HistoryScreen() {
   );
 }
 
-function DetailRow({ label, value, even }: { label: string; value: string; even?: boolean }) {
+function DetailRow({ label, value, even, colors }: { label: string; value: string; even?: boolean; colors: any }) {
   return (
-    <View style={[styles.detailRow, even && { backgroundColor: BrandColors.background }]}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
+    <View style={[styles.detailRow, { borderBottomColor: colors.border }, even && { backgroundColor: colors.background }]}>
+      <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: colors.foreground }]}>{value}</Text>
     </View>
   );
 }
