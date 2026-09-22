@@ -15,6 +15,7 @@ import {
   FileText,
   Tag,
   Building2,
+  RefreshCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -72,6 +73,7 @@ export const RequestsPage = () => {
   const [chatRequestId, setChatRequestId] = useState<string | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [reportRequest, setReportRequest] = useState<RepairRequest | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const isCompany = user?.role === 'company';
 
@@ -166,9 +168,11 @@ export const RequestsPage = () => {
 
 
 
+      setFetchError(null);
       setRequests(merged as RepairRequest[]);
     } catch (err) {
       console.error('Error fetching requests:', err);
+      setFetchError('Failed to load repair requests. Please try again.');
       toast.error('Failed to load repair requests');
     } finally {
       setLoading(false);
@@ -317,6 +321,22 @@ export const RequestsPage = () => {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-12 w-12 text-accent animate-spin" />
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="glass-card rounded-xl p-8 text-center max-w-md">
+          <XCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-foreground mb-2">Something went wrong</h2>
+          <p className="text-sm text-muted-foreground mb-4">{fetchError}</p>
+          <Button variant="accent" onClick={() => fetchRequests()}>
+            <RefreshCcw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
       </div>
     );
   }
