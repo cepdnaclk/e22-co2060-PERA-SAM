@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,26 +11,195 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  interpolateColor,
+} from 'react-native-reanimated';
 import { router } from 'expo-router';
-import { getSupabaseConfigError, isSupabaseConfigured, supabase } from '../lib/supabase';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { BrandColors, Typography, BorderRadius, Shadows } from '../constants/theme';
 import { GlassCard, FloatingOrb, useScalePress } from '../components/AnimatedUI';
 
+// ─── Service categories ────────────────────────────────────────────────────
+const SERVICE_CATEGORIES = [
+  { value: 'fan',             label: 'Industrial Fan',        icon: 'aperture-outline',        color: BrandColors.orange,  bg: BrandColors.orangeLight  },
+  { value: 'pump',            label: 'Industrial Pumps',      icon: 'water-outline',            color: BrandColors.blue,    bg: BrandColors.blueLight    },
+  { value: 'slider',          label: 'Slide Rail / Conveyor', icon: 'swap-horizontal-outline',  color: BrandColors.purple,  bg: BrandColors.purpleLight  },
+  { value: 'valve',           label: 'Industrial Valves',     icon: 'git-branch-outline',       color: BrandColors.emerald, bg: BrandColors.emeraldLight },
+  { value: 'vehicle_bearing', label: 'Vehicle Bearings',      icon: 'settings-outline',         color: BrandColors.rose,    bg: BrandColors.roseLight    },
+  { value: 'industrial',      label: 'Industrial Machinery',  icon: 'construct-outline',        color: BrandColors.indigo,  bg: BrandColors.indigoLight  },
+] as const;
+
+// ─── Animated role toggle ──────────────────────────────────────────────────
+function RoleToggle({
+  activeRole,
+  onSelect,
+}: {
+  activeRole: 'user' | 'company';
+  onSelect: (role: 'user' | 'company') => void;
+}) {
+  const progress = useSharedValue(activeRole === 'user' ? 0 : 1);
+  React.useEffect(() => {
+    progress.value = withTiming(activeRole === 'user' ? 0 : 1, { duration: 250 });
+  }, [activeRole, progress]);
+
+  const userTabStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(progress.value, [0, 1], [BrandColors.indigo, 'transparent']),
+  }));
+  const companyTabStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(progress.value, [0, 1], ['transparent', BrandColors.indigo]),
+  }));
+
+  return (
+    <View style={toggleSt.track}>
+      <Animated.View style={[toggleSt.tab, userTabStyle]}>
+        <TouchableOpacity style={toggleSt.tabInner} onPress={() => onSelect('user')} activeOpacity={0.85}>
+          <Ionicons name="person-outline" size={16} color={activeRole === 'user' ? BrandColors.white : BrandColors.mutedForeground} />
+          <Text style={[toggleSt.tabLabel, { color: activeRole === 'user' ? BrandColors.white : BrandColors.mutedForeground }]}>Normal User</Text>
+        </TouchableOpacity>
+      </Animated.View>
+      <Animated.View style={[toggleSt.tab, companyTabStyle]}>
+        <TouchableOpacity style={toggleSt.tabInner} onPress={() => onSelect('company')} activeOpacity={0.85}>
+          <Ionicons name="business-outline" size={16} color={activeRole === 'company' ? BrandColors.white : BrandColors.mutedForeground} />
+          <Text style={[toggleSt.tabLabel, { color: activeRole === 'company' ? BrandColors.white : BrandColors.mutedForeground }]}>Service Company</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+}
+
+const toggleSt = StyleSheet.create({
+  track: { flexDirection: 'row', backgroundColor: BrandColors.muted, borderRadius: BorderRadius.md, padding: 4, marginBottom: 20 },
+  tab: { flex: 1, borderRadius: BorderRadius.sm, overflow: 'hidden' },
+  tabInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 8 },
+  tabLabel: { fontSize: 13, fontWeight: '600' },
+});
+
+// ─── Category checkbox card ────────────────────────────────────────────────
+function CategoryCard({
+  item,
+  selected,
+  onToggle,
+}: {
+  item: (typeof SERVICE_CATEGORIES)[number];
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={[catSt.card, selected && { borderColor: item.color, backgroundColor: item.bg }]}
+      onPress={onToggle}
+      activeOpacity={0.75}
+    >
+      <View style={[catSt.iconWrap, { backgroundColor: selected ? item.color : BrandColors.muted }]}>
+        <Ionicons name={item.icon as any} size={18} color={selected ? BrandColors.white : BrandColors.mutedForeground} />
+      </View>
+      <Text style={[catSt.cardLabel, { color: selected ? item.color : BrandColors.foreground, fontWeight: selected ? '700' : '500' }]} numberOfLines={2}>
+        {item.label}
+      </Text>
+      {selected && (
+        <View style={[catSt.checkBadge, { backgroundColor: item.color }]}>
+          <Ionicons name="checkmark" size={10} color={BrandColors.white} />
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+const catSt = StyleSheet.create({
+  card: { flex: 1, minWidth: '45%', maxWidth: '50%', borderWidth: 1.5, borderColor: BrandColors.border, borderRadius: BorderRadius.md, padding: 12, alignItems: 'center', gap: 8, backgroundColor: BrandColors.card, position: 'relative' },
+  iconWrap: { width: 38, height: 38, borderRadius: BorderRadius.sm, justifyContent: 'center', alignItems: 'center' },
+  cardLabel: { fontSize: 12, textAlign: 'center' },
+  checkBadge: { position: 'absolute', top: 6, right: 6, width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
+});
+
+// ─── Reusable labelled input ───────────────────────────────────────────────
+function FieldInput({
+  label,
+  icon,
+  iconColor,
+  placeholder,
+  value,
+  onChangeText,
+  keyboardType,
+  autoCapitalize,
+  secureTextEntry,
+  autoCorrect,
+}: {
+  label: string;
+  icon: string;
+  iconColor: string;
+  placeholder: string;
+  value: string;
+  onChangeText: (t: string) => void;
+  keyboardType?: React.ComponentProps<typeof TextInput>['keyboardType'];
+  autoCapitalize?: React.ComponentProps<typeof TextInput>['autoCapitalize'];
+  secureTextEntry?: boolean;
+  autoCorrect?: boolean;
+}) {
+  return (
+    <View style={fldSt.group}>
+      <Text style={fldSt.label}>{label}</Text>
+      <View style={fldSt.inputWrap}>
+        <Ionicons name={icon as any} size={18} color={iconColor} style={fldSt.inputIcon} />
+        <TextInput
+          style={fldSt.input}
+          placeholder={placeholder}
+          placeholderTextColor={BrandColors.mutedForeground}
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          secureTextEntry={secureTextEntry}
+          autoCorrect={autoCorrect}
+        />
+      </View>
+    </View>
+  );
+}
+
+const fldSt = StyleSheet.create({
+  group: { gap: 6 },
+  label: { ...Typography.label, color: BrandColors.foreground },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: BrandColors.border, borderRadius: BorderRadius.md, backgroundColor: BrandColors.background, height: 52 },
+  inputIcon: { marginLeft: 14 },
+  input: { flex: 1, height: 52, paddingHorizontal: 12, fontSize: 16, color: BrandColors.foreground },
+});
+
 export default function RegisterScreen() {
   const { setDemoSession } = useAuth();
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
+  const [activeRole, setActiveRole] = useState<'user' | 'company'>('user');
+  const [loading, setLoading] = useState(false);
+
+  // Shared password state
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+
+  // Normal user fields
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [age, setAge] = useState('');
+  const [address, setAddress] = useState('');
+
+  // Company fields
+  const [companyName, setCompanyName] = useState('');
+  const [technicianName, setTechnicianName] = useState('');
+  const [companyEmail, setCompanyEmail] = useState('');
+  const [phone1, setPhone1] = useState('');
+  const [phone2, setPhone2] = useState('');
+  const [companyAddress, setCompanyAddress] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const { animatedStyle: btnAnim, onPressIn, onPressOut } = useScalePress();
 
-  // Animated strength bar
+  // ── Password strength animation ──────────────────────────────────────────
   const strengthWidth = useSharedValue(0);
   const strengthColor = useSharedValue<string>(BrandColors.danger);
 
@@ -54,60 +223,112 @@ export default function RegisterScreen() {
     backgroundColor: strengthColor.value,
   }));
 
+  const toggleCategory = useCallback((value: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(value) ? prev.filter((c) => c !== value) : [...prev, value],
+    );
+  }, []);
+
+  const handleRoleSwitch = useCallback((role: 'user' | 'company') => {
+    setActiveRole(role);
+    setPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
+  }, []);
+
+  // ── Validation ─────────────────────────────────────────────────────────
+  function validateUser(): string | null {
+    if (!fullName.trim()) return 'Full name is required.';
+    if (!email.trim()) return 'Email is required.';
+    if (!phone.trim()) return 'Phone number is required.';
+    if (!age.trim()) return 'Age is required.';
+    if (!address.trim()) return 'Address is required.';
+    if (!password) return 'Password is required.';
+    if (password.length < 6) return 'Password must be at least 6 characters.';
+    if (password !== confirmPassword) return 'Passwords do not match.';
+    return null;
+  }
+
+  function validateCompany(): string | null {
+    if (!companyName.trim()) return 'Company name is required.';
+    if (!technicianName.trim()) return 'Technician name is required.';
+    if (!companyEmail.trim()) return 'Email is required.';
+    if (!phone1.trim()) return 'Primary contact number is required.';
+    if (!companyAddress.trim()) return 'Address is required.';
+    if (!password) return 'Password is required.';
+    if (password.length < 6) return 'Password must be at least 6 characters.';
+    if (password !== confirmPassword) return 'Passwords do not match.';
+    if (selectedCategories.length === 0) return 'Please select at least one service category.';
+    return null;
+  }
+
+  // ── Submit ──────────────────────────────────────────────────────────────
   async function handleRegister() {
-    if (!fullName.trim() || !email.trim() || !password || !confirmPassword) {
-      Alert.alert('Missing Fields', 'Please fill in all fields.');
-      return;
-    }
-    if (password.length < 6) {
-      Alert.alert('Weak Password', 'Password must be at least 6 characters.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      Alert.alert('Password Mismatch', 'Passwords do not match.');
+    const validationError = activeRole === 'user' ? validateUser() : validateCompany();
+    if (validationError) {
+      Alert.alert('Validation Error', validationError);
       return;
     }
 
+    // Demo mode fallback when Supabase is not configured
     if (!isSupabaseConfigured) {
-      // Demo mode fallback when Supabase credentials are not in .env yet
-      setDemoSession(email.trim(), fullName.trim());
-      router.replace('/(tabs)/dashboard');
+      const displayName = activeRole === 'user' ? fullName.trim() : companyName.trim();
+      const emailUsed = activeRole === 'user' ? email.trim() : companyEmail.trim();
+      setDemoSession(emailUsed, displayName);
+      router.replace('/welcome' as any);
       return;
     }
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            name: fullName.trim(),
-            full_name: fullName.trim(),
+      let signUpError: Error | null = null;
+
+      if (activeRole === 'user') {
+        const { error: err } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: {
+              full_name: fullName.trim(),
+              name: fullName.trim(),
+              role: 'user',
+              phone: phone.trim(),
+              age: age.trim(),
+              address: address.trim(),
+            },
           },
-        },
-      });
-
-      if (error) throw error;
-
-      if (data.session) {
-        router.replace('/(tabs)/dashboard');
-        return;
+        });
+        if (err) signUpError = err;
+      } else {
+        const { error: err } = await supabase.auth.signUp({
+          email: companyEmail.trim(),
+          password,
+          options: {
+            data: {
+              full_name: companyName.trim(),
+              name: technicianName.trim(),
+              company_name: companyName.trim(),
+              technician_name: technicianName.trim(),
+              role: 'company',
+              phone: phone1.trim(),
+              contact_numbers: [phone1.trim(), phone2.trim()].filter(Boolean),
+              address: companyAddress.trim(),
+              service_categories: selectedCategories,
+            },
+          },
+        });
+        if (err) signUpError = err;
       }
 
-      Alert.alert(
-        'Account Created',
-        'Please check your email to confirm your account, then sign in.',
-        [{ text: 'OK', onPress: () => router.replace('/') }]
-      );
+      if (signUpError) throw signUpError;
+      router.replace('/welcome' as any);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Could not create your account.';
+      const message = error instanceof Error ? error.message : 'Could not create your account.';
       Alert.alert(
         'Registration Failed',
         message === 'Network request failed'
           ? 'Could not reach Supabase. Check your internet connection and the Supabase URL in pera-sam-mobile/.env, then restart Expo.'
-          : message
+          : message,
       );
     } finally {
       setLoading(false);
@@ -122,16 +343,15 @@ export default function RegisterScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header band */}
+        {/* ── Header band ── */}
         <View style={styles.headerBand}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo }]} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.6 }]} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.pink, opacity: 0.2, top: '50%' }]} />
-
           <FloatingOrb color="#ffffff" size={60} top={15} right={-10} delay={0} />
           <FloatingOrb color={BrandColors.pink} size={45} top={50} left={20} delay={500} />
-
           <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.headerBandInner}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
               <Ionicons name="arrow-back" size={22} color={BrandColors.white} />
@@ -146,104 +366,87 @@ export default function RegisterScreen() {
           </Animated.View>
         </View>
 
-        {/* Title */}
+        {/* ── Title ── */}
         <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.titleBlock}>
           <Text style={styles.pageTitle}>Sign Up</Text>
           <Text style={styles.pageSubtitle}>
-            Start analyzing equipment acoustics today
+            {activeRole === 'user'
+              ? 'Start analyzing equipment acoustics today'
+              : 'Register your service company to receive repair requests'}
           </Text>
         </Animated.View>
 
-        {/* Form */}
+        {/* ── Form card ── */}
         <Animated.View entering={FadeInDown.duration(500).delay(350)}>
           <GlassCard style={styles.formCard} intensity="strong">
-            {/* Full Name */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full Name</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons
-                  name="person-outline"
-                  size={18}
-                  color={BrandColors.purple}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="John Doe"
-                  placeholderTextColor={BrandColors.mutedForeground}
-                  value={fullName}
-                  onChangeText={setFullName}
-                  autoCapitalize="words"
-                />
-              </View>
-            </View>
 
-            {/* Email */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons
-                  name="mail-outline"
-                  size={18}
-                  color={BrandColors.indigo}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="you@example.com"
-                  placeholderTextColor={BrandColors.mutedForeground}
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoCorrect={false}
-                />
-              </View>
-            </View>
+            {/* Role toggle */}
+            <RoleToggle activeRole={activeRole} onSelect={handleRoleSwitch} />
 
-            {/* Password */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={18}
-                  color={BrandColors.indigo}
-                  style={styles.inputIcon}
-                />
+            {/* ── Normal User fields ── */}
+            {activeRole === 'user' && (
+              <>
+                <FieldInput label="Full Name" icon="person-outline" iconColor={BrandColors.purple} placeholder="John Doe" value={fullName} onChangeText={setFullName} autoCapitalize="words" />
+                <FieldInput label="Email" icon="mail-outline" iconColor={BrandColors.indigo} placeholder="you@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
+                <FieldInput label="Phone Number" icon="call-outline" iconColor={BrandColors.emerald} placeholder="+94 77 000 0000" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoCapitalize="none" />
+                <FieldInput label="Age" icon="calendar-outline" iconColor={BrandColors.amber} placeholder="25" value={age} onChangeText={setAge} keyboardType="numeric" autoCapitalize="none" />
+                <FieldInput label="Address" icon="location-outline" iconColor={BrandColors.rose} placeholder="123 Main St, Colombo" value={address} onChangeText={setAddress} autoCapitalize="sentences" />
+              </>
+            )}
+
+            {/* ── Company fields ── */}
+            {activeRole === 'company' && (
+              <>
+                <FieldInput label="Company Name" icon="business-outline" iconColor={BrandColors.indigo} placeholder="Acme Service Co." value={companyName} onChangeText={setCompanyName} autoCapitalize="words" />
+                <FieldInput label="Technician Name" icon="person-outline" iconColor={BrandColors.purple} placeholder="Jane Smith" value={technicianName} onChangeText={setTechnicianName} autoCapitalize="words" />
+                <FieldInput label="Email" icon="mail-outline" iconColor={BrandColors.blue} placeholder="company@example.com" value={companyEmail} onChangeText={setCompanyEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
+                <FieldInput label="Primary Contact" icon="call-outline" iconColor={BrandColors.emerald} placeholder="+94 77 000 0000" value={phone1} onChangeText={setPhone1} keyboardType="phone-pad" autoCapitalize="none" />
+                <FieldInput label="Secondary Contact (optional)" icon="call-outline" iconColor={BrandColors.cyan} placeholder="+94 71 000 0000" value={phone2} onChangeText={setPhone2} keyboardType="phone-pad" autoCapitalize="none" />
+                <FieldInput label="Address" icon="location-outline" iconColor={BrandColors.rose} placeholder="456 Industry Rd, Kandy" value={companyAddress} onChangeText={setCompanyAddress} autoCapitalize="sentences" />
+
+                {/* Service categories multi-select grid */}
+                <View style={styles.categorySection}>
+                  <Text style={styles.label}>Service Categories</Text>
+                  <Text style={styles.categoryHint}>Select all categories your company services (at least 1)</Text>
+                  <View style={styles.categoryGrid}>
+                    {SERVICE_CATEGORIES.map((item) => (
+                      <CategoryCard
+                        key={item.value}
+                        item={item}
+                        selected={selectedCategories.includes(item.value)}
+                        onToggle={() => toggleCategory(item.value)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              </>
+            )}
+
+            {/* ── Shared Password fields ── */}
+            <View style={fldSt.group}>
+              <Text style={fldSt.label}>Password</Text>
+              <View style={fldSt.inputWrap}>
+                <Ionicons name="lock-closed-outline" size={18} color={BrandColors.indigo} style={fldSt.inputIcon} />
                 <TextInput
-                  style={[styles.input, { flex: 1 }]}
+                  style={[fldSt.input, { flex: 1 }]}
                   placeholder="Min 6 characters"
                   placeholderTextColor={BrandColors.mutedForeground}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                 />
-                <TouchableOpacity
-                  style={styles.eyeBtn}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    size={20}
-                    color={BrandColors.mutedForeground}
-                  />
+                <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword((s) => !s)}>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={BrandColors.mutedForeground} />
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Confirm Password */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Confirm Password</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons
-                  name="shield-checkmark-outline"
-                  size={18}
-                  color={BrandColors.purple}
-                  style={styles.inputIcon}
-                />
+            <View style={fldSt.group}>
+              <Text style={fldSt.label}>Confirm Password</Text>
+              <View style={fldSt.inputWrap}>
+                <Ionicons name="shield-checkmark-outline" size={18} color={BrandColors.purple} style={fldSt.inputIcon} />
                 <TextInput
-                  style={styles.input}
+                  style={fldSt.input}
                   placeholder="Re-enter password"
                   placeholderTextColor={BrandColors.mutedForeground}
                   value={confirmPassword}
@@ -287,20 +490,23 @@ export default function RegisterScreen() {
                 )}
               </TouchableOpacity>
             </Animated.View>
+
           </GlassCard>
         </Animated.View>
 
         {/* Sign In link */}
         <Animated.View entering={FadeInDown.duration(500).delay(500)} style={styles.signinRow}>
           <Text style={styles.signinText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => router.replace('/')}>
+          <TouchableOpacity onPress={() => router.back()}>
             <Text style={styles.signinLink}>Sign in</Text>
           </TouchableOpacity>
         </Animated.View>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -413,6 +619,23 @@ const styles = StyleSheet.create({
   },
   eyeBtn: {
     padding: 14,
+  },
+
+  // Category styles
+  categorySection: {
+    gap: 8,
+    marginTop: 4,
+  },
+  categoryHint: {
+    ...Typography.caption,
+    color: BrandColors.mutedForeground,
+    marginTop: -2,
+    marginBottom: 4,
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
 
   // Password strength

@@ -87,6 +87,19 @@ export const BrandColors = {
   glassOverlay: 'rgba(255, 255, 255, 0.12)',
 } as const;
 
+export const DarkBrandColors = {
+  ...BrandColors,
+  background: '#0f172a',
+  foreground: '#f8fafc',
+  card: '#1e293b',
+  muted: '#1e293b',
+  mutedForeground: '#94a3b8',
+  border: '#334155',
+  glassWhite: 'rgba(30, 41, 59, 0.85)',
+  glassBorder: 'rgba(255, 255, 255, 0.1)',
+  glassOverlay: 'rgba(0, 0, 0, 0.4)',
+} as const;
+
 // ─── Gradient Presets (layered View stops) ──────────────────────────────────
 export const GradientPresets = {
   heroHeader: ['#6366f1', '#8b5cf6', '#06b6d4'],   // indigo → purple → cyan

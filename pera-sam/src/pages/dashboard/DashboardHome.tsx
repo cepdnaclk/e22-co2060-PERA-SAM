@@ -15,11 +15,13 @@ import {
   User,
   Bell,
   MessageSquare,
-  Settings
+  Settings,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { parseChatMessage } from '@/lib/appointment-utils';
 
 interface AnalysisRecord {
   id: string;
@@ -32,7 +34,7 @@ interface AnalysisRecord {
 
 interface NotificationItem {
   id: string;
-  type: 'message' | 'analysis';
+  type: 'message' | 'analysis' | 'request';
   title: string;
   message: string;
   time: string;
@@ -49,52 +51,76 @@ export const DashboardHome = () => {
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notificationTab, setNotificationTab] = useState<'all' | 'unread'>('all');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const fetchUnreadMessages = async (): Promise<NotificationItem[]> => {
-    if (!user) return [];
+  const fetchMessages = async (): Promise<NotificationItem[]> => {
+    if (!user || !supabase?.from) return [];
     try {
-      const { data, error } = await supabase
-        .from('request_messages')
-        .select('id, content, created_at, request_id')
-        .eq('is_read', false)
-        .neq('sender_id', user.id)
-        .order('created_at', { ascending: false });
+      const query = supabase.from('request_messages');
+      if (typeof query?.select !== 'function') return [];
+      const selectQuery = query.select('id, content, created_at, request_id, is_read, sender_id');
+      if (typeof selectQuery?.neq !== 'function') return [];
+      const neqQuery = selectQuery.neq('sender_id', user.id);
+      if (typeof neqQuery?.order !== 'function') return [];
+
+      const orderQuery = neqQuery.order('created_at', { ascending: false });
+      const res = typeof orderQuery?.limit === 'function' ? await orderQuery.limit(30) : await orderQuery;
+      const { data, error } = res || {};
 
       if (error) throw error;
-      return (data || []).map((msg: any) => ({
-        id: msg.id,
-        type: 'message',
-        title: 'New Message',
-        message: msg.content.length > 50 ? msg.content.slice(0, 50) + '...' : msg.content,
-        time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        link: `/dashboard/requests`,
-        isRead: false,
-        created_at: msg.created_at
-      }));
+      return (data || []).map((msg: any) => {
+        const parsed = parseChatMessage(msg.content);
+        let title = 'New Message';
+        let preview = parsed.cleanText;
+
+        if (parsed.proposal) {
+          title = parsed.proposal.status === 'accepted' ? 'Appointment Confirmed' : 'Appointment Proposed';
+          preview = `Date: ${parsed.proposal.startDate} (${parsed.proposal.timeRange})`;
+        } else if (parsed.attachments.length > 0 && !preview) {
+          preview = '📷 Sent an image attachment';
+        }
+
+        if (preview.length > 50) {
+          preview = preview.slice(0, 50) + '...';
+        }
+
+        return {
+          id: msg.id,
+          type: 'message' as const,
+          title,
+          message: preview || 'New message',
+          time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          link: `/dashboard/requests`,
+          isRead: Boolean(msg.is_read),
+          created_at: msg.created_at
+        };
+      });
     } catch (err) {
-      console.error('Error fetching unread messages:', err);
+      console.error('Error fetching messages for notifications:', err);
       return [];
     }
   };
 
   const fetchRecentAnalyses = async (): Promise<NotificationItem[]> => {
-    if (!user) return [];
+    if (!user || !supabase?.from) return [];
     try {
-      const { data, error } = await supabase
-        .from('analysis_results' as any)
-        .select('id, category, status, created_at, details')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
+      const query = supabase.from('analysis_results' as any);
+      if (typeof query?.select !== 'function') return [];
+      const selectQuery = query.select('id, category, status, created_at, details');
+      if (typeof selectQuery?.eq !== 'function') return [];
+      const eqQuery = selectQuery.eq('user_id', user.id);
+      if (typeof eqQuery?.order !== 'function') return [];
+      const orderQuery = eqQuery.order('created_at', { ascending: false });
 
-      if (error) throw error;
+      const res = typeof orderQuery?.limit === 'function' ? await orderQuery.limit(10) : await orderQuery;
+      const { data, error } = res || {};
       
       const readAnalysisIds: string[] = JSON.parse(localStorage.getItem(`read_analyses_${user.id}`) || '[]');
 
       return (data || []).map((item: any) => ({
         id: item.id,
-        type: 'analysis',
+        type: 'analysis' as const,
         title: `Analysis: ${item.status.toUpperCase()}`,
         message: `Machine category: ${item.category}`,
         time: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -108,10 +134,69 @@ export const DashboardHome = () => {
     }
   };
 
+  const fetchRecentRequests = async (): Promise<NotificationItem[]> => {
+    if (!user || !supabase?.from) return [];
+    try {
+      const query = supabase.from('repair_requests');
+      if (typeof query?.select !== 'function') return [];
+      const selectQuery = query.select('id, machine_type, status, created_at, updated_at, scheduled_date, scheduled_time_slot, user_id, company_id');
+      if (typeof selectQuery?.eq !== 'function') return [];
+      
+      const filterField = user.role === 'company' ? 'company_id' : 'user_id';
+      const eqQuery = selectQuery.eq(filterField, user.id);
+      if (typeof eqQuery?.order !== 'function') return [];
+
+      const orderQuery = eqQuery.order('updated_at', { ascending: false });
+      const res = typeof orderQuery?.limit === 'function' ? await orderQuery.limit(10) : await orderQuery;
+      const { data, error } = res || {};
+
+      if (error) throw error;
+
+      const readRequestIds: string[] = JSON.parse(localStorage.getItem(`read_requests_${user.id}`) || '[]');
+
+      return (data || []).map((req: any) => {
+        let title = 'Service Request Update';
+        let msg = `${req.machine_type}: Status is ${req.status}`;
+        let link = '/dashboard/requests';
+
+        if (req.status === 'accepted') {
+          title = 'Service Request Accepted';
+          if (req.scheduled_date) {
+            title = 'Appointment Scheduled';
+            msg = `${req.machine_type} confirmed for ${new Date(req.scheduled_date).toLocaleDateString()}`;
+            link = '/dashboard/appointments';
+          }
+        } else if (req.status === 'pending' && user.role === 'company') {
+          title = 'New Service Request';
+          msg = `New request for ${req.machine_type}`;
+        }
+
+        const notificationId = `req_${req.id}_${req.status}`;
+
+        return {
+          id: notificationId,
+          type: 'request' as const,
+          title,
+          message: msg,
+          time: new Date(req.updated_at || req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          link,
+          isRead: readRequestIds.includes(notificationId),
+          created_at: req.updated_at || req.created_at,
+        };
+      });
+    } catch (err) {
+      console.error('Error fetching request updates:', err);
+      return [];
+    }
+  };
+
   const loadNotifications = async () => {
-    const messages = await fetchUnreadMessages();
-    const analyses = await fetchRecentAnalyses();
-    const combined = [...messages, ...analyses].sort(
+    const [messages, analyses, requests] = await Promise.all([
+      fetchMessages(),
+      fetchRecentAnalyses(),
+      fetchRecentRequests(),
+    ]);
+    const combined = [...messages, ...analyses, ...requests].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     setNotifications(combined);
@@ -125,37 +210,59 @@ export const DashboardHome = () => {
   };
 
   const handleNotificationClick = async (notif: NotificationItem) => {
+    // Keep notification in list, mark it as read immediately in state
+    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
+
     if (notif.type === 'message') {
-      await supabase
-        .from('request_messages')
-        .update({ is_read: true })
-        .eq('id', notif.id);
+      try {
+        await supabase
+          .from('request_messages')
+          .update({ is_read: true })
+          .eq('id', notif.id);
+      } catch (e) {
+        console.error('Error marking message read:', e);
+      }
     } else if (notif.type === 'analysis') {
       markAnalysesAsRead([notif.id]);
+    } else if (notif.type === 'request') {
+      const readRequestIds: string[] = JSON.parse(localStorage.getItem(`read_requests_${user?.id}`) || '[]');
+      const updated = Array.from(new Set([...readRequestIds, notif.id]));
+      localStorage.setItem(`read_requests_${user?.id}`, JSON.stringify(updated));
     }
     
     setDropdownOpen(false);
-    loadNotifications();
     navigate(notif.link);
   };
 
   const handleMarkAllRead = async () => {
     if (!user) return;
     
+    // Mark all as read locally so they stay visible
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+
     const unreadMsgIds = notifications.filter(n => n.type === 'message' && !n.isRead).map(n => n.id);
     if (unreadMsgIds.length > 0) {
-      await supabase
-        .from('request_messages')
-        .update({ is_read: true })
-        .in('id', unreadMsgIds);
+      try {
+        await supabase
+          .from('request_messages')
+          .update({ is_read: true })
+          .in('id', unreadMsgIds);
+      } catch (e) {
+        console.error('Error marking messages as read:', e);
+      }
     }
     
     const unreadAnalysisIds = notifications.filter(n => n.type === 'analysis' && !n.isRead).map(n => n.id);
     if (unreadAnalysisIds.length > 0) {
       markAnalysesAsRead(unreadAnalysisIds);
     }
-    
-    loadNotifications();
+
+    const unreadReqIds = notifications.filter(n => n.type === 'request' && !n.isRead).map(n => n.id);
+    if (unreadReqIds.length > 0) {
+      const readRequestIds: string[] = JSON.parse(localStorage.getItem(`read_requests_${user.id}`) || '[]');
+      const updated = Array.from(new Set([...readRequestIds, ...unreadReqIds]));
+      localStorage.setItem(`read_requests_${user.id}`, JSON.stringify(updated));
+    }
   };
 
   useEffect(() => {
@@ -163,37 +270,58 @@ export const DashboardHome = () => {
 
     loadNotifications();
 
-    const msgChannel = supabase
-      .channel('dashboard-home-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'request_messages',
-        },
-        () => {
-          loadNotifications();
-        }
-      )
-      .subscribe();
+    let msgChannel: any = null;
+    let analysisChannel: any = null;
+    let reqChannel: any = null;
 
-    const analysisChannel = supabase
-      .channel('dashboard-home-analyses')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'analysis_results',
-        },
-        (payload: any) => {
-          if (payload.new && payload.new.user_id === user.id) {
+    if (typeof supabase?.channel === 'function') {
+      msgChannel = supabase
+        .channel('dashboard-home-messages')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'request_messages',
+          },
+          () => {
             loadNotifications();
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+
+      analysisChannel = supabase
+        .channel('dashboard-home-analyses')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'analysis_results',
+          },
+          (payload: any) => {
+            if (payload.new && payload.new.user_id === user.id) {
+              loadNotifications();
+            }
+          }
+        )
+        .subscribe();
+
+      reqChannel = supabase
+        .channel('dashboard-home-requests')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'repair_requests',
+          },
+          () => {
+            loadNotifications();
+          }
+        )
+        .subscribe();
+    }
 
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -209,8 +337,11 @@ export const DashboardHome = () => {
     document.addEventListener('keydown', handleEscapeKey);
 
     return () => {
-      supabase.removeChannel(msgChannel);
-      supabase.removeChannel(analysisChannel);
+      if (typeof supabase?.removeChannel === 'function') {
+        if (msgChannel) supabase.removeChannel(msgChannel);
+        if (analysisChannel) supabase.removeChannel(analysisChannel);
+        if (reqChannel) supabase.removeChannel(reqChannel);
+      }
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscapeKey);
     };
@@ -336,40 +467,85 @@ export const DashboardHome = () => {
                   </button>
                 )}
               </div>
+
+              {/* Filter tabs: All vs Unread */}
+              <div className="flex border-b border-border/60 bg-muted/20 px-3 py-1.5 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNotificationTab('all')}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                    notificationTab === 'all'
+                      ? 'bg-accent/15 text-accent'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  All ({notifications.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNotificationTab('unread')}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                    notificationTab === 'unread'
+                      ? 'bg-accent/15 text-accent'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Unread ({unreadCount})
+                </button>
+              </div>
               
-              <div className="max-h-64 overflow-y-auto divide-y divide-border">
-                {notifications.length === 0 ? (
-                  <div className="p-6 text-center text-xs text-muted-foreground">
-                    No new notifications
-                  </div>
-                ) : (
-                  notifications.map((notif) => (
+              <div className="max-h-80 overflow-y-auto divide-y divide-border/60 custom-scrollbar">
+                {(() => {
+                  const itemsToShow = notificationTab === 'unread'
+                    ? notifications.filter(n => !n.isRead)
+                    : notifications;
+
+                  if (itemsToShow.length === 0) {
+                    return (
+                      <div className="p-8 text-center text-xs text-muted-foreground">
+                        {notificationTab === 'unread'
+                          ? 'No unread notifications right now.'
+                          : 'No notifications available.'}
+                      </div>
+                    );
+                  }
+
+                  return itemsToShow.map((notif) => (
                     <div
                       key={notif.id}
                       onClick={() => handleNotificationClick(notif)}
-                      className={`p-3.5 hover:bg-muted/50 transition-colors cursor-pointer flex items-start gap-3 ${!notif.isRead ? 'bg-accent/5' : ''}`}
+                      className={`p-3.5 hover:bg-muted/60 transition-colors cursor-pointer flex items-start gap-3 relative ${
+                        !notif.isRead ? 'bg-accent/5' : 'opacity-85'
+                      }`}
                     >
-                      <div className="mt-0.5">
+                      <div className="mt-0.5 shrink-0 p-1.5 rounded-lg bg-muted/60 border border-border/40">
                         {notif.type === 'message' ? (
                           <MessageSquare className="h-4 w-4 text-accent" />
+                        ) : notif.type === 'request' ? (
+                          <CalendarIcon className="h-4 w-4 text-emerald-500" />
                         ) : (
-                          <Waves className="h-4 w-4 text-success" />
+                          <Waves className="h-4 w-4 text-indigo-500" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1.5">
-                          <p className={`text-xs font-semibold truncate ${!notif.isRead ? 'text-foreground' : 'text-muted-foreground'}`}>
+                          <p className={`text-xs font-semibold truncate ${
+                            !notif.isRead ? 'text-foreground font-bold' : 'text-foreground/80'
+                          }`}>
                             {notif.title}
                           </p>
-                          <span className="text-[9px] text-muted-foreground shrink-0">{notif.time}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">{notif.time}</span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                           {notif.message}
                         </p>
                       </div>
+                      {!notif.isRead && (
+                        <div className="w-2 h-2 rounded-full bg-accent shrink-0 mt-1.5" />
+                      )}
                     </div>
-                  ))
-                )}
+                  ));
+                })()}
               </div>
             </div>
           )}

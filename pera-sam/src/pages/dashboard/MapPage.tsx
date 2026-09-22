@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { RequestRepairModal } from '@/components/RequestRepairModal';
+import { RequestChatDialog } from '@/components/RequestChatDialog';
 import { motion } from 'framer-motion';
 import {
   MapPin,
@@ -19,7 +20,8 @@ import {
   Cog,
   Gauge,
   Waves,
-  CircleDot
+  CircleDot,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -165,6 +167,9 @@ export const MapPage = () => {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [repairModalProvider, setRepairModalProvider] = useState<ServiceProvider | null>(null);
   const [providerDistances, setProviderDistances] = useState<Record<string, string>>({});
+  const [chatRequestId, setChatRequestId] = useState<string | null>(null);
+  const [chatProvider, setChatProvider] = useState<ServiceProvider | null>(null);
+  const [loadingChatProviderId, setLoadingChatProviderId] = useState<string | null>(null);
 
 
   // Fetch providers from Supabase
@@ -394,6 +399,65 @@ export const MapPage = () => {
 
   const selectedProviderData = providers.find(p => p.id === selectedProvider);
 
+  const handleOpenChat = async (provider: ServiceProvider) => {
+    if (!user) {
+      toast.error('Please login to message service providers');
+      return;
+    }
+
+    if (user.id === provider.id) {
+      toast.info('You cannot message your own company profile');
+      return;
+    }
+
+    setLoadingChatProviderId(provider.id);
+    try {
+      // 1. Check existing requests between this user and this company
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: existingRequests, error: fetchErr } = await (supabase as any)
+        .from('repair_requests')
+        .select('id, status, created_at')
+        .eq('user_id', user.id)
+        .eq('company_id', provider.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (fetchErr) throw fetchErr;
+
+      if (existingRequests && existingRequests.length > 0) {
+        setChatRequestId(existingRequests[0].id);
+        setChatProvider(provider);
+        return;
+      }
+
+      // 2. If none exists, create an initial direct inquiry request
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: newRequest, error: createErr } = await (supabase as any)
+        .from('repair_requests')
+        .insert({
+          user_id: user.id,
+          company_id: provider.id,
+          machine_type: 'General Service Inquiry',
+          brand: 'General',
+          description: `Customer Name: ${user.name || 'User'}\nIssue: Chat conversation initiated from Find Services map`,
+          status: 'pending',
+        })
+        .select('id')
+        .single();
+
+      if (createErr) throw createErr;
+
+      if (newRequest?.id) {
+        setChatRequestId(newRequest.id);
+        setChatProvider(provider);
+      }
+    } catch (err: any) {
+      console.error('Failed to open chat with provider:', err);
+      toast.error('Failed to open chat. Please try again.');
+    } finally {
+      setLoadingChatProviderId(null);
+    }
+  };
 
   return (
     <div className="space-y-6 min-h-[500px]">
@@ -555,6 +619,41 @@ export const MapPage = () => {
                           </span>
                         ))}
                       </div>
+
+                      <div className="flex gap-1.5 mt-3 pt-2 border-t border-border/50">
+                        <Button
+                          size="sm"
+                          variant="accent"
+                          className="h-7 text-[10px] px-2 flex-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!user) {
+                              toast.error("Please login to request repair");
+                              return;
+                            }
+                            setRepairModalProvider(provider);
+                          }}
+                        >
+                          Request Repair
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[10px] px-2 flex-1"
+                          disabled={loadingChatProviderId === provider.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenChat(provider);
+                          }}
+                        >
+                          {loadingChatProviderId === provider.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : (
+                            <MessageSquare className="h-3 w-3 mr-1" />
+                          )}
+                          Message
+                        </Button>
+                      </div>
                     </div>
                   </Popup>
                 </Marker>
@@ -705,8 +804,21 @@ export const MapPage = () => {
                             <Calendar className="h-3.5 w-3.5 mr-2" />
                             Request Repair
                           </Button>
-                          <Button variant="outline" size="sm" className="w-full">
-                            <MessageSquare className="h-3.5 w-3.5 mr-2" />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            disabled={loadingChatProviderId === provider.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenChat(provider);
+                            }}
+                          >
+                            {loadingChatProviderId === provider.id ? (
+                              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                            ) : (
+                              <MessageSquare className="h-3.5 w-3.5 mr-2" />
+                            )}
                             Message
                           </Button>
                         </div>
@@ -734,6 +846,20 @@ export const MapPage = () => {
           />
         )}
       </AnimatePresence>
+
+      {/* Technician Company Chat Dialog */}
+      {chatRequestId && chatProvider && (
+        <RequestChatDialog
+          isOpen={!!chatRequestId}
+          onClose={() => {
+            setChatRequestId(null);
+            setChatProvider(null);
+          }}
+          requestId={chatRequestId}
+          isCompany={user?.role === 'company'}
+          otherPartyName={chatProvider.name}
+        />
+      )}
     </div>
   );
 };

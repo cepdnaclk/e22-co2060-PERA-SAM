@@ -8,15 +8,23 @@
     "scheme": "perasammobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "com.perasam.mobile",
+      "icon": "./assets/images/icon.png"
     },
     "android": {
+      "package": "com.perasam.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -39,6 +47,13 @@
       "expo-web-browser",
       "expo-document-picker",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow PERA-SAM to access your photos to update your profile picture.",
+          "cameraPermission": "Allow PERA-SAM to access your camera to take a profile picture."
+        }
+      ],
+      [
         "expo-audio",
         {
           "microphonePermission": "Allow PERA-SAM to access your microphone for audio analysis."
@@ -50,7 +65,10 @@
           "locationAlwaysAndWhenInUsePermission": "Allow PERA-SAM to use your location to find nearby service providers.",
           "locationWhenInUsePermission": "Allow PERA-SAM to use your location to find nearby service providers."
         }
-      ]
+      ],
+      "expo-image",
+      "expo-status-bar",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

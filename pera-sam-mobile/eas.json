@@ -1,0 +1,47 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "promptToInstall": true
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "ios": { "simulator": true }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "ios": { "simulator": false },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://cwzgoenapgrmuejgrfzh.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3emdvZW5hcGdybXVlamdyZnpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5OTc2ODUsImV4cCI6MjA4NzU3MzY4NX0.qXY-rq0dcsbHJsxC4-tmAh9EE6n9l7qoAZ_pUCr1pgM",
+        "EXPO_PUBLIC_ML_API_URL": "https://perasam-backend.blackplant-6bc12ea8.southeastasia.azurecontainerapps.io"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "android": { "buildType": "app-bundle" },
+      "ios": { "simulator": false },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://cwzgoenapgrmuejgrfzh.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3emdvZW5hcGdybXVlamdyZnpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5OTc2ODUsImV4cCI6MjA4NzU3MzY4NX0.qXY-rq0dcsbHJsxC4-tmAh9EE6n9l7qoAZ_pUCr1pgM",
+        "EXPO_PUBLIC_ML_API_URL": "https://perasam-backend.blackplant-6bc12ea8.southeastasia.azurecontainerapps.io"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "production"
+      },
+      "ios": {
+        "appleId": "YOUR_APPLE_ID",
+        "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID",
+        "appleTeamId": "YOUR_APPLE_TEAM_ID"
+      }
+    }
+  }
+}
