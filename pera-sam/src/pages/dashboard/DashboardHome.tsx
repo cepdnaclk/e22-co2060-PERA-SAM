@@ -280,7 +280,7 @@ export const DashboardHome = () => {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-foreground">
-              Welcome back, {user?.name?.split(' ')[0]}!
+              Welcome back, {user?.name?.split(' ')[0] || 'User'}!
             </h1>
             <p className="text-muted-foreground mt-1">
               Here's an overview of your sound analysis activity
