@@ -88,7 +88,7 @@ export const RequestsPage = () => {
         .eq(isCompany ? 'company_id' : 'user_id', user.id)
         .order('created_at', { ascending: false });
 
-      console.log('[RequestsPage] Step1 requestData:', requestData, 'error:', requestError);
+
 
       if (requestError) throw requestError;
       if (!requestData || requestData.length === 0) {
@@ -101,7 +101,7 @@ export const RequestsPage = () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...new Set((requestData as any[]).map((r: any) => isCompany ? r.user_id : r.company_id).filter(Boolean))
       ];
-      console.log('[RequestsPage] Step2 otherPartyIds:', otherPartyIds);
+
 
       // Step 3: batch-fetch their profiles (name, phone, avatar_url) — bypasses RLS via SECURITY DEFINER RPC
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -112,7 +112,7 @@ export const RequestsPage = () => {
         const { data: rpcData, error: rpcError } = await (supabase as any)
           .rpc('get_profiles_for_requests', { user_ids: otherPartyIds });
 
-        console.log('[RequestsPage] Step3 RPC profileData:', rpcData, 'error:', rpcError);
+
 
         if (!rpcError && rpcData && (rpcData as any[]).length > 0) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -127,7 +127,7 @@ export const RequestsPage = () => {
             .select('id, name, phone, avatar_url')
             .in('id', otherPartyIds);
 
-          console.log('[RequestsPage] Step3 direct profileData:', profileData, 'error:', profileError);
+
 
           if (profileData) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -138,7 +138,7 @@ export const RequestsPage = () => {
         }
       }
 
-      console.log('[RequestsPage] Step3 profileMap:', profileMap);
+
 
       // Step 4: merge profile data into each request
       // If profile fetch failed (e.g. RLS), extract name from the description as last resort fallback
@@ -164,7 +164,7 @@ export const RequestsPage = () => {
         };
       });
 
-      console.log('[RequestsPage] Step4 merged:', merged);
+
 
       setRequests(merged as RepairRequest[]);
     } catch (err) {
