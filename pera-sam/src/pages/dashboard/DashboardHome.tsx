@@ -436,6 +436,24 @@ export const DashboardHome = () => {
             ))}
           </div>
 
+          {loading && (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 rounded-lg border border-border animate-pulse">
+                  <div className="w-12 h-12 bg-muted rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded w-3/4" />
+                    <div className="h-3 bg-muted rounded w-1/2" />
+                  </div>
+                  <div className="text-right space-y-2">
+                    <div className="h-5 bg-muted rounded-full w-16" />
+                    <div className="h-3 bg-muted rounded w-12" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {!loading && analyses.length === 0 && (
             <div className="text-center py-12">
               <Waves className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
