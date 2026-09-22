@@ -317,7 +317,7 @@ export const DashboardHome = () => {
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-background/95 backdrop-blur-md border border-border rounded-xl shadow-xl z-50 overflow-hidden py-1">
+            <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-sm bg-background/95 backdrop-blur-md border border-border rounded-xl shadow-xl z-50 overflow-hidden py-1" role="menu">
               <div className="px-4 py-2 border-b border-border flex items-center justify-between">
                 <span className="font-semibold text-sm text-foreground">Notifications</span>
                 {unreadCount > 0 && (
