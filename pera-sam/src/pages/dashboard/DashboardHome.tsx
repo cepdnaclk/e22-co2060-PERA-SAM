@@ -294,6 +294,9 @@ export const DashboardHome = () => {
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="relative p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             title="Notifications"
+            aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+            aria-expanded={dropdownOpen}
+            aria-haspopup="true"
           >
             <Bell className="h-6 w-6" />
             {unreadCount > 0 && (
@@ -308,6 +311,7 @@ export const DashboardHome = () => {
             onClick={() => navigate('/dashboard/settings')}
             className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             title="Settings"
+            aria-label="Go to settings"
           >
             <Settings className="h-6 w-6" />
           </button>
