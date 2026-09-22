@@ -23,6 +23,7 @@ import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
 import { RequestChatDialog } from '@/components/RequestChatDialog';
 import { ReportGeneratorModal } from '@/components/ReportGeneratorModal';
+import { getStatusColor, getStatusIcon } from '@/lib/status-helpers';
 
 interface RepairRequest {
   id: string;
@@ -270,25 +271,7 @@ export const RequestsPage = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-warning/10 text-warning border-warning/20';
-      case 'accepted': return 'bg-info/10 text-info border-info/20';
-      case 'completed': return 'bg-success/10 text-success border-success/20';
-      case 'declined': return 'bg-destructive/10 text-destructive border-destructive/20';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending': return <Clock className="h-4 w-4" />;
-      case 'accepted': return <CheckCircle className="h-4 w-4" />;
-      case 'completed': return <CheckCircle className="h-4 w-4" />;
-      case 'declined': return <XCircle className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
-    }
-  };
 
   // Compute the "one week ago" cutoff once per render to avoid inconsistent date calculations
   const oneWeekAgo = useMemo(() => {
