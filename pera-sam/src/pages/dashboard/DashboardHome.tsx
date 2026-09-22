@@ -200,12 +200,19 @@ export const DashboardHome = () => {
         setDropdownOpen(false);
       }
     };
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setDropdownOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscapeKey);
 
     return () => {
       supabase.removeChannel(msgChannel);
       supabase.removeChannel(analysisChannel);
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
     };
   }, [user]);
 
