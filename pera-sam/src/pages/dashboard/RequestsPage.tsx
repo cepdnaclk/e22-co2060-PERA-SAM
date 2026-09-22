@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   MessageSquare,
@@ -290,6 +290,13 @@ export const RequestsPage = () => {
     }
   };
 
+  // Compute the "one week ago" cutoff once per render to avoid inconsistent date calculations
+  const oneWeekAgo = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7);
+    return date;
+  }, [requests]);
+
   // Dynamic stats calculation
   const stats = [
     { id: 'pending', label: 'Pending', value: requests.filter(r => r.status === 'pending').length.toString(), color: 'text-warning' },
@@ -298,11 +305,7 @@ export const RequestsPage = () => {
     {
       id: 'this_week',
       label: 'This Week',
-      value: requests.filter(r => {
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        return new Date(r.created_at) > oneWeekAgo;
-      }).length.toString(),
+      value: requests.filter(r => new Date(r.created_at) > oneWeekAgo).length.toString(),
       color: 'text-foreground'
     },
   ];
@@ -310,8 +313,6 @@ export const RequestsPage = () => {
   const filteredRequests = requests.filter(r => {
     if (!filter) return true;
     if (filter === 'this_week') {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
       return new Date(r.created_at) > oneWeekAgo;
     }
     return r.status === filter;
