@@ -97,13 +97,13 @@ if (typeof window !== 'undefined') {
 }
 
 const serviceCategories = [
-  { id: 'all',             label: 'All Services',        icon: Settings },
-  { id: 'fan',             label: 'Industrial Fan',      icon: Waves },
-  { id: 'pump',            label: 'Industrial Pump',     icon: Droplets },
-  { id: 'slider',          label: 'Slide Rail',          icon: Cog },
-  { id: 'valve',           label: 'Industrial Valve',    icon: Gauge },
-  { id: 'vehicle_bearing', label: 'Vehicle Bearing',     icon: CircleDot },
-  { id: 'industrial',      label: 'Industrial (General)',icon: Factory },
+  { id: 'all', label: 'All Services', icon: Settings },
+  { id: 'fan', label: 'Industrial Fan', icon: Waves },
+  { id: 'pump', label: 'Industrial Pump', icon: Droplets },
+  { id: 'slider', label: 'Slide Rail', icon: Cog },
+  { id: 'valve', label: 'Industrial Valve', icon: Gauge },
+  { id: 'vehicle_bearing', label: 'Vehicle Bearing', icon: CircleDot },
+  { id: 'industrial', label: 'Industrial (General)', icon: Factory },
 ];
 
 interface ServiceProvider {
@@ -287,12 +287,12 @@ export const MapPage = () => {
           const newLat = position.coords.latitude;
           const newLng = position.coords.longitude;
           setUserLocation([newLat, newLng]);
-          
+
           const currentUser = userRef.current;
           if (currentUser) {
             const currentLat = currentUser.location?.lat;
             const currentLng = currentUser.location?.lng;
-            
+
             // Only update if coordinates significantly changed
             if (!currentLat || !currentLng || Math.abs(currentLat - newLat) > 0.0001 || Math.abs(currentLng - newLng) > 0.0001) {
               updateProfileRef.current({ location_lat: newLat, location_lng: newLng }).catch(err => {
@@ -334,7 +334,7 @@ export const MapPage = () => {
         // Prepare coordinates for OSRM: format is {lng},{lat}
         // First coordinate is the user (source)
         const coords = [`${userLocation[1]},${userLocation[0]}`];
-        
+
         // Add all providers up to API limit (100 total coords usually, so 99 destinations max)
         const providersToFetch = providers.slice(0, 99);
         providersToFetch.forEach(p => {
@@ -342,13 +342,13 @@ export const MapPage = () => {
         });
 
         const url = `https://router.project-osrm.org/table/v1/driving/${coords.join(';')}?sources=0&annotations=distance`;
-        
+
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           if (data.distances && data.distances[0]) {
             const newDistances: Record<string, string> = {};
-            
+
             providers.forEach((p, index) => {
               if (index < 99 && data.distances[0][index + 1] !== null && data.distances[0][index + 1] !== undefined) {
                 const distMeters = data.distances[0][index + 1];
@@ -359,7 +359,7 @@ export const MapPage = () => {
                 newDistances[p.id] = `${d.toFixed(1)} km`;
               }
             });
-            
+
             setProviderDistances(newDistances);
             return;
           }
@@ -573,8 +573,9 @@ export const MapPage = () => {
               scrollWheelZoom={true}
             >
               <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.maptiler.com/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url={`https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=qYHfezhVB2bGEILbWUoI`}
+                maxZoom={20}
               />
 
               {/* User Location Marker */}
