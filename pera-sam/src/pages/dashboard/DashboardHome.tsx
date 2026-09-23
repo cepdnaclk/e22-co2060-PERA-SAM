@@ -328,7 +328,13 @@ export const DashboardHome = () => {
         setDropdownOpen(false);
       }
     };
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setDropdownOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscapeKey);
 
     return () => {
       if (typeof supabase?.removeChannel === 'function') {
@@ -337,6 +343,7 @@ export const DashboardHome = () => {
         if (reqChannel) supabase.removeChannel(reqChannel);
       }
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
     };
   }, [user]);
 
@@ -411,7 +418,7 @@ export const DashboardHome = () => {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-foreground">
-              Welcome back, {user?.name?.split(' ')[0]}!
+              Welcome back, {user?.name?.split(' ')[0] || 'User'}!
             </h1>
             <p className="text-muted-foreground mt-1">
               Here's an overview of your sound analysis activity
@@ -425,6 +432,9 @@ export const DashboardHome = () => {
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="relative p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             title="Notifications"
+            aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+            aria-expanded={dropdownOpen}
+            aria-haspopup="true"
           >
             <Bell className="h-6 w-6" />
             {unreadCount > 0 && (
@@ -439,23 +449,15 @@ export const DashboardHome = () => {
             onClick={() => navigate('/dashboard/settings')}
             className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             title="Settings"
+            aria-label="Go to settings"
           >
             <Settings className="h-6 w-6" />
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-background/95 backdrop-blur-md border border-border rounded-xl shadow-2xl z-50 overflow-hidden py-1">
-              <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm text-foreground">Notifications</span>
-                  {unreadCount > 0 ? (
-                    <span className="px-2 py-0.5 bg-accent/15 text-accent text-[11px] font-bold rounded-full">
-                      {unreadCount} new
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground text-xs font-normal">All caught up</span>
-                  )}
-                </div>
+            <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-sm bg-background/95 backdrop-blur-md border border-border rounded-xl shadow-xl z-50 overflow-hidden py-1" role="menu">
+              <div className="px-4 py-2 border-b border-border flex items-center justify-between">
+                <span className="font-semibold text-sm text-foreground">Notifications</span>
                 {unreadCount > 0 && (
                   <button
                     onClick={handleMarkAllRead}
@@ -620,6 +622,24 @@ export const DashboardHome = () => {
               </motion.div>
             ))}
           </div>
+
+          {loading && (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 rounded-lg border border-border animate-pulse">
+                  <div className="w-12 h-12 bg-muted rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded w-3/4" />
+                    <div className="h-3 bg-muted rounded w-1/2" />
+                  </div>
+                  <div className="text-right space-y-2">
+                    <div className="h-5 bg-muted rounded-full w-16" />
+                    <div className="h-3 bg-muted rounded w-12" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {!loading && analyses.length === 0 && (
             <div className="text-center py-12">

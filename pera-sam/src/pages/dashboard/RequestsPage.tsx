@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   MessageSquare,
@@ -16,7 +16,7 @@ import {
   FileText,
   Tag,
   Building2,
-  Calendar as CalendarIcon,
+  RefreshCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,6 +77,7 @@ export const RequestsPage = () => {
   const [chatRequestId, setChatRequestId] = useState<string | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [reportRequest, setReportRequest] = useState<RepairRequest | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const isCompany = user?.role === 'company';
 
@@ -93,7 +94,7 @@ export const RequestsPage = () => {
         .eq(isCompany ? 'company_id' : 'user_id', user.id)
         .order('created_at', { ascending: false });
 
-      console.log('[RequestsPage] Step1 requestData:', requestData, 'error:', requestError);
+
 
       if (requestError) throw requestError;
       if (!requestData || requestData.length === 0) {
@@ -106,7 +107,7 @@ export const RequestsPage = () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...new Set((requestData as any[]).map((r: any) => isCompany ? r.user_id : r.company_id).filter(Boolean))
       ];
-      console.log('[RequestsPage] Step2 otherPartyIds:', otherPartyIds);
+
 
       // Step 3: batch-fetch their profiles (name, phone, avatar_url) — bypasses RLS via SECURITY DEFINER RPC
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -117,7 +118,7 @@ export const RequestsPage = () => {
         const { data: rpcData, error: rpcError } = await (supabase as any)
           .rpc('get_profiles_for_requests', { user_ids: otherPartyIds });
 
-        console.log('[RequestsPage] Step3 RPC profileData:', rpcData, 'error:', rpcError);
+
 
         if (!rpcError && rpcData && (rpcData as any[]).length > 0) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -132,7 +133,7 @@ export const RequestsPage = () => {
             .select('id, name, phone, avatar_url')
             .in('id', otherPartyIds);
 
-          console.log('[RequestsPage] Step3 direct profileData:', profileData, 'error:', profileError);
+
 
           if (profileData) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -143,7 +144,7 @@ export const RequestsPage = () => {
         }
       }
 
-      console.log('[RequestsPage] Step3 profileMap:', profileMap);
+
 
       // Step 4: merge profile data into each request
       // If profile fetch failed (e.g. RLS), extract name from the description as last resort fallback
@@ -169,11 +170,13 @@ export const RequestsPage = () => {
         };
       });
 
-      console.log('[RequestsPage] Step4 merged:', merged);
 
+
+      setFetchError(null);
       setRequests(merged as RepairRequest[]);
     } catch (err) {
       console.error('Error fetching requests:', err);
+      setFetchError('Failed to load repair requests. Please try again.');
       toast.error('Failed to load repair requests');
     } finally {
       setLoading(false);
@@ -271,25 +274,14 @@ export const RequestsPage = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-warning/10 text-warning border-warning/20';
-      case 'accepted': return 'bg-info/10 text-info border-info/20';
-      case 'completed': return 'bg-success/10 text-success border-success/20';
-      case 'declined': return 'bg-destructive/10 text-destructive border-destructive/20';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending': return <Clock className="h-4 w-4" />;
-      case 'accepted': return <CheckCircle className="h-4 w-4" />;
-      case 'completed': return <CheckCircle className="h-4 w-4" />;
-      case 'declined': return <XCircle className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
-    }
-  };
+
+  // Compute the "one week ago" cutoff once per render to avoid inconsistent date calculations
+  const oneWeekAgo = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7);
+    return date;
+  }, [requests]);
 
   // Dynamic stats calculation
   const stats = [
@@ -299,11 +291,7 @@ export const RequestsPage = () => {
     {
       id: 'this_week',
       label: 'This Week',
-      value: requests.filter(r => {
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        return new Date(r.created_at) > oneWeekAgo;
-      }).length.toString(),
+      value: requests.filter(r => new Date(r.created_at) > oneWeekAgo).length.toString(),
       color: 'text-foreground'
     },
   ];
@@ -311,8 +299,6 @@ export const RequestsPage = () => {
   const filteredRequests = requests.filter(r => {
     if (!filter) return true;
     if (filter === 'this_week') {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
       return new Date(r.created_at) > oneWeekAgo;
     }
     return r.status === filter;
@@ -322,6 +308,22 @@ export const RequestsPage = () => {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-12 w-12 text-accent animate-spin" />
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="glass-card rounded-xl p-8 text-center max-w-md">
+          <XCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-foreground mb-2">Something went wrong</h2>
+          <p className="text-sm text-muted-foreground mb-4">{fetchError}</p>
+          <Button variant="accent" onClick={() => fetchRequests()}>
+            <RefreshCcw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
       </div>
     );
   }
