@@ -11,13 +11,20 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.perasam.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -50,11 +57,18 @@
           "locationAlwaysAndWhenInUsePermission": "Allow PERA-SAM to use your location to find nearby service providers.",
           "locationWhenInUsePermission": "Allow PERA-SAM to use your location to find nearby service providers."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3efe5bed-5da8-44a1-bd7a-936ca78dcbf8"
+      }
     }
   }
 }

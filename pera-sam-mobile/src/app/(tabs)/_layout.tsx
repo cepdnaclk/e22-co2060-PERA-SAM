@@ -6,7 +6,6 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
-  interpolateColor,
 } from 'react-native-reanimated';
 import { BrandColors } from '../../constants/theme';
 import { useEffect, useState } from 'react';

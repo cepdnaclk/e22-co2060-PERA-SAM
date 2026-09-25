@@ -12,7 +12,7 @@ export function getMlApiConfigError() {
   }
 
   if (Platform.OS !== 'web' && /:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(mlApiUrl)) {
-    return 'This phone cannot reach localhost. Set EXPO_PUBLIC_ML_API_URL to your computer’s Wi-Fi IPv4 address, for example http://192.168.1.10:8000, then restart Expo.';
+    return "This phone cannot reach localhost. Set EXPO_PUBLIC_ML_API_URL to your computer's Wi-Fi IPv4 address, for example http://192.168.1.10:8000, then restart Expo.";
   }
 
   return null;
@@ -22,7 +22,7 @@ export function getMlApiErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : '';
 
   if (message === 'Network request failed' || message.includes('Failed to fetch')) {
-    return 'Could not reach the ML backend. Confirm it is running, your phone and computer use the same Wi-Fi, and EXPO_PUBLIC_ML_API_URL uses your computer’s Wi-Fi IPv4 address.';
+    return "Could not reach the ML backend. Confirm it is running, your phone and computer use the same Wi-Fi, and EXPO_PUBLIC_ML_API_URL uses your computer's Wi-Fi IPv4 address.";
   }
 
   return message || 'Could not connect to the ML server.';

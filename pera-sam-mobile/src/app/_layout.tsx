@@ -1,7 +1,10 @@
 import { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, ErrorBoundary } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../lib/AuthContext';
+
+export { ErrorBoundary };
+
 
 function RootNavigator() {
   const { session, loading } = useAuth();

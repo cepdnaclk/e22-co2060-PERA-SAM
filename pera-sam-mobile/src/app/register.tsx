@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { router } from 'expo-router';
-import { getSupabaseConfigError, isSupabaseConfigured, supabase } from '../lib/supabase';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { BrandColors, Typography, BorderRadius, Shadows } from '../constants/theme';

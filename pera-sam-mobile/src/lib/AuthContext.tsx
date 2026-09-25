@@ -37,15 +37,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
-        setSession(newSession);
-        setLoading(false);
+    let unsubscribe = () => {};
+    try {
+      const { data } = supabase.auth.onAuthStateChange(
+        (_event, newSession) => {
+          setSession(newSession);
+          setLoading(false);
+        }
+      );
+      if (data?.subscription) {
+        unsubscribe = () => data.subscription.unsubscribe();
       }
-    );
+    } catch (e) {
+      console.warn('Auth state listener error:', e);
+      setLoading(false);
+    }
 
     return () => {
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
 
