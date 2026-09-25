@@ -12,21 +12,23 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { useThemeContext } from '../../lib/ThemeContext';
 import { supabase } from '../../lib/supabase';
+import { useLanguage, TranslationKey } from '../../lib/i18n';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 const TAB_ITEMS: {
   name: string;
+  titleKey: TranslationKey;
   title: string;
   icon: IoniconsName;
   iconFocused: IoniconsName;
   activeColor: string;
 }[] = [
-  { name: 'dashboard', title: 'Home', icon: 'grid-outline', iconFocused: 'grid', activeColor: BrandColors.indigo },
-  { name: 'analysis', title: 'Analysis', icon: 'mic-outline', iconFocused: 'mic', activeColor: BrandColors.accent },
-  { name: 'map', title: 'Map', icon: 'map-outline', iconFocused: 'map', activeColor: BrandColors.blue },
-  { name: 'requests', title: 'Requests', icon: 'chatbubbles-outline', iconFocused: 'chatbubbles', activeColor: BrandColors.purple },
-  { name: 'profile', title: 'Profile', icon: 'person-outline', iconFocused: 'person', activeColor: BrandColors.pink },
+  { name: 'dashboard', titleKey: 'tabHome', title: 'Home', icon: 'grid-outline', iconFocused: 'grid', activeColor: BrandColors.indigo },
+  { name: 'analysis', titleKey: 'tabAnalysis', title: 'Analysis', icon: 'mic-outline', iconFocused: 'mic', activeColor: BrandColors.accent },
+  { name: 'map', titleKey: 'tabTechnicians', title: 'Map', icon: 'map-outline', iconFocused: 'map', activeColor: BrandColors.blue },
+  { name: 'requests', titleKey: 'tabRequests', title: 'Requests', icon: 'chatbubbles-outline', iconFocused: 'chatbubbles', activeColor: BrandColors.purple },
+  { name: 'profile', titleKey: 'tabProfile', title: 'Profile', icon: 'person-outline', iconFocused: 'person', activeColor: BrandColors.pink },
 ];
 
 // Hidden tabs that remain navigable but don't show in the bottom bar
@@ -135,6 +137,7 @@ function AnimatedTabIcon({
 export default function TabLayout() {
   const { user } = useAuth();
   const { isDark } = useThemeContext();
+  const { t } = useLanguage();
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Fetch unread request messages count
@@ -199,7 +202,7 @@ export default function TabLayout() {
           key={tab.name}
           name={tab.name}
           options={{
-            title: tab.title,
+            title: t(tab.titleKey) || tab.title,
             tabBarActiveTintColor: tab.activeColor,
             tabBarIcon: ({ focused, color }) => (
               <AnimatedTabIcon

@@ -24,6 +24,7 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../lib/AuthContext';
 import { useThemeContext } from '../../lib/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 import { supabase } from '../../lib/supabase';
 import { getMlApiConfigError, getMlApiErrorMessage, mlApiUrl } from '../../lib/mlApi';
 import {
@@ -76,6 +77,7 @@ type AudioInput = {
 export default function AnalysisScreen() {
   const { user } = useAuth();
   const { colors, isDark } = useThemeContext();
+  const { t } = useLanguage();
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const audioRecorderState = useAudioRecorderState(audioRecorder);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -457,7 +459,7 @@ export default function AnalysisScreen() {
                     <View style={[styles.uploadIconCircle, isDark && { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
                       <Ionicons name="cloud-upload-outline" size={32} color={BrandColors.indigo} />
                     </View>
-                    <Text style={[styles.uploadTitle, { color: colors.foreground }]}>Tap to select audio file</Text>
+                    <Text style={[styles.uploadTitle, { color: colors.foreground }]}>{t('noAudioSelected') || 'Tap to select audio file'}</Text>
                     <Text style={[styles.uploadHint, { color: colors.mutedForeground }]}>WAV, MP3, M4A, OGG, FLAC supported</Text>
                   </>
                 )}
@@ -481,7 +483,9 @@ export default function AnalysisScreen() {
                   color={isRecording ? BrandColors.white : BrandColors.rose}
                 />
                 <Text style={[styles.recordBtnText, isRecording && styles.recordBtnTextActive]}>
-                  {isRecording ? `Stop Recording (${recordingDuration}s)` : 'Record Audio with Microphone'}
+                  {isRecording
+                    ? `${t('stopRecording') || 'Stop Recording'} (${recordingDuration}s)`
+                    : (t('recordAudio') || 'Record Audio with Microphone')}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
