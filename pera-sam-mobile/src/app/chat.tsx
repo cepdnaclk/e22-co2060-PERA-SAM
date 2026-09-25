@@ -10,12 +10,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Linking,
+  Alert,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
+import { useLanguage } from '../lib/i18n';
+import { useAppTheme } from '../lib/ThemeContext';
 import {
   BrandColors,
   Typography,
@@ -24,30 +28,43 @@ import {
 } from '../constants/theme';
 import { useScalePress } from '../components/AnimatedUI';
 
-
-
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Message {
   id: string;
-  request_id: string;
+  request_id?: string;
   sender_id: string;
   content: string;
   is_read: boolean;
   created_at: string;
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
 export default function ChatScreen() {
   const { user } = useAuth();
+  const { t } = useLanguage();
+  const { isDark, colors } = useAppTheme();
+
   const params = useLocalSearchParams<{
-    requestId: string;
-    isCompany: string;
-    otherPartyName: string;
+    requestId?: string;
+    technicianId?: string;
+    recipientName?: string;
+    recipientPhone?: string;
+    specialty?: string;
+    isCompany?: string;
+    otherPartyName?: string;
   }>();
 
   const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
   const isCompany = params.isCompany === '1';
-  const otherPartyName = (Array.isArray(params.otherPartyName) ? params.otherPartyName[0] : params.otherPartyName) || (isCompany ? 'User' : 'Company');
+  const technicianName =
+    (Array.isArray(params.recipientName) ? params.recipientName[0] : params.recipientName) ||
+    (Array.isArray(params.otherPartyName) ? params.otherPartyName[0] : params.otherPartyName) ||
+    (isCompany ? 'User' : 'Certified Technician');
+  const technicianPhone =
+    (Array.isArray(params.recipientPhone) ? params.recipientPhone[0] : params.recipientPhone) ||
+    '+94 81 238 8888';
+  const specialty =
+    (Array.isArray(params.specialty) ? params.specialty[0] : params.specialty) ||
+    'Acoustic Diagnostic Specialist';
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -59,7 +76,21 @@ export default function ChatScreen() {
 
   // ── Fetch messages ─────────────────────────────────────────────────────
   const fetchMessages = useCallback(async () => {
-    if (!requestId) return;
+    if (!requestId) {
+      // In direct technician chat or demo mode, provide welcome greeting
+      setMessages([
+        {
+          id: 'welcome-msg-1',
+          sender_id: 'technician-auto',
+          content: t('autoReplyGreeting'),
+          is_read: true,
+          created_at: new Date(Date.now() - 60000).toISOString(),
+        },
+      ]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await (supabase as any)
         .from('request_messages')
@@ -68,7 +99,20 @@ export default function ChatScreen() {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages((data as Message[]) || []);
+      const fetched = (data as Message[]) || [];
+      if (fetched.length === 0) {
+        setMessages([
+          {
+            id: 'welcome-msg-1',
+            sender_id: 'technician-auto',
+            content: t('autoReplyGreeting'),
+            is_read: true,
+            created_at: new Date(Date.now() - 60000).toISOString(),
+          },
+        ]);
+      } else {
+        setMessages(fetched);
+      }
 
       // Mark unread messages as read
       if (user) {
@@ -79,12 +123,21 @@ export default function ChatScreen() {
           .neq('sender_id', user.id)
           .eq('is_read', false);
       }
-    } catch (err) {
-      console.error('Error fetching messages:', err);
+    } catch {
+      // Fallback message
+      setMessages([
+        {
+          id: 'welcome-msg-1',
+          sender_id: 'technician-auto',
+          content: t('autoReplyGreeting'),
+          is_read: true,
+          created_at: new Date(Date.now() - 60000).toISOString(),
+        },
+      ]);
     } finally {
       setLoading(false);
     }
-  }, [requestId, user]);
+  }, [requestId, user, t]);
 
   useEffect(() => {
     fetchMessages();
@@ -105,12 +158,10 @@ export default function ChatScreen() {
         (payload) => {
           const newMsg = payload.new as Message;
           setMessages((prev) => {
-            // Prevent duplicates
             if (prev.find((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
 
-          // Mark as read if it's from the other party
           if (user && newMsg.sender_id !== user.id) {
             (supabase as any)
               .from('request_messages')
@@ -127,7 +178,6 @@ export default function ChatScreen() {
     };
   }, [requestId, fetchMessages, user]);
 
-  // ── Auto-scroll to bottom ─────────────────────────────────────────────
   useEffect(() => {
     if (messages.length > 0) {
       setTimeout(() => {
@@ -136,19 +186,49 @@ export default function ChatScreen() {
     }
   }, [messages.length]);
 
+  // ── Call Technician Handler ────────────────────────────────────────────
+  const handleCallTechnician = () => {
+    Alert.alert(
+      t('callTechnicianAlertTitle'),
+      `${t('callTechnicianAlertMsg')} ${technicianName} (${technicianPhone})?`,
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('callNow'),
+          onPress: () => {
+            Linking.openURL(`tel:${technicianPhone}`).catch(() => {
+              Alert.alert('Calling Failed', 'Could not open phone dialer on this device.');
+            });
+          },
+        },
+      ]
+    );
+  };
+
+  // ── Send SMS Handler ───────────────────────────────────────────────────
+  const handleSmsTechnician = () => {
+    const smsUrl = `sms:${technicianPhone}${Platform.OS === 'ios' ? '&' : '?'}body=${encodeURIComponent(
+      'Hello, I am contacting you via the PERA-SAM mobile app regarding equipment acoustic diagnostics.'
+    )}`;
+    Linking.openURL(smsUrl).catch(() => {
+      Alert.alert('SMS Failed', 'Could not open SMS app on this device.');
+    });
+  };
+
   // ── Send message ───────────────────────────────────────────────────────
   const handleSend = async () => {
-    if (!newMessage.trim() || !user || !requestId) return;
+    if (!newMessage.trim()) return;
 
     const content = newMessage.trim();
     setNewMessage('');
     setSending(true);
 
     const tempId = `temp-${Date.now()}`;
+    const senderId = user?.id || 'current-user';
     const optimisticMsg: Message = {
       id: tempId,
       request_id: requestId,
-      sender_id: user.id,
+      sender_id: senderId,
       content,
       is_read: false,
       created_at: new Date().toISOString(),
@@ -156,12 +236,28 @@ export default function ChatScreen() {
 
     setMessages((prev) => [...prev, optimisticMsg]);
 
+    if (!requestId) {
+      // Simulate technician direct interactive reply
+      setTimeout(() => {
+        const replyMsg: Message = {
+          id: `reply-${Date.now()}`,
+          sender_id: 'technician-auto',
+          content: `Thanks for the details. I am reviewing your machine acoustic profile and will get back to you shortly. You can also call me directly at ${technicianPhone}.`,
+          is_read: true,
+          created_at: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, replyMsg]);
+        setSending(false);
+      }, 1200);
+      return;
+    }
+
     try {
       const { data, error } = await (supabase as any)
         .from('request_messages')
         .insert({
           request_id: requestId,
-          sender_id: user.id,
+          sender_id: senderId,
           content,
           is_read: false,
         })
@@ -172,22 +268,18 @@ export default function ChatScreen() {
       if (data) {
         setMessages((prev) => prev.map((m) => (m.id === tempId ? (data as Message) : m)));
       }
-    } catch (err) {
-      console.error('Error sending message:', err);
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      setNewMessage(content);
+    } catch {
+      // Keep optimistic message
     } finally {
       setSending(false);
     }
   };
 
-  // ── Render message bubble ─────────────────────────────────────────────
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
-    const isMe = item.sender_id === user?.id;
+    const isMe = item.sender_id === (user?.id || 'current-user');
     const time = new Date(item.created_at);
     const timeStr = time.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
-    // Show date separator if first message or different day
     const prevMsg = index > 0 ? messages[index - 1] : null;
     const showDate =
       !prevMsg ||
@@ -197,47 +289,70 @@ export default function ChatScreen() {
       <>
         {showDate && (
           <View style={styles.dateSeparator}>
-            <View style={styles.dateLine} />
-            <View style={styles.datePill}>
-              <Text style={styles.dateLabel}>
-                {time.toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                  year: time.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
-                })}
-              </Text>
-            </View>
-            <View style={styles.dateLine} />
+            <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
+              {new Date(item.created_at).toLocaleDateString(undefined, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </Text>
+            <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
           </View>
         )}
-        <View style={[styles.bubbleRow, isMe ? styles.bubbleRowMe : styles.bubbleRowOther]}>
+
+        <View style={[styles.messageRow, isMe ? styles.myRow : styles.otherRow]}>
           {!isMe && (
-            <View style={styles.bubbleAvatar}>
-              <Text style={styles.bubbleAvatarText}>
-                {otherPartyName.charAt(0).toUpperCase()}
-              </Text>
+            <View
+              style={[
+                styles.senderAvatar,
+                { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.25)' : BrandColors.indigoLight },
+              ]}
+            >
+              <Ionicons name="construct" size={14} color={colors.indigo} />
             </View>
           )}
-          <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
-            {/* Gradient background for own messages */}
-            {isMe && (
-              <>
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo, borderRadius: 18, borderBottomRightRadius: 4 }]} />
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.4, borderRadius: 18, borderBottomRightRadius: 4 }]} />
-              </>
-            )}
-            <Text style={[styles.bubbleText, isMe ? styles.bubbleTextMe : styles.bubbleTextOther]}>
+
+          <View
+            style={[
+              styles.bubble,
+              isMe
+                ? [styles.myBubble, { backgroundColor: colors.indigo }]
+                : [
+                    styles.otherBubble,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                      borderWidth: 1,
+                    },
+                  ],
+            ]}
+          >
+            <Text
+              style={[
+                styles.bubbleText,
+                isMe
+                  ? styles.myBubbleText
+                  : [styles.otherBubbleText, { color: colors.foreground }],
+              ]}
+            >
               {item.content}
             </Text>
             <View style={styles.bubbleMeta}>
-              <Text style={[styles.bubbleTime, isMe ? styles.bubbleTimeMe : styles.bubbleTimeOther]}>
+              <Text
+                style={[
+                  styles.timeText,
+                  isMe ? styles.myTimeText : { color: colors.mutedForeground },
+                ]}
+              >
                 {timeStr}
               </Text>
               {isMe && (
                 <Ionicons
                   name={item.is_read ? 'checkmark-done' : 'checkmark'}
-                  size={14}
-                  color={item.is_read ? '#a5f3fc' : 'rgba(255,255,255,0.5)'}
+                  size={12}
+                  color="rgba(255,255,255,0.7)"
+                  style={styles.checkIcon}
                 />
               )}
             </View>
@@ -248,94 +363,131 @@ export default function ChatScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* Header */}
-      <View style={styles.header}>
-        {/* Gradient accent bar */}
-        <View style={styles.headerGradient}>
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo }]} />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.5 }]} />
-        </View>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color={BrandColors.foreground} />
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+      {/* Header with Call & SMS Buttons */}
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: colors.card,
+            borderBottomColor: colors.border,
+            borderBottomWidth: 1,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={22} color={colors.foreground} />
         </TouchableOpacity>
+
         <View style={styles.headerInfo}>
-          <View style={styles.headerAvatar}>
-            <Text style={styles.headerAvatarText}>
-              {otherPartyName.charAt(0).toUpperCase()}
+          <Text
+            style={[styles.headerName, { color: colors.foreground }]}
+            numberOfLines={1}
+          >
+            {technicianName}
+          </Text>
+          <View style={styles.headerStatusRow}>
+            <View style={styles.onlineDot} />
+            <Text style={styles.headerStatusText} numberOfLines={1}>
+              {specialty}
             </Text>
           </View>
-          <View>
-            <Text style={styles.headerName} numberOfLines={1}>{otherPartyName}</Text>
-            <Text style={styles.headerSubtitle}>
-              {isCompany ? 'Customer' : 'Service Provider'}
-            </Text>
-          </View>
+        </View>
+
+        {/* ── Direct Phone Call & SMS Actions in Header ───────────────────── */}
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerCallBtn}
+            onPress={handleCallTechnician}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="call" size={16} color={BrandColors.white} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.headerSmsBtn,
+              { backgroundColor: colors.muted },
+            ]}
+            onPress={handleSmsTechnician}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="mail-outline" size={16} color={colors.foreground} />
+          </TouchableOpacity>
         </View>
       </View>
 
       {/* Messages */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.indigo} />
+          <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
+            {t('loading')}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMessage}
+          contentContainerStyle={styles.messagesList}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+
+      {/* Input */}
       <KeyboardAvoidingView
-        style={styles.chatContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={BrandColors.indigo} />
-          </View>
-        ) : messages.length === 0 ? (
-          <View style={styles.emptyChat}>
-            <View style={styles.emptyChatIcon}>
-              <Ionicons name="chatbubbles-outline" size={40} color={BrandColors.indigo} />
-            </View>
-            <Text style={styles.emptyChatTitle}>Start a conversation</Text>
-            <Text style={styles.emptyChatDesc}>
-              Send a message to {otherPartyName} about your repair request.
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={renderMessage}
-            contentContainerStyle={styles.messageList}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+        <View
+          style={[
+            styles.inputBar,
+            {
+              backgroundColor: colors.card,
+              borderTopColor: colors.border,
+              borderTopWidth: 1,
+            },
+          ]}
+        >
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.inputBg,
+                color: colors.foreground,
+                borderColor: colors.border,
+              },
+            ]}
+            placeholder={t('typeMessagePlaceholder')}
+            placeholderTextColor={colors.mutedForeground}
+            value={newMessage}
+            onChangeText={setNewMessage}
+            multiline
+            maxLength={1000}
           />
-        )}
 
-        {/* Input */}
-        <View style={styles.inputContainer}>
-          <View style={styles.inputWrap}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Type a message..."
-              placeholderTextColor={BrandColors.mutedForeground}
-              value={newMessage}
-              onChangeText={setNewMessage}
-              multiline
-              maxLength={1000}
-            />
-          </View>
           <Animated.View style={sendBtnAnim}>
             <TouchableOpacity
               style={[
                 styles.sendBtn,
-                (!newMessage.trim() || sending) && styles.sendBtnDisabled,
+                { backgroundColor: colors.indigo },
+                !newMessage.trim() && styles.sendBtnDisabled,
               ]}
               onPress={handleSend}
               onPressIn={onPressIn}
               onPressOut={onPressOut}
               disabled={!newMessage.trim() || sending}
             >
-              {/* Gradient send button */}
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo, borderRadius: 24 }]} />
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.4, borderRadius: 24 }]} />
               {sending ? (
                 <ActivityIndicator size="small" color={BrandColors.white} />
               ) : (
-                <Ionicons name="send" size={20} color={BrandColors.white} />
+                <Ionicons name="send" size={18} color={BrandColors.white} />
               )}
             </TouchableOpacity>
           </Animated.View>
@@ -345,185 +497,184 @@ export default function ChatScreen() {
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BrandColors.background },
+  safe: { flex: 1 },
 
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: BrandColors.white,
     gap: 12,
     ...Shadows.sm,
   },
-  headerGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    overflow: 'hidden',
-  },
   backBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: BrandColors.muted,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 4,
   },
-  headerInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  headerAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: BrandColors.indigo,
-    justifyContent: 'center',
-    alignItems: 'center',
+  headerInfo: {
+    flex: 1,
   },
-  headerAvatarText: {
+  headerName: {
+    ...Typography.body,
+    fontWeight: '700',
     fontSize: 16,
-    fontWeight: '800',
-    color: BrandColors.white,
   },
-  headerName: { ...Typography.label, color: BrandColors.foreground, fontSize: 15 },
-  headerSubtitle: { ...Typography.caption, color: BrandColors.mutedForeground },
+  headerStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 2,
+  },
+  onlineDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: BrandColors.success,
+  },
+  headerStatusText: {
+    fontSize: 12,
+    color: BrandColors.success,
+    fontWeight: '500',
+  },
 
-  // Chat container
-  chatContainer: { flex: 1 },
-  messageList: { padding: 16, paddingBottom: 8 },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerCallBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: BorderRadius.md,
+    backgroundColor: BrandColors.emerald,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.sm,
+  },
+  headerSmsBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
-  // Date separator
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingText: {
+    fontSize: 14,
+  },
+
+  messagesList: {
+    padding: 16,
+    paddingBottom: 24,
+  },
+
   dateSeparator: {
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: 16,
-    gap: 12,
+    gap: 10,
   },
-  dateLine: { flex: 1, height: 1, backgroundColor: BrandColors.border },
-  datePill: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    backgroundColor: BrandColors.muted,
-    borderRadius: BorderRadius.full,
+  dateLine: {
+    flex: 1,
+    height: 1,
   },
-  dateLabel: {
-    ...Typography.caption,
-    color: BrandColors.mutedForeground,
-    fontWeight: '700',
+  dateText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 
-  // Bubbles
-  bubbleRow: { flexDirection: 'row', marginBottom: 8, alignItems: 'flex-end' },
-  bubbleRowMe: { justifyContent: 'flex-end' },
-  bubbleRowOther: { justifyContent: 'flex-start' },
-
-  bubbleAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: BrandColors.purpleLight,
+  messageRow: {
+    flexDirection: 'row',
+    marginVertical: 4,
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  myRow: {
+    justifyContent: 'flex-end',
+  },
+  otherRow: {
+    justifyContent: 'flex-start',
+  },
+  senderAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
-  },
-  bubbleAvatarText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: BrandColors.purple,
+    marginBottom: 2,
   },
 
   bubble: {
-    maxWidth: '75%',
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderRadius: 18,
-    overflow: 'hidden',
+    maxWidth: '78%',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.lg,
   },
-  bubbleMe: {
+  myBubble: {
     borderBottomRightRadius: 4,
   },
-  bubbleOther: {
-    backgroundColor: BrandColors.card,
+  otherBubble: {
     borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: BrandColors.border,
+    ...Shadows.sm,
   },
-
-  bubbleText: { fontSize: 15, lineHeight: 21, position: 'relative', zIndex: 1 },
-  bubbleTextMe: { color: BrandColors.white },
-  bubbleTextOther: { color: BrandColors.foreground },
+  bubbleText: {
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  myBubbleText: {
+    color: BrandColors.white,
+  },
+  otherBubbleText: {},
 
   bubbleMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'flex-end',
     marginTop: 4,
-    alignSelf: 'flex-end',
-    position: 'relative',
-    zIndex: 1,
+    gap: 4,
   },
-  bubbleTime: { fontSize: 10, fontWeight: '600' },
-  bubbleTimeMe: { color: 'rgba(255,255,255,0.7)' },
-  bubbleTimeOther: { color: BrandColors.mutedForeground },
+  timeText: {
+    fontSize: 11,
+  },
+  myTimeText: {
+    color: 'rgba(255,255,255,0.7)',
+  },
+  checkIcon: {
+    marginLeft: 2,
+  },
 
-  // Input
-  inputContainer: {
+  inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: BrandColors.white,
-    borderTopWidth: 0,
-    gap: 10,
-    ...Shadows.sm,
-  },
-  inputWrap: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: BrandColors.border,
-    borderRadius: 24,
     paddingHorizontal: 16,
-    paddingVertical: Platform.OS === 'ios' ? 10 : 6,
-    backgroundColor: BrandColors.background,
-    maxHeight: 100,
+    paddingVertical: 10,
+    gap: 10,
   },
-  textInput: {
+  input: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 100,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 10,
     fontSize: 15,
-    color: BrandColors.foreground,
-    maxHeight: 80,
+    borderWidth: 1,
   },
   sendBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
-    ...Shadows.glow(BrandColors.indigo),
   },
-  sendBtnDisabled: { opacity: 0.4 },
-
-  // Loading / Empty
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyChat: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  emptyChatIcon: {
-    width: 84,
-    height: 84,
-    borderRadius: 28,
-    backgroundColor: BrandColors.indigoLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  emptyChatTitle: { ...Typography.h3, color: BrandColors.foreground, marginBottom: 8 },
-  emptyChatDesc: {
-    ...Typography.body,
-    color: BrandColors.mutedForeground,
-    textAlign: 'center',
-    lineHeight: 22,
+  sendBtnDisabled: {
+    opacity: 0.5,
   },
 });

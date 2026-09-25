@@ -9,12 +9,15 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { useLanguage } from '../../lib/i18n';
+import { useAppTheme } from '../../lib/ThemeContext';
 import {
   BrandColors,
   Typography,
@@ -74,6 +77,8 @@ function parseDescription(desc: string): Record<string, string> {
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function RequestsScreen() {
   const { user } = useAuth();
+  const { t } = useLanguage();
+  const { isDark, colors } = useAppTheme();
   const params = useLocalSearchParams<{ requestProviderId?: string; requestProviderName?: string }>();
   const [requests, setRequests] = useState<RepairRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -306,20 +311,56 @@ export default function RequestsScreen() {
                 <View style={styles.expandedActions}>
                   {/* Chat button (for both user and company) */}
                   <TouchableOpacity
-                    style={styles.chatBtn}
+                    style={[
+                      styles.chatBtn,
+                      {
+                        backgroundColor: isDark
+                          ? 'rgba(99, 102, 241, 0.18)'
+                          : BrandColors.indigoLight,
+                        borderColor: colors.indigo,
+                      },
+                    ]}
                     onPress={() => {
                       router.push({
                         pathname: '/chat',
                         params: {
                           requestId: item.id,
                           isCompany: isCompany ? '1' : '0',
-                          otherPartyName: item.profiles?.name || (isCompany ? 'User' : 'Company'),
+                          recipientName: item.profiles?.name || (isCompany ? 'User' : 'Certified Technician'),
+                          recipientPhone: item.profiles?.phone || '+94 81 238 8888',
+                          otherPartyName: item.profiles?.name || (isCompany ? 'User' : 'Certified Technician'),
                         },
                       } as any);
                     }}
                   >
-                    <Ionicons name="chatbubble-outline" size={16} color={BrandColors.indigo} />
-                    <Text style={styles.chatBtnText}>Message</Text>
+                    <Ionicons name="chatbubble-outline" size={16} color={colors.indigo} />
+                    <Text style={[styles.chatBtnText, { color: colors.indigo }]}>{t('message')}</Text>
+                  </TouchableOpacity>
+
+                  {/* Direct Call Technician button */}
+                  <TouchableOpacity
+                    style={styles.callActionBtn}
+                    onPress={() => {
+                      const phone = item.profiles?.phone || '+94 81 238 8888';
+                      Alert.alert(
+                        t('callTechnicianAlertTitle'),
+                        `${t('callTechnicianAlertMsg')} ${item.profiles?.name || 'Technician'} (${phone})?`,
+                        [
+                          { text: t('cancel'), style: 'cancel' },
+                          {
+                            text: t('callNow'),
+                            onPress: () => {
+                              Linking.openURL(`tel:${phone}`).catch(() => {
+                                Alert.alert('Calling Failed', 'Could not open phone dialer on this device.');
+                              });
+                            },
+                          },
+                        ]
+                      );
+                    }}
+                  >
+                    <Ionicons name="call" size={15} color={BrandColors.white} />
+                    <Text style={styles.callActionBtnText}>{t('call')}</Text>
                   </TouchableOpacity>
 
                   {/* Company-only action buttons */}
@@ -637,10 +678,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: BrandColors.indigo,
   },
   chatBtnText: { fontSize: 13, fontWeight: '700', color: BrandColors.indigo },
+  callActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    height: 42,
+    backgroundColor: BrandColors.emerald,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  callActionBtnText: { fontSize: 13, fontWeight: '700', color: BrandColors.white },
   acceptBtn: {
     flex: 1,
     flexDirection: 'row',

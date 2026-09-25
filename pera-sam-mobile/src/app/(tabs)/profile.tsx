@@ -13,8 +13,10 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuth } from '../../lib/AuthContext';
-import { getMlApiConfigError, mlApiUrl } from '../../lib/mlApi';
+import { getMlApiConfigError } from '../../lib/mlApi';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { useLanguage, LANGUAGES } from '../../lib/i18n';
+import { useAppTheme, ThemeMode } from '../../lib/ThemeContext';
 import {
   BrandColors,
   Typography,
@@ -34,16 +36,18 @@ const TECH_ITEMS = [
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const { t, language, setLanguage } = useLanguage();
+  const { mode, setMode, isDark, colors } = useAppTheme();
   const mlApiConfigError = getMlApiConfigError();
 
   const handleSignOut = () => {
     Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
+      t('signOut'),
+      t('signOutConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Sign Out',
+          text: t('signOut'),
           style: 'destructive',
           onPress: signOut,
         },
@@ -51,34 +55,66 @@ export default function ProfileScreen() {
     );
   };
 
-  const email = user?.email || 'Unknown';
-  const fullName = user?.user_metadata?.full_name || 'PERA-SAM User';
+  const email = user?.email || 'user@perasam.org';
+  const fullName = user?.user_metadata?.full_name || 'PERA-SAM Engineer';
   const createdAt = user?.created_at
     ? new Date(user.created_at).toLocaleDateString(undefined, {
         year: 'numeric',
-        month: 'long',
+        month: 'short',
         day: 'numeric',
       })
-    : 'Unknown';
+    : '2026';
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+      <Animated.View
+        entering={FadeInDown.duration(400)}
+        style={[
+          styles.header,
+          {
+            backgroundColor: colors.card,
+            borderBottomColor: colors.border,
+            borderBottomWidth: 1,
+          },
+        ]}
+      >
         <View style={styles.headerIconBg}>
           <Ionicons name="person" size={18} color={BrandColors.white} />
         </View>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+          {t('profileTitle')}
+        </Text>
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Avatar & Info */}
+        {/* Avatar & Info Banner */}
         <Animated.View entering={FadeInDown.duration(500).delay(100)}>
           <View style={styles.profileCard}>
             {/* Gradient background */}
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo, borderRadius: BorderRadius.xl }]} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.5, borderRadius: BorderRadius.xl }]} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.pink, opacity: 0.2, borderRadius: BorderRadius.xl, top: '50%' }]} />
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: BrandColors.indigo, borderRadius: BorderRadius.xl },
+              ]}
+            />
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: BrandColors.purple, opacity: 0.6, borderRadius: BorderRadius.xl },
+              ]}
+            />
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: BrandColors.pink,
+                  opacity: 0.25,
+                  borderRadius: BorderRadius.xl,
+                  top: '50%',
+                },
+              ]}
+            />
             <FloatingOrb color="#fff" size={50} top={-10} right={20} delay={0} />
             <FloatingOrb color={BrandColors.pink} size={30} top={40} left={10} delay={500} />
 
@@ -95,71 +131,248 @@ export default function ProfileScreen() {
               <Text style={styles.profileEmail}>{email}</Text>
               <View style={styles.memberBadge}>
                 <Ionicons name="shield-checkmark" size={14} color={BrandColors.white} />
-                <Text style={styles.memberText}>Member since {createdAt}</Text>
+                <Text style={styles.memberText}>
+                  {t('memberSince')} {createdAt}
+                </Text>
               </View>
             </View>
           </View>
         </Animated.View>
 
-        {/* Quick Actions */}
-        <Animated.View entering={FadeInDown.duration(500).delay(200)}>
-          <Text style={styles.sectionTitle}>Quick Access</Text>
+        {/* ── Language Selector (English, Sinhala, Tamil) ───────────────────── */}
+        <Animated.View entering={FadeInDown.duration(500).delay(150)}>
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+            {t('language')}
+          </Text>
+          <View
+            style={[
+              styles.settingsCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <View style={styles.languageOptionsContainer}>
+              {LANGUAGES.map((lang) => {
+                const isActive = language === lang.code;
+                return (
+                  <TouchableOpacity
+                    key={lang.code}
+                    style={[
+                      styles.langOptionBtn,
+                      {
+                        backgroundColor: isActive
+                          ? isDark
+                            ? 'rgba(99, 102, 241, 0.25)'
+                            : BrandColors.indigoLight
+                          : colors.muted,
+                        borderColor: isActive ? colors.indigo : 'transparent',
+                      },
+                    ]}
+                    onPress={() => setLanguage(lang.code)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.langFlag}>{lang.flag}</Text>
+                    <View style={styles.langTextContainer}>
+                      <Text
+                        style={[
+                          styles.langNativeLabel,
+                          {
+                            color: isActive
+                              ? colors.indigo
+                              : colors.foreground,
+                            fontWeight: isActive ? '800' : '600',
+                          },
+                        ]}
+                      >
+                        {lang.nativeLabel}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.langSubLabel,
+                          { color: colors.mutedForeground },
+                        ]}
+                      >
+                        {lang.label}
+                      </Text>
+                    </View>
+                    {isActive && (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={20}
+                        color={colors.indigo}
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
         </Animated.View>
-        <Animated.View entering={FadeInDown.duration(500).delay(300)} style={styles.quickActionsRow}>
+
+        {/* ── Appearance & Dark Mode ────────────────────────────────────────── */}
+        <Animated.View entering={FadeInDown.duration(500).delay(200)}>
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+            {t('appearance')}
+          </Text>
+          <View
+            style={[
+              styles.settingsCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <View style={styles.themeSelectorRow}>
+              {[
+                { id: 'light', labelKey: 'modeLight', icon: 'sunny-outline' },
+                { id: 'dark', labelKey: 'modeDark', icon: 'moon-outline' },
+                { id: 'system', labelKey: 'modeSystem', icon: 'phone-portrait-outline' },
+              ].map((item) => {
+                const isSelected = mode === item.id;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.themePill,
+                      {
+                        backgroundColor: isSelected
+                          ? colors.indigo
+                          : isDark
+                          ? '#1e293b'
+                          : colors.muted,
+                      },
+                    ]}
+                    onPress={() => setMode(item.id as ThemeMode)}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons
+                      name={item.icon as any}
+                      size={18}
+                      color={isSelected ? BrandColors.white : colors.mutedForeground}
+                    />
+                    <Text
+                      style={[
+                        styles.themePillText,
+                        {
+                          color: isSelected
+                            ? BrandColors.white
+                            : colors.foreground,
+                        },
+                      ]}
+                    >
+                      {t(item.labelKey as any)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Quick Actions */}
+        <Animated.View entering={FadeInDown.duration(500).delay(250)}>
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+            {t('quickAccess')}
+          </Text>
+        </Animated.View>
+        <Animated.View
+          entering={FadeInDown.duration(500).delay(300)}
+          style={styles.quickActionsRow}
+        >
           <TouchableOpacity
-            style={styles.quickAction}
+            style={[
+              styles.quickAction,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
             onPress={() => router.push('/(tabs)/history' as any)}
           >
-            <View style={[styles.quickActionIcon, { backgroundColor: BrandColors.purpleLight }]}>
+            <View
+              style={[
+                styles.quickActionIcon,
+                { backgroundColor: BrandColors.purpleLight },
+              ]}
+            >
               <Ionicons name="time" size={22} color={BrandColors.purple} />
             </View>
-            <Text style={styles.quickActionLabel}>History</Text>
+            <Text style={[styles.quickActionLabel, { color: colors.foreground }]}>
+              {t('tabHistory')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.quickAction}
+            style={[
+              styles.quickAction,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
             onPress={() => router.push('/(tabs)/analysis' as any)}
           >
-            <View style={[styles.quickActionIcon, { backgroundColor: BrandColors.accentLight }]}>
+            <View
+              style={[
+                styles.quickActionIcon,
+                { backgroundColor: BrandColors.accentLight },
+              ]}
+            >
               <Ionicons name="mic" size={22} color={BrandColors.accent} />
             </View>
-            <Text style={styles.quickActionLabel}>Analysis</Text>
+            <Text style={[styles.quickActionLabel, { color: colors.foreground }]}>
+              {t('tabAnalysis')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.quickAction}
-            onPress={() => router.push('/(tabs)/requests' as any)}
+            style={[
+              styles.quickAction,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+            onPress={() => router.push('/(tabs)/map' as any)}
           >
-            <View style={[styles.quickActionIcon, { backgroundColor: BrandColors.blueLight }]}>
-              <Ionicons name="chatbubbles" size={22} color={BrandColors.blue} />
+            <View
+              style={[
+                styles.quickActionIcon,
+                { backgroundColor: BrandColors.blueLight },
+              ]}
+            >
+              <Ionicons name="construct" size={22} color={BrandColors.blue} />
             </View>
-            <Text style={styles.quickActionLabel}>Requests</Text>
+            <Text style={[styles.quickActionLabel, { color: colors.foreground }]}>
+              {t('tabTechnicians')}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
 
         {/* Settings Sections */}
         <Animated.View entering={FadeInDown.duration(500).delay(400)}>
-          <Text style={styles.sectionTitle}>Configuration</Text>
-          <View style={styles.settingsCard}>
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+            {t('configuration')}
+          </Text>
+          <View
+            style={[
+              styles.settingsCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
             <SettingsRow
               icon="server-outline"
-              label="ML Backend URL"
-              value={mlApiConfigError ? 'Setup needed' : mlApiUrl}
+              label="ML Backend API"
+              value={mlApiConfigError ? 'Setup needed' : 'Azure Cloud Connected'}
               valueColor={mlApiConfigError ? BrandColors.warning : BrandColors.success}
               iconColor={BrandColors.orange}
+              textColor={colors.foreground}
+              borderColor={colors.border}
             />
             <SettingsRow
               icon="cloud-outline"
-              label="Supabase"
-              value={isSupabaseConfigured ? 'Configured' : 'Setup needed'}
+              label="Supabase Cloud"
+              value={isSupabaseConfigured ? 'Connected' : 'Demo Mode'}
               valueColor={isSupabaseConfigured ? BrandColors.success : BrandColors.warning}
               iconColor={BrandColors.emerald}
+              textColor={colors.foreground}
+              borderColor={colors.border}
             />
             <SettingsRow
               icon="phone-portrait-outline"
-              label="Platform"
-              value={`Expo SDK 54`}
+              label="Mobile Runtime"
+              value={`Expo SDK 54 / React 19`}
               iconColor={BrandColors.purple}
+              textColor={colors.foreground}
+              borderColor={colors.border}
               last
             />
           </View>
@@ -167,20 +380,38 @@ export default function ProfileScreen() {
 
         {/* About */}
         <Animated.View entering={FadeInDown.duration(500).delay(500)}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <View style={styles.settingsCard}>
-            <SettingsRow icon="information-circle-outline" label="App Version" value="1.0.0" iconColor={BrandColors.blue} />
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+            {t('appInfo')}
+          </Text>
+          <View
+            style={[
+              styles.settingsCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <SettingsRow
+              icon="information-circle-outline"
+              label={t('appVersion')}
+              value="1.0.0 (Production)"
+              iconColor={BrandColors.blue}
+              textColor={colors.foreground}
+              borderColor={colors.border}
+            />
             <SettingsRow
               icon="school-outline"
-              label="Team"
+              label={t('team')}
               value="Invictus-Team29"
               iconColor={BrandColors.indigo}
+              textColor={colors.foreground}
+              borderColor={colors.border}
             />
             <SettingsRow
               icon="business-outline"
-              label="University"
+              label={t('university')}
               value="University of Peradeniya"
               iconColor={BrandColors.cyan}
+              textColor={colors.foreground}
+              borderColor={colors.border}
             />
             <TouchableOpacity
               onPress={() => {
@@ -190,9 +421,11 @@ export default function ProfileScreen() {
               <SettingsRow
                 icon="logo-github"
                 label="GitHub Repository"
-                value="Open →"
-                valueColor={BrandColors.indigo}
-                iconColor={BrandColors.foreground}
+                value="cepdnaclk/e22-co2060 →"
+                valueColor={colors.indigo}
+                iconColor={colors.foreground}
+                textColor={colors.foreground}
+                borderColor={colors.border}
                 last
               />
             </TouchableOpacity>
@@ -201,12 +434,25 @@ export default function ProfileScreen() {
 
         {/* Technologies */}
         <Animated.View entering={FadeInDown.duration(500).delay(600)}>
-          <Text style={styles.sectionTitle}>Technologies</Text>
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+            Technologies
+          </Text>
           <View style={styles.techGrid}>
             {TECH_ITEMS.map((tech) => (
-              <View key={tech.name} style={[styles.techChip, { borderColor: `${tech.color}30` }]}>
+              <View
+                key={tech.name}
+                style={[
+                  styles.techChip,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: `${tech.color}40`,
+                  },
+                ]}
+              >
                 <Ionicons name={tech.icon as any} size={14} color={tech.color} />
-                <Text style={[styles.techChipText, { color: tech.color }]}>{tech.name}</Text>
+                <Text style={[styles.techChipText, { color: tech.color }]}>
+                  {tech.name}
+                </Text>
               </View>
             ))}
           </View>
@@ -215,17 +461,24 @@ export default function ProfileScreen() {
         {/* Sign Out */}
         <Animated.View entering={FadeInDown.duration(500).delay(700)}>
           <TouchableOpacity
-            style={styles.signOutBtn}
+            style={[
+              styles.signOutBtn,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(239, 68, 68, 0.15)'
+                  : BrandColors.roseLight,
+              },
+            ]}
             onPress={handleSignOut}
             activeOpacity={0.85}
           >
             <Ionicons name="log-out-outline" size={20} color={BrandColors.rose} />
-            <Text style={styles.signOutText}>Sign Out</Text>
+            <Text style={styles.signOutText}>{t('signOut')}</Text>
           </TouchableOpacity>
         </Animated.View>
 
         {/* Footer */}
-        <Text style={styles.footer}>
+        <Text style={[styles.footer, { color: colors.mutedForeground }]}>
           PERA-SAM — Predictive Equipment Reliability{'\n'}& Acoustics Sound Analysis Manager
         </Text>
       </ScrollView>
@@ -239,6 +492,8 @@ function SettingsRow({
   value,
   valueColor,
   iconColor,
+  textColor,
+  borderColor,
   last,
 }: {
   icon: string;
@@ -246,18 +501,40 @@ function SettingsRow({
   value: string;
   valueColor?: string;
   iconColor?: string;
+  textColor?: string;
+  borderColor?: string;
   last?: boolean;
 }) {
   return (
-    <View style={[styles.settingsRow, last && { borderBottomWidth: 0 }]}>
+    <View
+      style={[
+        styles.settingsRow,
+        { borderBottomColor: borderColor || '#e2e8f0' },
+        last && { borderBottomWidth: 0 },
+      ]}
+    >
       <View style={styles.settingsLeft}>
-        <View style={[styles.settingsIconBg, { backgroundColor: (iconColor || BrandColors.mutedForeground) + '15' }]}>
-          <Ionicons name={icon as any} size={16} color={iconColor || BrandColors.mutedForeground} />
+        <View
+          style={[
+            styles.settingsIconBg,
+            { backgroundColor: (iconColor || BrandColors.mutedForeground) + '18' },
+          ]}
+        >
+          <Ionicons
+            name={icon as any}
+            size={16}
+            color={iconColor || BrandColors.mutedForeground}
+          />
         </View>
-        <Text style={styles.settingsLabel}>{label}</Text>
+        <Text style={[styles.settingsLabel, textColor ? { color: textColor } : {}]}>
+          {label}
+        </Text>
       </View>
       <Text
-        style={[styles.settingsValue, valueColor ? { color: valueColor } : {}]}
+        style={[
+          styles.settingsValue,
+          valueColor ? { color: valueColor } : { color: BrandColors.mutedForeground },
+        ]}
         numberOfLines={1}
       >
         {value}
@@ -267,7 +544,7 @@ function SettingsRow({
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BrandColors.background },
+  safe: { flex: 1 },
 
   header: {
     flexDirection: 'row',
@@ -275,55 +552,54 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: BrandColors.white,
     ...Shadows.sm,
   },
   headerIconBg: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     borderRadius: 10,
     backgroundColor: BrandColors.pink,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: { ...Typography.h3, color: BrandColors.foreground },
+  headerTitle: { ...Typography.h3 },
 
-  scroll: { padding: 20, paddingBottom: 40 },
+  scroll: { padding: 20, paddingBottom: 100 },
 
   // Profile card
   profileCard: {
     borderRadius: BorderRadius.xl,
-    padding: 28,
+    padding: 24,
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 24,
     overflow: 'hidden',
-    minHeight: 200,
+    minHeight: 180,
   },
   profileContent: {
     alignItems: 'center',
     zIndex: 10,
   },
   avatarRing: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: 'rgba(255,255,255,0.25)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 12,
     borderWidth: 3,
     borderColor: 'rgba(255,255,255,0.4)',
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: 'rgba(255,255,255,0.95)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '800',
     color: BrandColors.indigo,
   },
@@ -334,7 +610,7 @@ const styles = StyleSheet.create({
   },
   profileEmail: {
     ...Typography.body,
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.85)',
     marginBottom: 12,
   },
   memberBadge: {
@@ -350,57 +626,101 @@ const styles = StyleSheet.create({
   },
   memberText: {
     ...Typography.caption,
-    color: 'rgba(255,255,255,0.9)',
+    color: 'rgba(255,255,255,0.95)',
     fontWeight: '600',
+  },
+
+  // Language options
+  languageOptionsContainer: {
+    padding: 12,
+    gap: 8,
+  },
+  langOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
+  },
+  langFlag: {
+    fontSize: 24,
+    marginRight: 14,
+  },
+  langTextContainer: {
+    flex: 1,
+  },
+  langNativeLabel: {
+    fontSize: 16,
+  },
+  langSubLabel: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+
+  // Theme selector
+  themeSelectorRow: {
+    flexDirection: 'row',
+    padding: 10,
+    gap: 8,
+  },
+  themePill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: BorderRadius.md,
+  },
+  themePillText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 
   // Quick Actions
   quickActionsRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 28,
+    marginBottom: 24,
   },
   quickAction: {
     flex: 1,
-    backgroundColor: BrandColors.card,
     borderRadius: BorderRadius.lg,
-    padding: 16,
+    padding: 14,
     alignItems: 'center',
     ...Shadows.md,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
   },
   quickActionIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
+    width: 46,
+    height: 46,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
   quickActionLabel: {
     ...Typography.caption,
-    color: BrandColors.foreground,
     fontWeight: '700',
+    textAlign: 'center',
   },
 
   // Sections
   sectionTitle: {
     ...Typography.label,
-    color: BrandColors.mutedForeground,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 10,
+    marginBottom: 8,
     marginLeft: 4,
+    fontSize: 12,
   },
   settingsCard: {
-    backgroundColor: BrandColors.card,
     borderRadius: BorderRadius.xl,
-    marginBottom: 24,
+    marginBottom: 20,
     overflow: 'hidden',
     ...Shadows.md,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
   },
   settingsRow: {
     flexDirection: 'row',
@@ -409,7 +729,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: BrandColors.muted,
   },
   settingsLeft: {
     flexDirection: 'row',
@@ -426,15 +745,15 @@ const styles = StyleSheet.create({
   },
   settingsLabel: {
     ...Typography.body,
-    color: BrandColors.foreground,
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '500',
   },
   settingsValue: {
     ...Typography.bodySmall,
-    color: BrandColors.mutedForeground,
     maxWidth: 160,
     textAlign: 'right',
     fontWeight: '600',
+    fontSize: 13,
   },
 
   // Tech grid
@@ -442,15 +761,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 28,
+    marginBottom: 24,
   },
   techChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    backgroundColor: BrandColors.card,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: BorderRadius.full,
     borderWidth: 1.5,
   },
@@ -462,15 +780,14 @@ const styles = StyleSheet.create({
   // Sign out
   signOutBtn: {
     flexDirection: 'row',
-    height: 54,
-    backgroundColor: BrandColors.roseLight,
+    height: 52,
     borderRadius: BorderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 24,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(244,63,94,0.15)',
+    borderColor: 'rgba(244,63,94,0.2)',
   },
   signOutText: {
     ...Typography.button,
@@ -481,7 +798,6 @@ const styles = StyleSheet.create({
   // Footer
   footer: {
     ...Typography.caption,
-    color: BrandColors.mutedForeground,
     textAlign: 'center',
     lineHeight: 18,
   },

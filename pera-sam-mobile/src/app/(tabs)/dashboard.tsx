@@ -10,12 +10,16 @@ import {
   Modal,
   Pressable,
   FlatList,
+  Linking,
+  Alert,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { useLanguage } from '../../lib/i18n';
+import { useAppTheme } from '../../lib/ThemeContext';
 import {
   BrandColors,
   Typography,
@@ -48,6 +52,8 @@ export interface AppNotification {
 
 export default function DashboardScreen() {
   const { user } = useAuth();
+  const { t, language, setLanguage } = useLanguage();
+  const { isDark, colors } = useAppTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [recentAnalyses, setRecentAnalyses] = useState<AnalysisRecord[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -198,9 +204,19 @@ export default function DashboardScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(500).delay(50)} style={styles.header}>
+      <Animated.View
+        entering={FadeInDown.duration(500).delay(50)}
+        style={[
+          styles.header,
+          {
+            backgroundColor: colors.card,
+            borderBottomColor: colors.border,
+            borderBottomWidth: 1,
+          },
+        ]}
+      >
         {/* Gradient accent bar */}
         <View style={styles.headerGradient}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo }]} />
@@ -210,22 +226,44 @@ export default function DashboardScreen() {
           <View style={styles.logoBox}>
             <Ionicons name="mic" size={18} color={BrandColors.white} />
           </View>
-          <Text style={styles.headerTitle}>PERA-SAM</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>PERA-SAM</Text>
         </View>
 
-        {/* Notification Button */}
-        <TouchableOpacity
-          style={styles.notifBtn}
-          onPress={() => setShowNotifModal(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
-            size={22}
-            color={unreadCount > 0 ? BrandColors.indigo : BrandColors.foreground}
-          />
-          {unreadCount > 0 && <View style={styles.notifDot} />}
-        </TouchableOpacity>
+        {/* Right Actions: Language Switcher + Notification Button */}
+        <View style={styles.headerRightActions}>
+          <TouchableOpacity
+            style={[
+              styles.langBadge,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(99, 102, 241, 0.25)'
+                  : BrandColors.indigoLight,
+              },
+            ]}
+            onPress={() => {
+              const next = language === 'en' ? 'si' : language === 'si' ? 'ta' : 'en';
+              setLanguage(next);
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.langBadgeText, { color: colors.indigo }]}>
+              {language === 'en' ? '🇬🇧 EN' : language === 'si' ? '🇱🇰 සිං' : '🇱🇰 த'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.notifBtn, { backgroundColor: colors.muted }]}
+            onPress={() => setShowNotifModal(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
+              size={20}
+              color={unreadCount > 0 ? colors.indigo : colors.foreground}
+            />
+            {unreadCount > 0 && <View style={styles.notifDot} />}
+          </TouchableOpacity>
+        </View>
       </Animated.View>
 
       <ScrollView
@@ -234,7 +272,7 @@ export default function DashboardScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={BrandColors.indigo}
+            tintColor={colors.indigo}
             colors={[BrandColors.indigo, BrandColors.purple]}
           />
         }
@@ -249,10 +287,10 @@ export default function DashboardScreen() {
             <FloatingOrb color={BrandColors.pink} size={35} top={40} right={60} delay={600} />
             <View style={styles.welcomeContent}>
               <Text style={styles.greeting}>
-                Hello, {userName}! 👋
+                {t('welcomeBack')}, {userName}! 👋
               </Text>
               <Text style={styles.greetingSub}>
-                Monitor your equipment health at a glance
+                {t('findTechDesc')}
               </Text>
             </View>
           </View>
@@ -260,17 +298,30 @@ export default function DashboardScreen() {
 
         {/* Quick Stats */}
         <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.statsRow}>
-          <View style={[styles.statCard, { borderLeftColor: BrandColors.indigo }]}>
-            <Text style={[styles.statNumber, { color: BrandColors.indigo }]}>{totalCount}</Text>
-            <Text style={styles.statLabel}>Total Analyses</Text>
+          <View
+            style={[
+              styles.statCard,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                borderLeftColor: colors.indigo,
+              },
+            ]}
+          >
+            <Text style={[styles.statNumber, { color: colors.indigo }]}>{totalCount}</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
+              {t('totalAnalyses')}
+            </Text>
           </View>
           <View
             style={[
               styles.statCard,
               {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
                 borderLeftColor: lastStatus
                   ? StatusConfig[lastStatus].color
-                  : BrandColors.mutedForeground,
+                  : colors.mutedForeground,
               },
             ]}
           >
@@ -282,10 +333,10 @@ export default function DashboardScreen() {
                   color={StatusConfig[lastStatus].color}
                 />
               ) : (
-                <Ionicons name="help-circle-outline" size={26} color={BrandColors.mutedForeground} />
+                <Ionicons name="help-circle-outline" size={26} color={colors.mutedForeground} />
               )}
             </View>
-            <Text style={styles.statLabel}>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
               {lastStatus ? StatusConfig[lastStatus].label : 'No data'}
             </Text>
           </View>
@@ -293,52 +344,166 @@ export default function DashboardScreen() {
 
         {/* Quick Actions */}
         <Animated.View entering={FadeInDown.duration(500).delay(300)}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+            {t('quickAccess')}
+          </Text>
         </Animated.View>
         <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.actionsRow}>
           <TouchableOpacity
-            style={styles.actionCard}
+            style={[
+              styles.actionCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
             onPress={() => router.push('/(tabs)/analysis' as any)}
             activeOpacity={0.8}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.accentLight }]}>
               <Ionicons name="mic" size={24} color={BrandColors.accent} />
             </View>
-            <Text style={styles.actionTitle}>New Analysis</Text>
-            <Text style={styles.actionDesc}>Upload audio</Text>
+            <Text style={[styles.actionTitle, { color: colors.foreground }]}>
+              {t('tabAnalysis')}
+            </Text>
+            <Text style={[styles.actionDesc, { color: colors.mutedForeground }]}>
+              {t('quickAnalyze')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionCard}
+            style={[
+              styles.actionCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
             onPress={() => router.push('/(tabs)/history' as any)}
             activeOpacity={0.8}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.purpleLight }]}>
               <Ionicons name="time" size={24} color={BrandColors.purple} />
             </View>
-            <Text style={styles.actionTitle}>History</Text>
-            <Text style={styles.actionDesc}>Past results</Text>
+            <Text style={[styles.actionTitle, { color: colors.foreground }]}>
+              {t('tabHistory')}
+            </Text>
+            <Text style={[styles.actionDesc, { color: colors.mutedForeground }]}>
+              {t('recentActivity')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionCard}
+            style={[
+              styles.actionCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
             onPress={() => router.push('/(tabs)/map' as any)}
             activeOpacity={0.8}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.blueLight }]}>
-              <Ionicons name="map" size={24} color={BrandColors.blue} />
+              <Ionicons name="construct" size={24} color={BrandColors.blue} />
             </View>
-            <Text style={styles.actionTitle}>Services</Text>
-            <Text style={styles.actionDesc}>Find nearby</Text>
+            <Text style={[styles.actionTitle, { color: colors.foreground }]}>
+              {t('tabTechnicians')}
+            </Text>
+            <Text style={[styles.actionDesc, { color: colors.mutedForeground }]}>
+              {t('findNearbyTechs')}
+            </Text>
           </TouchableOpacity>
+        </Animated.View>
+
+        {/* ── Technicians & Rapid Support Banner ─────────────────────────────── */}
+        <Animated.View entering={FadeInDown.duration(500).delay(450)}>
+          <View
+            style={[
+              styles.supportBanner,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <View style={styles.supportBannerLeft}>
+              <View
+                style={[
+                  styles.supportIconBg,
+                  {
+                    backgroundColor: isDark
+                      ? 'rgba(16, 185, 129, 0.2)'
+                      : BrandColors.emeraldLight,
+                  },
+                ]}
+              >
+                <Ionicons name="headset" size={22} color={BrandColors.emerald} />
+              </View>
+              <View style={styles.supportTextContainer}>
+                <Text style={[styles.supportTitle, { color: colors.foreground }]}>
+                  {t('findNearbyTechs')}
+                </Text>
+                <Text
+                  style={[styles.supportSubtitle, { color: colors.mutedForeground }]}
+                  numberOfLines={2}
+                >
+                  {t('findTechDesc')}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.supportActionRow}>
+              {/* Quick Call Hotline / Certified Tech */}
+              <TouchableOpacity
+                style={styles.supportCallBtn}
+                onPress={() => {
+                  Alert.alert(
+                    t('callTechnicianAlertTitle'),
+                    `${t('callTechnicianAlertMsg')} Peradeniya Industrial Hotline (+94 81 238 8888)?`,
+                    [
+                      { text: t('cancel'), style: 'cancel' },
+                      {
+                        text: t('callNow'),
+                        onPress: () => {
+                          Linking.openURL('tel:+94812388888').catch(() => {
+                            Alert.alert('Calling Failed', 'Could not open phone dialer on this device.');
+                          });
+                        },
+                      },
+                    ]
+                  );
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="call" size={15} color={BrandColors.white} />
+                <Text style={styles.supportCallBtnText}>{t('call')}</Text>
+              </TouchableOpacity>
+
+              {/* Message / Browse Techs */}
+              <TouchableOpacity
+                style={[
+                  styles.supportBrowseBtn,
+                  {
+                    backgroundColor: isDark
+                      ? 'rgba(99, 102, 241, 0.2)'
+                      : BrandColors.indigoLight,
+                    borderColor: colors.indigo,
+                  },
+                ]}
+                onPress={() => router.push('/(tabs)/map' as any)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="chatbubble-ellipses" size={15} color={colors.indigo} />
+                <Text style={[styles.supportBrowseBtnText, { color: colors.indigo }]}>
+                  {t('message')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </Animated.View>
 
         {/* Recent Activity */}
         <Animated.View entering={FadeInDown.duration(500).delay(500)} style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+            {t('recentActivity')}
+          </Text>
           {recentAnalyses.length > 0 && (
             <TouchableOpacity onPress={() => router.push('/(tabs)/history' as any)}>
-              <Text style={styles.viewAllLink}>View All →</Text>
+              <Text style={[styles.viewAllLink, { color: colors.indigo }]}>
+                {t('viewAll')} →
+              </Text>
             </TouchableOpacity>
           )}
         </Animated.View>
@@ -533,25 +698,104 @@ const styles = StyleSheet.create({
     color: BrandColors.foreground,
     letterSpacing: -0.3,
   },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  langBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+  },
+  langBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
   notifBtn: {
-    width: 42,
-    height: 42,
+    width: 40,
+    height: 40,
     borderRadius: 14,
-    backgroundColor: BrandColors.muted,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
   notifDot: {
     position: 'absolute',
-    top: 9,
-    right: 9,
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: BrandColors.rose,
     borderWidth: 1.5,
     borderColor: BrandColors.white,
+  },
+
+  supportBanner: {
+    borderRadius: BorderRadius.xl,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    ...Shadows.md,
+  },
+  supportBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  supportIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  supportTextContainer: {
+    flex: 1,
+  },
+  supportTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  supportSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  supportActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  supportCallBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 38,
+    backgroundColor: BrandColors.emerald,
+    borderRadius: BorderRadius.md,
+  },
+  supportCallBtnText: {
+    color: BrandColors.white,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  supportBrowseBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 38,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
+  },
+  supportBrowseBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 
   scroll: { padding: 20, paddingBottom: 100 },

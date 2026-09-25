@@ -11,21 +11,25 @@ import { BrandColors } from '../../constants/theme';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { useLanguage, TranslationKey } from '../../lib/i18n';
+import { useAppTheme } from '../../lib/ThemeContext';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
-const TAB_ITEMS: {
+interface TabItemConfig {
   name: string;
-  title: string;
+  titleKey: TranslationKey;
   icon: IoniconsName;
   iconFocused: IoniconsName;
   activeColor: string;
-}[] = [
-  { name: 'dashboard', title: 'Home', icon: 'grid-outline', iconFocused: 'grid', activeColor: BrandColors.indigo },
-  { name: 'analysis', title: 'Analysis', icon: 'mic-outline', iconFocused: 'mic', activeColor: BrandColors.accent },
-  { name: 'map', title: 'Map', icon: 'map-outline', iconFocused: 'map', activeColor: BrandColors.blue },
-  { name: 'requests', title: 'Requests', icon: 'chatbubbles-outline', iconFocused: 'chatbubbles', activeColor: BrandColors.purple },
-  { name: 'profile', title: 'Profile', icon: 'person-outline', iconFocused: 'person', activeColor: BrandColors.pink },
+}
+
+const TAB_ITEMS: TabItemConfig[] = [
+  { name: 'dashboard', titleKey: 'tabHome', icon: 'grid-outline', iconFocused: 'grid', activeColor: BrandColors.indigo },
+  { name: 'analysis', titleKey: 'tabAnalysis', icon: 'mic-outline', iconFocused: 'mic', activeColor: BrandColors.accent },
+  { name: 'map', titleKey: 'tabTechnicians', icon: 'construct-outline', iconFocused: 'construct', activeColor: BrandColors.blue },
+  { name: 'requests', titleKey: 'tabRequests', icon: 'chatbubbles-outline', iconFocused: 'chatbubbles', activeColor: BrandColors.purple },
+  { name: 'profile', titleKey: 'tabProfile', icon: 'person-outline', iconFocused: 'person', activeColor: BrandColors.pink },
 ];
 
 // Hidden tabs that remain navigable but don't show in the bottom bar
@@ -133,6 +137,8 @@ function AnimatedTabIcon({
 // ── Main Layout ─────────────────────────────────────────────────────────────
 export default function TabLayout() {
   const { user } = useAuth();
+  const { t } = useLanguage();
+  const { isDark, colors } = useAppTheme();
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Fetch unread request messages count
@@ -174,13 +180,22 @@ export default function TabLayout() {
     };
   }, [user]);
 
+  const dynamicTabBarStyle = [
+    styles.tabBar,
+    {
+      backgroundColor: isDark ? 'rgba(17, 23, 38, 0.94)' : 'rgba(255, 255, 255, 0.94)',
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.6)',
+      shadowColor: isDark ? '#000000' : '#0f172a',
+    },
+  ];
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: BrandColors.indigo,
-        tabBarInactiveTintColor: BrandColors.mutedForeground,
-        tabBarStyle: styles.tabBar,
+        tabBarActiveTintColor: colors.indigo,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarStyle: dynamicTabBarStyle,
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,
       }}
@@ -190,7 +205,7 @@ export default function TabLayout() {
           key={tab.name}
           name={tab.name}
           options={{
-            title: tab.title,
+            title: t(tab.titleKey),
             tabBarActiveTintColor: tab.activeColor,
             tabBarIcon: ({ focused, color }) => (
               <AnimatedTabIcon
