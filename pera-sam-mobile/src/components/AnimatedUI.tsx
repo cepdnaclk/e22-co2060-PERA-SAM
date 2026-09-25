@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp, TouchableOpacity, TouchableOpacityProps } from 'react-native';
 import Animated, {
   FadeInDown,
   FadeInUp,
@@ -17,6 +17,9 @@ import Animated, {
   withRepeat,
   withSequence,
   Easing,
+  ReduceMotion,
+  useReducedMotion,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import { BrandColors } from '../constants/theme';
 
@@ -132,10 +135,10 @@ export function useScalePress() {
   const scale = useSharedValue(1);
 
   const onPressIn = () => {
-    scale.value = withSpring(0.96, { damping: 15, stiffness: 200 });
+    scale.value = withTiming(0.98, { duration: 110, reduceMotion: ReduceMotion.System });
   };
   const onPressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 200 });
+    scale.value = withSpring(1, { damping: 22, stiffness: 280, reduceMotion: ReduceMotion.System });
   };
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -145,12 +148,41 @@ export function useScalePress() {
   return { animatedStyle, onPressIn, onPressOut };
 }
 
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+/** Press feedback stays on the UI thread and follows the system motion setting. */
+export function MotionButton({ style, onPressIn, onPressOut, ...props }: TouchableOpacityProps) {
+  const press = useScalePress();
+  return (
+    <AnimatedTouchable
+      accessibilityRole="button"
+      activeOpacity={0.85}
+      {...props}
+      style={[style, press.animatedStyle]}
+      onPressIn={(event) => { press.onPressIn(); onPressIn?.(event); }}
+      onPressOut={(event) => { press.onPressOut(); onPressOut?.(event); }}
+    />
+  );
+}
+
+/** Decorative acoustic signature: one short reveal, with no continuous idle animation. */
+export function AcousticSignature() {
+  return (
+    <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, height: 48, marginVertical: 20 }}>
+      {[10, 18, 14, 28, 20, 36, 46, 28, 18, 34, 44, 24, 38, 18, 28, 42, 30, 20, 12, 24, 16, 10].map((height, index) => (
+        <Animated.View key={index} entering={FadeInUp.duration(350).delay(index * 12).reduceMotion(ReduceMotion.System)} style={{ flex: 1, maxWidth: 8, height, borderRadius: 4, backgroundColor: index > 7 && index < 15 ? '#5eead4' : '#508b99' }} />
+      ))}
+    </View>
+  );
+}
+
 // ─── Pulsing Glow (for recording indicator, etc.) ───────────────────────────
 export function usePulse(active: boolean) {
   const pulse = useSharedValue(1);
+  const reducedMotion = useReducedMotion();
 
   React.useEffect(() => {
-    if (active) {
+    if (active && !reducedMotion) {
       pulse.value = withRepeat(
         withSequence(
           withTiming(1.04, { duration: 700, easing: Easing.inOut(Easing.ease) }),
@@ -162,7 +194,8 @@ export function usePulse(active: boolean) {
     } else {
       pulse.value = withTiming(1, { duration: 250 });
     }
-  }, [active, pulse]);
+    return () => cancelAnimation(pulse);
+  }, [active, pulse, reducedMotion]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],
@@ -184,8 +217,10 @@ interface FloatingOrbProps {
 
 export function FloatingOrb({ color, size, top, left, right, bottom, delay = 0 }: FloatingOrbProps) {
   const translateY = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
 
   React.useEffect(() => {
+    if (reducedMotion) return;
     translateY.value = withRepeat(
       withSequence(
         withTiming(-6, { duration: 2200 + delay, easing: Easing.inOut(Easing.ease) }),
@@ -194,7 +229,8 @@ export function FloatingOrb({ color, size, top, left, right, bottom, delay = 0 }
       -1,
       true
     );
-  }, [delay, translateY]);
+    return () => cancelAnimation(translateY);
+  }, [delay, translateY, reducedMotion]);
 
   const orbStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],

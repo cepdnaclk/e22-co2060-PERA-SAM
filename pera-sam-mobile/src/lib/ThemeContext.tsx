@@ -34,7 +34,7 @@ export interface DynamicThemeColors {
 
 const LIGHT_THEME: DynamicThemeColors = {
   isDark: false,
-  background: '#f0f4ff',
+  background: '#f5f7fa',
   card: '#ffffff',
   cardSecondary: '#f8fafc',
   foreground: '#0f172a',

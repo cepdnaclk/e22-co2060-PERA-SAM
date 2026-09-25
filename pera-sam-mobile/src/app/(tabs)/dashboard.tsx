@@ -1,10 +1,8 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   RefreshControl,
   Modal,
@@ -13,13 +11,13 @@ import {
   Linking,
   Alert,
 } from 'react-native';
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInRight, ReduceMotion } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useLanguage } from '../../lib/i18n';
-import { useAppTheme } from '../../lib/ThemeContext';
+import { DynamicThemeColors, useAppTheme } from '../../lib/ThemeContext';
 import {
   BrandColors,
   Typography,
@@ -28,7 +26,8 @@ import {
   StatusConfig,
   AnalysisStatus,
 } from '../../constants/theme';
-import { FloatingOrb } from '../../components/AnimatedUI';
+import { AcousticSignature, MotionButton } from '../../components/AnimatedUI';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AnalysisRecord {
   id: string;
@@ -54,6 +53,8 @@ export default function DashboardScreen() {
   const { user } = useAuth();
   const { t, language, setLanguage } = useLanguage();
   const { isDark, colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [recentAnalyses, setRecentAnalyses] = useState<AnalysisRecord[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -204,10 +205,10 @@ export default function DashboardScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
       <Animated.View
-        entering={FadeInDown.duration(500).delay(50)}
+        entering={FadeInDown.duration(360).delay(25).reduceMotion(ReduceMotion.System)}
         style={[
           styles.header,
           {
@@ -217,11 +218,6 @@ export default function DashboardScreen() {
           },
         ]}
       >
-        {/* Gradient accent bar */}
-        <View style={styles.headerGradient}>
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo }]} />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.5 }]} />
-        </View>
         <View style={styles.headerLeft}>
           <View style={styles.logoBox}>
             <Ionicons name="mic" size={18} color={BrandColors.white} />
@@ -231,7 +227,8 @@ export default function DashboardScreen() {
 
         {/* Right Actions: Language Switcher + Notification Button */}
         <View style={styles.headerRightActions}>
-          <TouchableOpacity
+          <MotionButton
+            accessibilityLabel="Change language"
             style={[
               styles.langBadge,
               {
@@ -247,11 +244,12 @@ export default function DashboardScreen() {
             activeOpacity={0.7}
           >
             <Text style={[styles.langBadgeText, { color: colors.indigo }]}>
-              {language === 'en' ? '🇬🇧 EN' : language === 'si' ? '🇱🇰 සිං' : '🇱🇰 த'}
+              {language === 'en' ? 'EN' : language === 'si' ? 'සිං' : 'த'}
             </Text>
-          </TouchableOpacity>
+          </MotionButton>
 
-          <TouchableOpacity
+          <MotionButton
+            accessibilityLabel="Open notifications"
             style={[styles.notifBtn, { backgroundColor: colors.muted }]}
             onPress={() => setShowNotifModal(true)}
             activeOpacity={0.7}
@@ -262,12 +260,13 @@ export default function DashboardScreen() {
               color={unreadCount > 0 ? colors.indigo : colors.foreground}
             />
             {unreadCount > 0 && <View style={styles.notifDot} />}
-          </TouchableOpacity>
+          </MotionButton>
         </View>
       </Animated.View>
 
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 110 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -277,37 +276,40 @@ export default function DashboardScreen() {
           />
         }
       >
-        {/* Welcome Banner */}
-        <Animated.View entering={FadeInDown.duration(500).delay(100)}>
+        <Animated.View entering={FadeInDown.duration(350).reduceMotion(ReduceMotion.System)} style={styles.welcomeIntro}>
+          <Text style={styles.welcomeLabel}>{t('welcomeBack')}</Text>
+          <Text style={styles.userName}>{userName}</Text>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.duration(400).delay(60).reduceMotion(ReduceMotion.System)}>
           <View style={styles.welcomeBanner}>
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo, borderRadius: BorderRadius.xl }]} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.5, borderRadius: BorderRadius.xl }]} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.cyan, opacity: 0.15, borderRadius: BorderRadius.xl, top: '40%' }]} />
-            <FloatingOrb color="#fff" size={60} top={-10} right={10} delay={0} />
-            <FloatingOrb color={BrandColors.pink} size={35} top={40} right={60} delay={600} />
-            <View style={styles.welcomeContent}>
-              <Text style={styles.greeting}>
-                {t('welcomeBack')}, {userName}! 👋
-              </Text>
-              <Text style={styles.greetingSub}>
-                {t('findTechDesc')}
-              </Text>
+            <View style={styles.heroEyebrow}>
+              <Ionicons name="pulse" size={16} color="#5eead4" />
+              <Text style={styles.heroEyebrowText}>{t('acousticIntelligence')}</Text>
             </View>
+            <Text style={styles.greeting}>{t('heroTitle')}</Text>
+            <Text style={styles.greetingSub}>{t('heroDescription')}</Text>
+            <AcousticSignature />
+            <MotionButton style={styles.heroButton} onPress={() => router.push('/(tabs)/analysis')}>
+              <Ionicons name="mic-outline" size={20} color="#102c38" />
+              <Text style={styles.heroButtonText}>{t('runAnalysis')}</Text>
+              <Ionicons name="arrow-forward" size={18} color="#102c38" />
+            </MotionButton>
           </View>
         </Animated.View>
 
         {/* Quick Stats */}
-        <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.statsRow}>
+        <Animated.View entering={FadeInDown.duration(360).delay(100).reduceMotion(ReduceMotion.System)} style={styles.statsRow}>
           <View
             style={[
               styles.statCard,
               {
                 backgroundColor: colors.card,
                 borderColor: colors.border,
-                borderLeftColor: colors.indigo,
               },
             ]}
           >
+            <Ionicons name="analytics-outline" size={18} color={colors.indigo} />
             <Text style={[styles.statNumber, { color: colors.indigo }]}>{totalCount}</Text>
             <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
               {t('totalAnalyses')}
@@ -319,12 +321,10 @@ export default function DashboardScreen() {
               {
                 backgroundColor: colors.card,
                 borderColor: colors.border,
-                borderLeftColor: lastStatus
-                  ? StatusConfig[lastStatus].color
-                  : colors.mutedForeground,
               },
             ]}
           >
+            <Text style={styles.statEyebrow}>{t('lastAnalysis')}</Text>
             <View style={styles.statusDot}>
               {lastStatus ? (
                 <Ionicons
@@ -343,32 +343,13 @@ export default function DashboardScreen() {
         </Animated.View>
 
         {/* Quick Actions */}
-        <Animated.View entering={FadeInDown.duration(500).delay(300)}>
-          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+        <Animated.View entering={FadeInDown.duration(360).delay(150).reduceMotion(ReduceMotion.System)}>
+          <Text style={styles.sectionTitle}>
             {t('quickAccess')}
           </Text>
         </Animated.View>
-        <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[
-              styles.actionCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-            onPress={() => router.push('/(tabs)/analysis' as any)}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.actionIcon, { backgroundColor: BrandColors.accentLight }]}>
-              <Ionicons name="mic" size={24} color={BrandColors.accent} />
-            </View>
-            <Text style={[styles.actionTitle, { color: colors.foreground }]}>
-              {t('tabAnalysis')}
-            </Text>
-            <Text style={[styles.actionDesc, { color: colors.mutedForeground }]}>
-              {t('quickAnalyze')}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
+        <Animated.View entering={FadeInDown.duration(360).delay(200).reduceMotion(ReduceMotion.System)} style={styles.actionsRow}>
+          <MotionButton
             style={[
               styles.actionCard,
               { backgroundColor: colors.card, borderColor: colors.border },
@@ -377,7 +358,7 @@ export default function DashboardScreen() {
             activeOpacity={0.8}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.purpleLight }]}>
-              <Ionicons name="time" size={24} color={BrandColors.purple} />
+              <Ionicons name="time" size={22} color={BrandColors.purple} />
             </View>
             <Text style={[styles.actionTitle, { color: colors.foreground }]}>
               {t('tabHistory')}
@@ -385,9 +366,9 @@ export default function DashboardScreen() {
             <Text style={[styles.actionDesc, { color: colors.mutedForeground }]}>
               {t('recentActivity')}
             </Text>
-          </TouchableOpacity>
+          </MotionButton>
 
-          <TouchableOpacity
+          <MotionButton
             style={[
               styles.actionCard,
               { backgroundColor: colors.card, borderColor: colors.border },
@@ -396,7 +377,7 @@ export default function DashboardScreen() {
             activeOpacity={0.8}
           >
             <View style={[styles.actionIcon, { backgroundColor: BrandColors.blueLight }]}>
-              <Ionicons name="construct" size={24} color={BrandColors.blue} />
+              <Ionicons name="construct" size={22} color={BrandColors.blue} />
             </View>
             <Text style={[styles.actionTitle, { color: colors.foreground }]}>
               {t('tabTechnicians')}
@@ -404,11 +385,11 @@ export default function DashboardScreen() {
             <Text style={[styles.actionDesc, { color: colors.mutedForeground }]}>
               {t('findNearbyTechs')}
             </Text>
-          </TouchableOpacity>
+          </MotionButton>
         </Animated.View>
 
         {/* ── Technicians & Rapid Support Banner ─────────────────────────────── */}
-        <Animated.View entering={FadeInDown.duration(500).delay(450)}>
+        <Animated.View entering={FadeInDown.duration(360).delay(225).reduceMotion(ReduceMotion.System)}>
           <View
             style={[
               styles.supportBanner,
@@ -446,7 +427,7 @@ export default function DashboardScreen() {
 
             <View style={styles.supportActionRow}>
               {/* Quick Call Hotline / Certified Tech */}
-              <TouchableOpacity
+              <MotionButton
                 style={styles.supportCallBtn}
                 onPress={() => {
                   Alert.alert(
@@ -469,10 +450,10 @@ export default function DashboardScreen() {
               >
                 <Ionicons name="call" size={15} color={BrandColors.white} />
                 <Text style={styles.supportCallBtnText}>{t('call')}</Text>
-              </TouchableOpacity>
+              </MotionButton>
 
               {/* Message / Browse Techs */}
-              <TouchableOpacity
+              <MotionButton
                 style={[
                   styles.supportBrowseBtn,
                   {
@@ -489,26 +470,26 @@ export default function DashboardScreen() {
                 <Text style={[styles.supportBrowseBtnText, { color: colors.indigo }]}>
                   {t('message')}
                 </Text>
-              </TouchableOpacity>
+              </MotionButton>
             </View>
           </View>
         </Animated.View>
 
         {/* Recent Activity */}
-        <Animated.View entering={FadeInDown.duration(500).delay(500)} style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+        <Animated.View entering={FadeInDown.duration(360).delay(240).reduceMotion(ReduceMotion.System)} style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
             {t('recentActivity')}
           </Text>
           {recentAnalyses.length > 0 && (
-            <TouchableOpacity onPress={() => router.push('/(tabs)/history' as any)}>
+            <MotionButton onPress={() => router.push('/(tabs)/history' as any)}>
               <Text style={[styles.viewAllLink, { color: colors.indigo }]}>
                 {t('viewAll')} →
               </Text>
-            </TouchableOpacity>
+            </MotionButton>
           )}
         </Animated.View>
         {recentAnalyses.length === 0 ? (
-          <Animated.View entering={FadeInDown.duration(500).delay(600)} style={styles.emptyCard}>
+          <Animated.View entering={FadeInDown.duration(360).delay(240).reduceMotion(ReduceMotion.System)} style={styles.emptyCard}>
             <View style={styles.emptyIconBg}>
               <Ionicons name="analytics-outline" size={40} color={BrandColors.indigo} />
             </View>
@@ -516,21 +497,21 @@ export default function DashboardScreen() {
             <Text style={styles.emptyDesc}>
               Upload an audio file to get your first equipment health report.
             </Text>
-            <TouchableOpacity
+            <MotionButton
               style={styles.emptyBtn}
               onPress={() => router.push('/(tabs)/analysis' as any)}
             >
               <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.indigo, borderRadius: BorderRadius.md }]} />
               <View style={[StyleSheet.absoluteFill, { backgroundColor: BrandColors.purple, opacity: 0.4, borderRadius: BorderRadius.md }]} />
               <Text style={styles.emptyBtnText}>Start Analysis</Text>
-            </TouchableOpacity>
+            </MotionButton>
           </Animated.View>
         ) : (
           recentAnalyses.map((item, idx) => {
             const cfg = StatusConfig[item.status] || StatusConfig.normal;
             return (
-              <Animated.View key={item.id} entering={FadeInRight.duration(400).delay(600 + idx * 100)}>
-                <View style={styles.activityCard}>
+              <Animated.View key={item.id} entering={FadeInRight.duration(300).delay(Math.min(idx, 4) * 45).reduceMotion(ReduceMotion.System)}>
+                <MotionButton style={styles.activityCard} onPress={() => router.push('/(tabs)/history')}>
                   <View style={[styles.activityDot, { backgroundColor: cfg.color }]} />
                   <View style={styles.activityInfo}>
                     <Text style={styles.activityCategory}>
@@ -550,7 +531,7 @@ export default function DashboardScreen() {
                       {cfg.label}
                     </Text>
                   </View>
-                </View>
+                </MotionButton>
               </Animated.View>
             );
           })
@@ -580,20 +561,20 @@ export default function DashboardScreen() {
               </View>
               <View style={styles.notifHeaderActions}>
                 {unreadCount > 0 && (
-                  <TouchableOpacity onPress={markAllAsRead} style={styles.markReadBtn}>
+                  <MotionButton onPress={markAllAsRead} style={styles.markReadBtn}>
                     <Text style={styles.markReadText}>Mark all read</Text>
-                  </TouchableOpacity>
+                  </MotionButton>
                 )}
-                <TouchableOpacity onPress={() => setShowNotifModal(false)}>
-                  <Ionicons name="close-circle" size={26} color={BrandColors.mutedForeground} />
-                </TouchableOpacity>
+                <MotionButton accessibilityLabel="Close notifications" style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }} onPress={() => setShowNotifModal(false)}>
+                  <Ionicons name="close-circle" size={26} color={colors.mutedForeground} />
+                </MotionButton>
               </View>
             </View>
 
             {/* Notification List */}
             {notifications.length === 0 ? (
               <View style={styles.notifEmpty}>
-                <Ionicons name="notifications-off-outline" size={40} color={BrandColors.border} />
+                <Ionicons name="notifications-off-outline" size={40} color={colors.border} />
                 <Text style={styles.notifEmptyTitle}>No notifications</Text>
                 <Text style={styles.notifEmptySub}>You are all caught up!</Text>
               </View>
@@ -631,7 +612,7 @@ export default function DashboardScreen() {
                       : BrandColors.purpleLight;
 
                   return (
-                    <TouchableOpacity
+                    <MotionButton
                       style={[styles.notifCard, !item.isRead && styles.notifCardUnread]}
                       onPress={() => handleNotifPress(item)}
                       activeOpacity={0.8}
@@ -649,7 +630,7 @@ export default function DashboardScreen() {
                           {item.message}
                         </Text>
                       </View>
-                    </TouchableOpacity>
+                    </MotionButton>
                   );
                 }}
               />
@@ -661,8 +642,16 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BrandColors.background },
+const createStyles = (colors: DynamicThemeColors) => StyleSheet.create({
+  welcomeIntro: { marginBottom: 22 },
+  welcomeLabel: { fontSize: 13, color: colors.mutedForeground, marginBottom: 5 },
+  userName: { fontSize: 26, fontWeight: '700', letterSpacing: -0.7, color: colors.foreground },
+  heroEyebrow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  heroEyebrowText: { fontSize: 10, fontWeight: '700', letterSpacing: 1.8, textTransform: 'uppercase', color: '#9bcec9', flexShrink: 1 },
+  heroButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#99f6e4', borderRadius: 12, padding: 15, minHeight: 50 },
+  heroButtonText: { flexShrink: 1, fontSize: 14, fontWeight: '700', color: '#102c38' },
+  statEyebrow: { fontSize: 11, fontWeight: '600', color: colors.mutedForeground, marginBottom: 10 },
+  safe: { flex: 1, backgroundColor: colors.background },
 
   // Header
   header: {
@@ -671,7 +660,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: BrandColors.white,
+    backgroundColor: colors.card,
     borderBottomWidth: 0,
     ...Shadows.sm,
   },
@@ -695,7 +684,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: BrandColors.foreground,
+    color: colors.foreground,
     letterSpacing: -0.3,
   },
   headerRightActions: {
@@ -705,16 +694,17 @@ const styles = StyleSheet.create({
   },
   langBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
+    paddingVertical: 12,
+    minHeight: 44,
+    borderRadius: BorderRadius.md,
   },
   langBadgeText: {
     fontSize: 12,
     fontWeight: '800',
   },
   notifBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
@@ -737,7 +727,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 24,
     borderWidth: 1,
-    ...Shadows.md,
+    ...Shadows.sm,
   },
   supportBannerLeft: {
     flexDirection: 'row',
@@ -774,7 +764,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: 38,
+    minHeight: 44,
     backgroundColor: BrandColors.emerald,
     borderRadius: BorderRadius.md,
   },
@@ -789,7 +779,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: 38,
+    minHeight: 44,
     borderRadius: BorderRadius.md,
     borderWidth: 1.5,
   },
@@ -806,7 +796,9 @@ const styles = StyleSheet.create({
     padding: 24,
     marginBottom: 24,
     overflow: 'hidden',
-    minHeight: 120,
+    backgroundColor: '#142c3a',
+    borderWidth: 1,
+    borderColor: '#244453',
   },
   welcomeContent: {
     zIndex: 10,
@@ -815,23 +807,26 @@ const styles = StyleSheet.create({
     ...Typography.h2,
     color: BrandColors.white,
     marginBottom: 6,
-    fontSize: 24,
+    fontSize: 29,
+    lineHeight: 36,
+    letterSpacing: -0.8,
   },
   greetingSub: {
     ...Typography.body,
-    color: 'rgba(255,255,255,0.85)',
+    color: '#b3c8d3',
     fontSize: 14,
+    lineHeight: 22,
   },
 
   // Stats
   statsRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
   statCard: {
     flex: 1,
-    backgroundColor: BrandColors.card,
+    backgroundColor: colors.card,
     borderRadius: BorderRadius.lg,
     padding: 18,
-    borderLeftWidth: 4,
-    ...Shadows.md,
+    borderWidth: 1,
+    ...Shadows.sm,
   },
   statNumber: {
     ...Typography.bigNumber,
@@ -839,7 +834,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     ...Typography.caption,
-    color: BrandColors.mutedForeground,
+    color: colors.mutedForeground,
     marginTop: 4,
     fontWeight: '500',
   },
@@ -854,7 +849,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...Typography.h3,
-    color: BrandColors.foreground,
+    color: colors.foreground,
     marginBottom: 14,
   },
   viewAllLink: {
@@ -864,44 +859,44 @@ const styles = StyleSheet.create({
   },
 
   // Actions
-  actionsRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
+  actionsRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   actionCard: {
     flex: 1,
-    backgroundColor: BrandColors.card,
+    backgroundColor: colors.card,
     borderRadius: BorderRadius.lg,
     padding: 18,
-    alignItems: 'center',
-    ...Shadows.md,
+    alignItems: 'flex-start',
+    ...Shadows.sm,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    borderColor: colors.border,
   },
   actionIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
   },
   actionTitle: {
     ...Typography.label,
-    color: BrandColors.foreground,
+    color: colors.foreground,
     marginBottom: 2,
   },
   actionDesc: {
     ...Typography.caption,
-    color: BrandColors.mutedForeground,
+    color: colors.mutedForeground,
   },
 
   // Empty
   emptyCard: {
-    backgroundColor: BrandColors.card,
+    backgroundColor: colors.card,
     borderRadius: BorderRadius.xl,
     padding: 32,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: BrandColors.border,
-    borderStyle: 'dashed',
+    borderColor: colors.border,
+    borderStyle: 'solid',
   },
   emptyIconBg: {
     width: 72,
@@ -914,12 +909,12 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     ...Typography.h3,
-    color: BrandColors.foreground,
+    color: colors.foreground,
     marginBottom: 6,
   },
   emptyDesc: {
     ...Typography.bodySmall,
-    color: BrandColors.mutedForeground,
+    color: colors.mutedForeground,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 18,
@@ -929,7 +924,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: BorderRadius.md,
     overflow: 'hidden',
-    ...Shadows.glow(BrandColors.indigo),
+
   },
   emptyBtnText: {
     ...Typography.button,
@@ -941,13 +936,13 @@ const styles = StyleSheet.create({
   activityCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: BrandColors.card,
+    backgroundColor: colors.card,
     borderRadius: BorderRadius.lg,
     padding: 16,
     marginBottom: 10,
     ...Shadows.sm,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    borderColor: colors.border,
   },
   activityDot: {
     width: 12,
@@ -958,11 +953,11 @@ const styles = StyleSheet.create({
   activityInfo: { flex: 1 },
   activityCategory: {
     ...Typography.label,
-    color: BrandColors.foreground,
+    color: colors.foreground,
   },
   activityDate: {
     ...Typography.caption,
-    color: BrandColors.mutedForeground,
+    color: colors.mutedForeground,
     marginTop: 2,
   },
   statusBadge: {
@@ -982,7 +977,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: BrandColors.white,
+    backgroundColor: colors.card,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
@@ -994,20 +989,22 @@ const styles = StyleSheet.create({
     width: 44,
     height: 5,
     borderRadius: 3,
-    backgroundColor: BrandColors.border,
+    backgroundColor: colors.border,
     alignSelf: 'center',
     marginBottom: 14,
   },
   notifHeader: {
+    flexWrap: 'wrap',
+    gap: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: BrandColors.border,
+    borderBottomColor: colors.border,
   },
   notifHeaderTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  notifHeaderTitle: { ...Typography.h2, color: BrandColors.foreground },
+  notifHeaderTitle: { ...Typography.h2, color: colors.foreground },
   notifCountBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -1024,17 +1021,17 @@ const styles = StyleSheet.create({
   notifCard: {
     flexDirection: 'row',
     padding: 14,
-    backgroundColor: BrandColors.card,
+    backgroundColor: colors.card,
     borderRadius: BorderRadius.lg,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: BrandColors.border,
+    borderColor: colors.border,
     position: 'relative',
     alignItems: 'center',
     gap: 12,
   },
   notifCardUnread: {
-    backgroundColor: BrandColors.indigoLight + '20',
+    backgroundColor: colors.badgeBg,
     borderColor: BrandColors.indigo + '30',
   },
   unreadIndicator: {
@@ -1054,12 +1051,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   notifBody: { flex: 1 },
-  notifTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 },
-  notifTitle: { fontSize: 14, fontWeight: '700', color: BrandColors.foreground },
-  notifTime: { fontSize: 11, color: BrandColors.mutedForeground },
-  notifMsg: { fontSize: 13, color: BrandColors.mutedForeground, lineHeight: 18 },
+  notifTopRow: { flexWrap: 'wrap', gap: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 },
+  notifTitle: { flexShrink: 1, fontSize: 14, fontWeight: '700', color: colors.foreground },
+  notifTime: { fontSize: 11, color: colors.mutedForeground },
+  notifMsg: { fontSize: 13, color: colors.mutedForeground, lineHeight: 18 },
 
   notifEmpty: { alignItems: 'center', paddingVertical: 40, gap: 8 },
-  notifEmptyTitle: { ...Typography.h3, color: BrandColors.foreground },
-  notifEmptySub: { ...Typography.bodySmall, color: BrandColors.mutedForeground },
+  notifEmptyTitle: { ...Typography.h3, color: colors.foreground },
+  notifEmptySub: { ...Typography.bodySmall, color: colors.mutedForeground },
 });

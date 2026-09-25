@@ -3,7 +3,8 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   TouchableOpacity,
   Alert,
@@ -23,6 +24,8 @@ import {
   BorderRadius,
   Shadows,
 } from '../../constants/theme';
+import { ProfileEditor } from '../../components/ProfileEditor';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FloatingOrb } from '../../components/AnimatedUI';
 
 const TECH_ITEMS = [
@@ -38,6 +41,7 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { t, language, setLanguage } = useLanguage();
   const { mode, setMode, isDark, colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const mlApiConfigError = getMlApiConfigError();
 
   const handleSignOut = () => {
@@ -66,7 +70,7 @@ export default function ProfileScreen() {
     : '2026';
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
       <Animated.View
         entering={FadeInDown.duration(400)}
@@ -87,7 +91,8 @@ export default function ProfileScreen() {
         </Text>
       </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.scroll, { paddingBottom: 110 + insets.bottom }]}>
         {/* Avatar & Info Banner */}
         <Animated.View entering={FadeInDown.duration(500).delay(100)}>
           <View style={styles.profileCard}>
@@ -138,6 +143,8 @@ export default function ProfileScreen() {
             </View>
           </View>
         </Animated.View>
+
+        <ProfileEditor key={user?.id ?? 'signed-out'} />
 
         {/* ── Language Selector (English, Sinhala, Tamil) ───────────────────── */}
         <Animated.View entering={FadeInDown.duration(500).delay(150)}>
@@ -482,6 +489,7 @@ export default function ProfileScreen() {
           PERA-SAM — Predictive Equipment Reliability{'\n'}& Acoustics Sound Analysis Manager
         </Text>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

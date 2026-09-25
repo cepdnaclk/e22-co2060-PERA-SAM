@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  updateProfile: (fullName: string, contactPhone: string) => Promise<void>;
   setDemoSession: (email: string, name: string) => void;
 }
 
@@ -15,6 +16,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   signOut: async () => {},
+  updateProfile: async () => { throw new Error('Authentication is unavailable.'); },
   setDemoSession: () => {},
 });
 
@@ -67,6 +69,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
   };
 
+  const updateProfile = async (fullName: string, contactPhone: string) => {
+    if (!session?.user) throw new Error('Please sign in again.');
+    const userId = session.user.id;
+    const metadata = { full_name: fullName, name: fullName, contact_phone: contactPhone };
+    if (userId === 'demo-user-123') {
+      setSession((current) => current?.user.id === userId ? {
+        ...current,
+        user: { ...current.user, user_metadata: { ...current.user.user_metadata, ...metadata } },
+      } : current);
+      return;
+    }
+    const { data, error } = await supabase.auth.updateUser({ data: metadata });
+    if (error) throw error;
+    if (!data.user) throw new Error('Profile could not be saved.');
+    setSession((current) => current?.user.id === userId ? { ...current, user: data.user } : current);
+  };
+
   const setDemoSession = (email: string, name: string) => {
     const mockUser: any = {
       id: 'demo-user-123',
@@ -91,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user: session?.user ?? null,
         loading,
         signOut,
+        updateProfile,
         setDemoSession,
       }}
     >

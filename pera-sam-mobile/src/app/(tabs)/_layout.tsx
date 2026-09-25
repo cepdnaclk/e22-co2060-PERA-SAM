@@ -1,11 +1,13 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
+  ReduceMotion,
 } from 'react-native-reanimated';
 import { BrandColors } from '../../constants/theme';
 import { useEffect, useState } from 'react';
@@ -26,10 +28,10 @@ interface TabItemConfig {
 
 const TAB_ITEMS: TabItemConfig[] = [
   { name: 'dashboard', titleKey: 'tabHome', icon: 'grid-outline', iconFocused: 'grid', activeColor: BrandColors.indigo },
-  { name: 'analysis', titleKey: 'tabAnalysis', icon: 'mic-outline', iconFocused: 'mic', activeColor: BrandColors.accent },
-  { name: 'map', titleKey: 'tabTechnicians', icon: 'construct-outline', iconFocused: 'construct', activeColor: BrandColors.blue },
-  { name: 'requests', titleKey: 'tabRequests', icon: 'chatbubbles-outline', iconFocused: 'chatbubbles', activeColor: BrandColors.purple },
-  { name: 'profile', titleKey: 'tabProfile', icon: 'person-outline', iconFocused: 'person', activeColor: BrandColors.pink },
+  { name: 'analysis', titleKey: 'tabAnalysis', icon: 'mic-outline', iconFocused: 'mic', activeColor: BrandColors.indigo },
+  { name: 'map', titleKey: 'tabTechnicians', icon: 'construct-outline', iconFocused: 'construct', activeColor: BrandColors.indigo },
+  { name: 'requests', titleKey: 'tabRequests', icon: 'chatbubbles-outline', iconFocused: 'chatbubbles', activeColor: BrandColors.indigo },
+  { name: 'profile', titleKey: 'tabProfile', icon: 'person-outline', iconFocused: 'person', activeColor: BrandColors.indigo },
 ];
 
 // Hidden tabs that remain navigable but don't show in the bottom bar
@@ -41,9 +43,9 @@ function AnimatedBadge({ count }: { count: number }) {
 
   useEffect(() => {
     if (count > 0) {
-      scale.value = withSpring(1, { damping: 10, stiffness: 200 });
+      scale.value = withSpring(1, { damping: 22, stiffness: 260, reduceMotion: ReduceMotion.System });
     } else {
-      scale.value = withSpring(0, { damping: 10, stiffness: 200 });
+      scale.value = withSpring(0, { damping: 22, stiffness: 260, reduceMotion: ReduceMotion.System });
     }
   }, [count, scale]);
 
@@ -80,13 +82,13 @@ function AnimatedTabIcon({
 
   useEffect(() => {
     if (focused) {
-      scale.value = withSpring(1.12, { damping: 8, stiffness: 200 });
-      dotOpacity.value = withSpring(1, { damping: 12 });
-      bgOpacity.value = withTiming(1, { duration: 200 });
+      scale.value = withSpring(1.06, { damping: 24, stiffness: 280, reduceMotion: ReduceMotion.System });
+      dotOpacity.value = withSpring(1, { damping: 24, reduceMotion: ReduceMotion.System });
+      bgOpacity.value = withTiming(1, { duration: 180, reduceMotion: ReduceMotion.System });
     } else {
-      scale.value = withSpring(1, { damping: 10, stiffness: 180 });
-      dotOpacity.value = withTiming(0, { duration: 150 });
-      bgOpacity.value = withTiming(0, { duration: 150 });
+      scale.value = withSpring(1, { damping: 24, stiffness: 280, reduceMotion: ReduceMotion.System });
+      dotOpacity.value = withTiming(0, { duration: 150, reduceMotion: ReduceMotion.System });
+      bgOpacity.value = withTiming(0, { duration: 150, reduceMotion: ReduceMotion.System });
     }
   }, [focused, scale, dotOpacity, bgOpacity]);
 
@@ -116,7 +118,7 @@ function AnimatedTabIcon({
       <Animated.View style={iconAnimStyle}>
         <Ionicons
           name={focused ? tab.iconFocused : tab.icon}
-          size={focused ? 23 : 21}
+          size={22}
           color={color}
         />
       </Animated.View>
@@ -136,6 +138,7 @@ function AnimatedTabIcon({
 
 // ── Main Layout ─────────────────────────────────────────────────────────────
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { t } = useLanguage();
   const { isDark, colors } = useAppTheme();
@@ -183,6 +186,7 @@ export default function TabLayout() {
   const dynamicTabBarStyle = [
     styles.tabBar,
     {
+      bottom: Math.max(insets.bottom, 12),
       backgroundColor: isDark ? 'rgba(17, 23, 38, 0.94)' : 'rgba(255, 255, 255, 0.94)',
       borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.6)',
       shadowColor: isDark ? '#000000' : '#0f172a',
@@ -193,6 +197,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: colors.indigo,
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarStyle: dynamicTabBarStyle,
@@ -235,7 +240,6 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 24 : 12,
     left: 16,
     right: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.92)',
@@ -243,12 +247,12 @@ const styles = StyleSheet.create({
     height: 70,
     paddingBottom: 8,
     paddingTop: 8,
-    elevation: 20,
+    elevation: 6,
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    borderRadius: 28,
+    shadowOpacity: 0.07,
+    shadowRadius: 16,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.6)',
   },

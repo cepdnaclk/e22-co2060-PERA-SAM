@@ -18,6 +18,24 @@ export const LANGUAGES: LanguageOption[] = [
 
 const TRANSLATIONS = {
   en: {
+    profileDetails: "Profile details",
+    editProfile: "Edit profile",
+    profileFullName: "Full name",
+    profileContactPhone: "Contact number (optional)",
+    profilePhoneHint: "Include your country code for international numbers.",
+    profileSignInEmail: "Sign-in email (read-only)",
+    profileSaving: "Saving profile…",
+    profileSaved: "Profile updated successfully.",
+    profileDemoSaved: "Profile updated for this demo session only.",
+    profileSaveFailed: "Could not save your profile. Check your connection and try again.",
+    profileNameInvalid: "Enter a name between 1 and 80 characters.",
+    profilePhoneInvalid: "Enter a valid contact number with 7–15 digits.",
+
+    acousticIntelligence: 'Acoustic intelligence',
+    heroTitle: 'Know your machine.',
+    heroDescription: 'Turn machine sound into a clearer picture of equipment health.',
+    lastAnalysis: 'Latest analysis',
+
     // Tabs
     tabHome: 'Home',
     tabAnalysis: 'Analysis',
@@ -125,6 +143,24 @@ const TRANSLATIONS = {
     languageChanged: 'Language updated successfully',
   },
   si: {
+    profileDetails: "පැතිකඩ විස්තර",
+    editProfile: "පැතිකඩ සංස්කරණය",
+    profileFullName: "සම්පූර්ණ නම",
+    profileContactPhone: "දුරකථන අංකය (විකල්පයි)",
+    profilePhoneHint: "ජාත්‍යන්තර අංක සඳහා රටේ කේතය ඇතුළත් කරන්න.",
+    profileSignInEmail: "පිවිසුම් ඊමේල් (කියවීමට පමණයි)",
+    profileSaving: "පැතිකඩ සුරකිමින්…",
+    profileSaved: "පැතිකඩ සාර්ථකව යාවත්කාලීන විය.",
+    profileDemoSaved: "මෙම ආදර්ශ සැසිය සඳහා පමණක් පැතිකඩ යාවත්කාලීන විය.",
+    profileSaveFailed: "පැතිකඩ සුරැකිය නොහැකි විය. සම්බන්ධතාව පරීක්ෂා කර නැවත උත්සාහ කරන්න.",
+    profileNameInvalid: "අක්ෂර 1 සිට 80 දක්වා නමක් ඇතුළත් කරන්න.",
+    profilePhoneInvalid: "ඉලක්කම් 7–15 සහිත වලංගු දුරකථන අංකයක් ඇතුළත් කරන්න.",
+
+    acousticIntelligence: 'ධ්වනි විශ්ලේෂණය',
+    heroTitle: 'ඔබේ යන්ත්‍රය හඳුනාගන්න.',
+    heroDescription: 'යන්ත්‍රයේ ශබ්දයෙන් එහි තත්ත්වය පිළිබඳ පැහැදිලි අවබෝධයක් ලබා ගන්න.',
+    lastAnalysis: 'නවතම විශ්ලේෂණය',
+
     // Tabs
     tabHome: 'මුල් පිටුව',
     tabAnalysis: 'විශ්ලේෂණය',
@@ -232,6 +268,24 @@ const TRANSLATIONS = {
     languageChanged: 'භාෂාව සාර්ථකව යාවත්කාලීන විය',
   },
   ta: {
+    profileDetails: "சுயவிவர விவரங்கள்",
+    editProfile: "சுயவிவரத்தைத் திருத்து",
+    profileFullName: "முழுப் பெயர்",
+    profileContactPhone: "தொடர்பு எண் (விருப்பமானது)",
+    profilePhoneHint: "சர்வதேச எண்களுக்கு நாட்டின் குறியீட்டைச் சேர்க்கவும்.",
+    profileSignInEmail: "உள்நுழைவு மின்னஞ்சல் (படிக்க மட்டும்)",
+    profileSaving: "சுயவிவரம் சேமிக்கப்படுகிறது…",
+    profileSaved: "சுயவிவரம் புதுப்பிக்கப்பட்டது.",
+    profileDemoSaved: "இந்த மாதிரி அமர்வுக்கு மட்டும் சுயவிவரம் புதுப்பிக்கப்பட்டது.",
+    profileSaveFailed: "சுயவிவரத்தைச் சேமிக்க முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
+    profileNameInvalid: "1 முதல் 80 எழுத்துகள் கொண்ட பெயரை உள்ளிடவும்.",
+    profilePhoneInvalid: "7–15 இலக்கங்கள் கொண்ட சரியான தொடர்பு எண்ணை உள்ளிடவும்.",
+
+    acousticIntelligence: 'ஒலி நுண்ணறிவு',
+    heroTitle: 'உங்கள் இயந்திரத்தை அறியுங்கள்.',
+    heroDescription: 'இயந்திரத்தின் ஒலியிலிருந்து அதன் நிலையைத் தெளிவாக அறியுங்கள்.',
+    lastAnalysis: 'சமீபத்திய பகுப்பாய்வு',
+
     // Tabs
     tabHome: 'முகப்பு',
     tabAnalysis: 'பகுப்பாய்வு',

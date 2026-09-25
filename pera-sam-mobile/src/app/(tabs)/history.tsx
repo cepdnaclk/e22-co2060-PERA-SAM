@@ -1,9 +1,9 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
+  ActivityIndicator,
   FlatList,
   RefreshControl,
   TouchableOpacity,
@@ -14,6 +14,9 @@ import {
 } from 'react-native';
 import Animated, { FadeInRight, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { router, useFocusEffect } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DynamicThemeColors, useAppTheme } from '../../lib/ThemeContext';
 import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabase';
 import {
@@ -46,57 +49,92 @@ interface AnalysisRecord {
 
 export default function HistoryScreen() {
   const { user } = useAuth();
+  const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const requestId = useRef(0);
+  const recordOwner = useRef(user?.id);
   const [records, setRecords] = useState<AnalysisRecord[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<AnalysisRecord | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
 
   const filteredRecords = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
     return records.filter((r) => {
       const matchFilter = selectedFilter === 'all' || r.status === selectedFilter;
       const matchSearch =
-        !searchQuery ||
-        r.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.machine_id?.toLowerCase().includes(searchQuery.toLowerCase());
+        !query ||
+        r.category?.toLowerCase().includes(query) ||
+        r.machine_id?.toLowerCase().includes(query) ||
+        r.details?.filename?.toLowerCase().includes(query);
       return matchFilter && matchSearch;
     });
   }, [records, selectedFilter, searchQuery]);
 
-  const fetchHistory = useCallback(async () => {
-    if (!user) return;
+  const fetchHistory = useCallback(async (refresh = false) => {
+    const currentRequest = ++requestId.current;
+    setRefreshing(refresh);
+    setError(null);
+    if (recordOwner.current !== user?.id) {
+      recordOwner.current = user?.id;
+      setRecords([]);
+      setSelectedRecord(null);
+      setLoaded(false);
+    }
+    if (!user) {
+      setLoaded(true);
+      setRefreshing(false);
+      return;
+    }
     try {
-      const { data } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('analysis_results')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (data) setRecords(data as AnalysisRecord[]);
+      if (fetchError) throw fetchError;
+      if (currentRequest === requestId.current) setRecords((data ?? []) as AnalysisRecord[]);
     } catch {
-      // Table may not exist yet
+      if (currentRequest === requestId.current) {
+        setError('Unable to load history. Check your connection and try again.');
+      }
+    } finally {
+      if (currentRequest === requestId.current) {
+        setLoaded(true);
+        setRefreshing(false);
+      }
     }
-    setLoaded(true);
   }, [user]);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchHistory();
-    setRefreshing(false);
+  const onRefresh = useCallback(() => {
+    void fetchHistory(true);
   }, [fetchHistory]);
 
-  React.useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+  useFocusEffect(useCallback(() => {
+    void fetchHistory();
+    return () => { requestId.current += 1; };
+  }, [fetchHistory]));
+
+  const hasFilters = searchQuery.trim().length > 0 || selectedFilter !== 'all';
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedFilter('all');
+  };
 
   const renderItem = ({ item, index }: { item: AnalysisRecord; index: number }) => {
     const cfg = StatusConfig[item.status] || StatusConfig.normal;
     const date = new Date(item.created_at);
 
     return (
-      <Animated.View entering={FadeInRight.duration(400).delay(index * 80)}>
+      <Animated.View entering={FadeInRight.duration(400).delay(Math.min(index, 5) * 60)}>
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={`View ${item.category || 'equipment'} analysis for machine ${item.machine_id || 'unknown'}, ${cfg.label}`}
           style={styles.card}
           onPress={() => setSelectedRecord(item)}
           activeOpacity={0.7}
@@ -122,7 +160,7 @@ export default function HistoryScreen() {
 
             <View style={styles.cardBottom}>
               <View style={styles.cardMeta}>
-                <Ionicons name="calendar-outline" size={13} color={BrandColors.mutedForeground} />
+                <Ionicons name="calendar-outline" size={13} color={colors.mutedForeground} />
                 <Text style={styles.cardDate}>
                   {date.toLocaleDateString(undefined, {
                     month: 'short',
@@ -132,7 +170,7 @@ export default function HistoryScreen() {
                 </Text>
               </View>
               <View style={styles.cardMeta}>
-                <Ionicons name="time-outline" size={13} color={BrandColors.mutedForeground} />
+                <Ionicons name="time-outline" size={13} color={colors.mutedForeground} />
                 <Text style={styles.cardDate}>
                   {date.toLocaleTimeString(undefined, {
                     hour: '2-digit',
@@ -146,14 +184,14 @@ export default function HistoryScreen() {
             </View>
           </View>
 
-          <Ionicons name="chevron-forward" size={18} color={BrandColors.border} />
+          <Ionicons name="chevron-forward" size={18} color={colors.border} />
         </TouchableOpacity>
       </Animated.View>
     );
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       {/* Header */}
       <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
         {/* Gradient accent bar */}
@@ -168,7 +206,7 @@ export default function HistoryScreen() {
           <Text style={styles.headerTitle}>History</Text>
         </View>
         <View style={styles.headerCountBadge}>
-          <Text style={styles.headerCount}>{records.length} records</Text>
+          <Text style={styles.headerCount}>{loaded ? `${records.length} records` : 'Loading…'}</Text>
         </View>
       </Animated.View>
 
@@ -178,15 +216,18 @@ export default function HistoryScreen() {
           <Ionicons name="search-outline" size={18} color={BrandColors.indigo} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by category or machine..."
-            placeholderTextColor={BrandColors.mutedForeground}
+            placeholder="Search machines, categories, files"
+            accessibilityLabel="Search analysis history"
+            placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color={BrandColors.mutedForeground} />
+            <TouchableOpacity style={styles.iconButton} accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={18} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
@@ -202,6 +243,8 @@ export default function HistoryScreen() {
           {STATUS_FILTERS.map((f) => (
             <TouchableOpacity
               key={f.id}
+              accessibilityRole="button"
+              accessibilityState={{ selected: selectedFilter === f.id }}
               style={[
                 styles.filterChip,
                 selectedFilter === f.id && { backgroundColor: f.color },
@@ -225,7 +268,20 @@ export default function HistoryScreen() {
         data={filteredRecords}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: 110 + insets.bottom }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        ListHeaderComponent={error ? (
+          <View style={styles.errorBanner} accessibilityLiveRegion="polite">
+            <Ionicons name="cloud-offline-outline" size={24} color={colors.rose} />
+            <Text style={styles.errorText}>{error}{records.length > 0 ? ' Showing previously loaded results.' : ''}</Text>
+            <TouchableOpacity style={styles.iconButton} accessibilityRole="button" accessibilityLabel="Retry loading history" disabled={refreshing} onPress={onRefresh}>
+              <Ionicons name="refresh" size={22} color={colors.indigo} />
+            </TouchableOpacity>
+          </View>
+        ) : hasFilters && loaded ? (
+          <Text style={styles.resultCount}>{filteredRecords.length} of {records.length} results</Text>
+        ) : null}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -235,21 +291,33 @@ export default function HistoryScreen() {
           />
         }
         ListEmptyComponent={
-          loaded ? (
+          !loaded || (refreshing && records.length === 0) ? (
+            <View style={styles.empty}>
+              <ActivityIndicator size="large" color={colors.indigo} />
+              <Text style={styles.emptyDesc}>Loading your analyses…</Text>
+            </View>
+          ) : !error ? (
             <View style={styles.empty}>
               <View style={styles.emptyIconBg}>
                 <Ionicons name="folder-open-outline" size={44} color={BrandColors.indigo} />
               </View>
               <Text style={styles.emptyTitle}>
-                {searchQuery || selectedFilter !== 'all'
+                {hasFilters
                   ? 'No matching results'
                   : 'No history yet'}
               </Text>
               <Text style={styles.emptyDesc}>
-                {searchQuery || selectedFilter !== 'all'
+                {hasFilters
                   ? 'Try adjusting your search or filters.'
                   : 'Your analysis results will appear here once you run your first analysis.'}
               </Text>
+              <TouchableOpacity
+                style={styles.primaryButton}
+                accessibilityRole="button"
+                onPress={hasFilters ? clearFilters : () => router.push('/(tabs)/analysis')}
+              >
+                <Text style={styles.primaryButtonText}>{hasFilters ? 'Clear filters' : 'Start an analysis'}</Text>
+              </TouchableOpacity>
             </View>
           ) : null
         }
@@ -263,7 +331,8 @@ export default function HistoryScreen() {
         onRequestClose={() => setSelectedRecord(null)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setSelectedRecord(null)}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 16) }]} accessibilityViewIsModal onPress={(e) => e.stopPropagation()}>
+            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
             {selectedRecord && (() => {
               const cfg = StatusConfig[selectedRecord.status] || StatusConfig.normal;
               return (
@@ -272,8 +341,8 @@ export default function HistoryScreen() {
                   <View style={styles.modalHandle} />
                   <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>Analysis Details</Text>
-                    <TouchableOpacity onPress={() => setSelectedRecord(null)}>
-                      <Ionicons name="close-circle" size={28} color={BrandColors.mutedForeground} />
+                    <TouchableOpacity style={styles.iconButton} accessibilityRole="button" accessibilityLabel="Close analysis details" onPress={() => setSelectedRecord(null)}>
+                      <Ionicons name="close-circle" size={28} color={colors.mutedForeground} />
                     </TouchableOpacity>
                   </View>
 
@@ -310,6 +379,7 @@ export default function HistoryScreen() {
                 </>
               );
             })()}
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -318,16 +388,24 @@ export default function HistoryScreen() {
 }
 
 function DetailRow({ label, value, even }: { label: string; value: string; even?: boolean }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <View style={[styles.detailRow, even && { backgroundColor: BrandColors.background }]}>
+    <View style={[styles.detailRow, even && { backgroundColor: colors.background }]}>
       <Text style={styles.detailLabel}>{label}</Text>
       <Text style={styles.detailValue}>{value}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BrandColors.background },
+const createStyles = (colors: DynamicThemeColors) => StyleSheet.create({
+  iconButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  primaryButton: { marginTop: 20, minHeight: 48, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: BrandColors.indigo, borderRadius: BorderRadius.lg },
+  primaryButtonText: { color: BrandColors.white, fontWeight: '700', textAlign: 'center' },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, marginBottom: 16, borderRadius: BorderRadius.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.rose },
+  errorText: { flex: 1, color: colors.foreground, lineHeight: 20 },
+  resultCount: { ...Typography.caption, color: colors.mutedForeground, marginBottom: 12 },
+  safe: { flex: 1, backgroundColor: colors.background },
 
   header: {
     flexDirection: 'row',
@@ -335,7 +413,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: BrandColors.white,
+    backgroundColor: colors.card,
     ...Shadows.sm,
   },
   headerGradient: {
@@ -355,45 +433,47 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: { ...Typography.h3, color: BrandColors.foreground },
+  headerTitle: { ...Typography.h3, color: colors.foreground },
   headerCountBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    backgroundColor: BrandColors.purpleLight,
+    backgroundColor: colors.badgeBg,
     borderRadius: BorderRadius.full,
   },
-  headerCount: { ...Typography.caption, color: BrandColors.purple, fontWeight: '700' },
+  headerCount: { ...Typography.caption, color: colors.purple, fontWeight: '700' },
 
   // Search
   searchSection: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: BrandColors.card,
+    backgroundColor: colors.card,
     borderRadius: BorderRadius.lg,
     borderWidth: 1.5,
-    borderColor: BrandColors.border,
+    borderColor: colors.border,
     paddingHorizontal: 14,
-    height: 46,
+    minHeight: 48,
     gap: 10,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: BrandColors.foreground,
+    color: colors.foreground,
   },
 
   // Filter chips
   filterRow: { paddingHorizontal: 16, paddingBottom: 10, gap: 8 },
   filterChip: {
     paddingHorizontal: 14,
-    paddingVertical: 7,
-    backgroundColor: BrandColors.card,
+    paddingVertical: 11,
+    minHeight: 44,
+    justifyContent: 'center',
+    backgroundColor: colors.card,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: colors.border,
   },
-  filterChipText: { fontSize: 12, fontWeight: '700', color: BrandColors.mutedForeground },
+  filterChipText: { fontSize: 12, fontWeight: '700', color: colors.mutedForeground },
   filterChipTextActive: { color: BrandColors.white },
 
   list: { padding: 16, paddingBottom: 100 },
@@ -402,13 +482,13 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: BrandColors.card,
+    backgroundColor: colors.card,
     borderRadius: BorderRadius.lg,
     marginBottom: 10,
     overflow: 'hidden',
     ...Shadows.md,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    borderColor: colors.border,
   },
   cardIndicator: {
     width: 5,
@@ -422,8 +502,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cardInfo: { flex: 1 },
-  cardCategory: { ...Typography.label, color: BrandColors.foreground },
-  cardMachine: { ...Typography.caption, color: BrandColors.mutedForeground, marginTop: 2 },
+  cardCategory: { ...Typography.label, color: colors.foreground },
+  cardMachine: { ...Typography.caption, color: colors.mutedForeground, marginTop: 2 },
 
   badge: {
     flexDirection: 'row',
@@ -435,12 +515,12 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 12, fontWeight: '700' },
 
-  cardBottom: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  cardBottom: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10 },
   cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  cardDate: { ...Typography.caption, color: BrandColors.mutedForeground },
+  cardDate: { ...Typography.caption, color: colors.mutedForeground },
   cardScore: {
     ...Typography.label,
-    color: BrandColors.indigo,
+    color: colors.indigo,
     marginLeft: 'auto',
     fontWeight: '800',
   },
@@ -455,15 +535,15 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 28,
-    backgroundColor: BrandColors.indigoLight,
+    backgroundColor: colors.badgeBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
-  emptyTitle: { ...Typography.h3, color: BrandColors.foreground, marginBottom: 8 },
+  emptyTitle: { ...Typography.h3, color: colors.foreground, marginBottom: 8 },
   emptyDesc: {
     ...Typography.body,
-    color: BrandColors.mutedForeground,
+    color: colors.mutedForeground,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -475,7 +555,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: BrandColors.white,
+    backgroundColor: colors.card,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 24,
@@ -486,7 +566,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 5,
     borderRadius: 3,
-    backgroundColor: BrandColors.border,
+    backgroundColor: colors.border,
     alignSelf: 'center',
     marginBottom: 16,
   },
@@ -496,7 +576,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  modalTitle: { ...Typography.h2, color: BrandColors.foreground },
+  modalTitle: { flex: 1, ...Typography.h2, color: colors.foreground },
 
   modalHero: {
     flexDirection: 'row',
@@ -516,12 +596,12 @@ const styles = StyleSheet.create({
   modalStatus: { fontSize: 22, fontWeight: '800' },
 
   detailGrid: {
-    backgroundColor: BrandColors.card,
+    backgroundColor: colors.card,
     borderRadius: BorderRadius.xl,
     overflow: 'hidden',
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: BrandColors.border,
+    borderColor: colors.border,
   },
   detailRow: {
     flexDirection: 'row',
@@ -529,10 +609,10 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: BrandColors.border,
+    borderBottomColor: colors.border,
   },
-  detailLabel: { ...Typography.bodySmall, color: BrandColors.mutedForeground },
-  detailValue: { ...Typography.label, color: BrandColors.foreground, maxWidth: '55%', textAlign: 'right' },
+  detailLabel: { ...Typography.bodySmall, color: colors.mutedForeground },
+  detailValue: { ...Typography.label, color: colors.foreground, maxWidth: '55%', textAlign: 'right' },
 
   modalReco: {
     flexDirection: 'row',
