@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libasound2-dev \
     libsndfile1-dev \
+    ffmpeg \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
