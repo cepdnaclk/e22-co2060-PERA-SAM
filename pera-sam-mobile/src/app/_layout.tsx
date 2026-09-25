@@ -1,10 +1,15 @@
 import { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, ErrorBoundary } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../lib/AuthContext';
+import { LanguageProvider } from '../lib/i18n';
+import { ThemeProvider, useAppTheme } from '../lib/ThemeContext';
+
+export { ErrorBoundary };
 
 function RootNavigator() {
   const { session, loading } = useAuth();
+  const { isDark } = useAppTheme();
   const segments = useSegments();
   const router = useRouter();
 
@@ -26,7 +31,7 @@ function RootNavigator() {
 
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
         <Stack.Screen name="index" options={{ title: 'Login' }} />
         <Stack.Screen name="register" options={{ title: 'Register' }} />
@@ -46,8 +51,12 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootNavigator />
-    </AuthProvider>
+    <ThemeProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }

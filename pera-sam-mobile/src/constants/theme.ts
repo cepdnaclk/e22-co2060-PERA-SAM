@@ -3,7 +3,8 @@
  * Premium design tokens — vibrant colors, gradients, glassmorphism.
  */
 
-import '@/global.css';
+// Note: '@/global.css' is only used for web font variables.
+// Do NOT import it here — native Android/iOS builds will crash.
 import { Platform } from 'react-native';
 
 // ─── Brand Colors ───────────────────────────────────────────────────────────

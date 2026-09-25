@@ -20,7 +20,7 @@ import uuid
 import yaml
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
@@ -106,7 +106,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://red-mushroom-094aece00.7.azurestaticapps.net"],
+    allow_origins=["https://red-mushroom-094aece00.7.azurestaticapps.net", "http://localhost:8081", "http://localhost:19006"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -159,7 +159,10 @@ async def analyze_sound(
 ):
     """Upload a WAV file and get an anomaly detection result."""
     if not analyzer:
-        return {"status": "Error", "message": "Inference engine not initialised"}
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Inference engine is not initialised",
+        )
 
     # Save uploaded file temporarily
     temp_id   = str(uuid.uuid4())[:8]
@@ -179,7 +182,7 @@ async def analyze_sound(
         }
     except Exception as e:
         log.exception(f"Analysis failed for {file.filename}")
-        return {"status": "Error", "message": str(e)}
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)) from e
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
