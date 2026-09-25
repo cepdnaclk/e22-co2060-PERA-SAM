@@ -39,7 +39,6 @@ import {
 } from '../../lib/profileApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage, LANGUAGES } from '../../lib/i18n';
-import { ProfileEditor } from '../../components/ProfileEditor';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -59,7 +58,7 @@ type SectionKey = 'profile' | 'language' | 'password' | 'notifications' | 'priva
 
 const SECTIONS: { key: SectionKey; label: string; icon: string; color: string }[] = [
   { key: 'profile', label: 'Profile', icon: 'person-outline', color: BrandColors.indigo },
-  { key: 'language', label: 'Language', icon: 'language-outline', color: BrandColors.teal },
+  { key: 'language', label: 'Language', icon: 'language-outline', color: BrandColors.accent },
   { key: 'password', label: 'Password', icon: 'lock-closed-outline', color: BrandColors.purple },
   { key: 'notifications', label: 'Notifs', icon: 'notifications-outline', color: BrandColors.blue },
   { key: 'privacy', label: 'Privacy', icon: 'eye-off-outline', color: BrandColors.emerald },
@@ -77,7 +76,6 @@ export default function ProfileScreen() {
 
   // Active settings tab
   const [activeSection, setActiveSection] = useState<SectionKey>('profile');
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // ── Profile fields ──────────────────────────────────────────────────────
   const [name, setName] = useState('');
@@ -430,23 +428,14 @@ export default function ProfileScreen() {
                 </View>
 
                 <TouchableOpacity
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    marginTop: 8,
-                    paddingHorizontal: 12,
-                    paddingVertical: 5,
-                    borderRadius: BorderRadius.full,
-                    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-                  }}
-                  onPress={() => setIsEditingProfile(true)}
+                  style={styles.profileEditCta}
+                  onPress={() => setActiveSection('profile')}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit profile details"
                 >
                   <Ionicons name="create-outline" size={13} color={BrandColors.white} />
-                  <Text style={{ ...Typography.caption, fontWeight: '700', color: BrandColors.white }}>
-                    {t('editProfile') || 'Edit Profile'}
-                  </Text>
+                  <Text style={styles.profileEditCtaText}>Edit profile details</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -471,6 +460,8 @@ export default function ProfileScreen() {
                     ]}
                     onPress={() => setActiveSection(s.key)}
                     activeOpacity={0.75}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: active }}
                   >
                     <Ionicons
                       name={s.icon as any}
@@ -611,7 +602,7 @@ export default function ProfileScreen() {
           ═══════════════════════════════════════════════════════════════ */}
           {activeSection === 'language' && (
             <Animated.View entering={FadeInRight.duration(350).delay(40)}>
-              <SectionCard title={t('language') || 'Language'} icon="language-outline" iconColor={BrandColors.teal}>
+              <SectionCard title={t('language') || 'Language'} icon="language-outline" iconColor={BrandColors.accent}>
                 <Text style={{ ...Typography.caption, color: colors.mutedForeground, marginBottom: 16 }}>
                   Choose your preferred application display language.
                 </Text>
@@ -991,16 +982,6 @@ export default function ProfileScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <ProfileEditor
-        visible={isEditingProfile}
-        onClose={() => setIsEditingProfile(false)}
-        initialFullName={name || (user?.user_metadata?.full_name as string) || ''}
-        initialPhone={phone || (user?.user_metadata?.phone as string) || ''}
-        onProfileUpdated={(updatedName, updatedPhone) => {
-          setName(updatedName);
-          setPhone(updatedPhone);
-        }}
-      />
     </SafeAreaView>
   );
 }
@@ -1340,15 +1321,30 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.2)',
   },
   memberText: { ...Typography.caption, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
+  profileEditCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 12,
+    minHeight: 38,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.32)',
+  },
+  profileEditCtaText: { ...Typography.caption, fontWeight: '700', color: BrandColors.white },
 
   // Tab row
-  tabRow: { paddingBottom: 16, gap: 8 },
+  tabRow: { paddingHorizontal: 1, paddingBottom: 16, gap: 8 },
   tabChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
+    minHeight: 40,
     backgroundColor: BrandColors.card,
     borderRadius: BorderRadius.full,
     borderWidth: 1.5,
