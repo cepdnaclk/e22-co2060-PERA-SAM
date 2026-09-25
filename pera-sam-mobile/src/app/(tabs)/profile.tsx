@@ -38,6 +38,8 @@ import {
   geocodeAddress,
 } from '../../lib/profileApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLanguage, LANGUAGES } from '../../lib/i18n';
+import { ProfileEditor } from '../../components/ProfileEditor';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -53,10 +55,11 @@ const TECH_ITEMS = [
   { name: 'TensorFlow', icon: 'hardware-chip-outline', color: BrandColors.pink },
 ];
 
-type SectionKey = 'profile' | 'password' | 'notifications' | 'privacy' | 'info' | 'account';
+type SectionKey = 'profile' | 'language' | 'password' | 'notifications' | 'privacy' | 'info' | 'account';
 
 const SECTIONS: { key: SectionKey; label: string; icon: string; color: string }[] = [
   { key: 'profile', label: 'Profile', icon: 'person-outline', color: BrandColors.indigo },
+  { key: 'language', label: 'Language', icon: 'language-outline', color: BrandColors.teal },
   { key: 'password', label: 'Password', icon: 'lock-closed-outline', color: BrandColors.purple },
   { key: 'notifications', label: 'Notifs', icon: 'notifications-outline', color: BrandColors.blue },
   { key: 'privacy', label: 'Privacy', icon: 'eye-off-outline', color: BrandColors.emerald },
@@ -69,10 +72,12 @@ const SECTIONS: { key: SectionKey; label: string; icon: string; color: string }[
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { colors, isDark } = useThemeContext();
+  const { language, setLanguage, t } = useLanguage();
   const mlApiConfigError = getMlApiConfigError();
 
   // Active settings tab
   const [activeSection, setActiveSection] = useState<SectionKey>('profile');
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // ── Profile fields ──────────────────────────────────────────────────────
   const [name, setName] = useState('');
@@ -423,6 +428,26 @@ export default function ProfileScreen() {
                   <Ionicons name="shield-checkmark" size={13} color={BrandColors.white} />
                   <Text style={styles.memberText}>Member since {createdAt}</Text>
                 </View>
+
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginTop: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 5,
+                    borderRadius: BorderRadius.full,
+                    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                  }}
+                  onPress={() => setIsEditingProfile(true)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="create-outline" size={13} color={BrandColors.white} />
+                  <Text style={{ ...Typography.caption, fontWeight: '700', color: BrandColors.white }}>
+                    {t('editProfile') || 'Edit Profile'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           </Animated.View>
@@ -577,6 +602,55 @@ export default function ProfileScreen() {
                     </>
                   )}
                 </TouchableOpacity>
+              </SectionCard>
+            </Animated.View>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════
+              SECTION: Language Settings (Sinhala, Tamil, English)
+          ═══════════════════════════════════════════════════════════════ */}
+          {activeSection === 'language' && (
+            <Animated.View entering={FadeInRight.duration(350).delay(40)}>
+              <SectionCard title={t('language') || 'Language'} icon="language-outline" iconColor={BrandColors.teal}>
+                <Text style={{ ...Typography.caption, color: colors.mutedForeground, marginBottom: 16 }}>
+                  Choose your preferred application display language.
+                </Text>
+                {LANGUAGES.map((lang) => {
+                  const isSelected = language === lang.code;
+                  return (
+                    <TouchableOpacity
+                      key={lang.code}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: 16,
+                        borderRadius: BorderRadius.md,
+                        borderWidth: 1.5,
+                        borderColor: isSelected ? BrandColors.indigo : colors.border,
+                        backgroundColor: isSelected ? `${BrandColors.indigo}15` : colors.card,
+                        marginBottom: 10,
+                      }}
+                      onPress={() => setLanguage(lang.code)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <Text style={{ fontSize: 24 }}>{lang.flag}</Text>
+                        <View>
+                          <Text style={{ ...Typography.body, fontWeight: '700', color: colors.foreground }}>
+                            {lang.nativeLabel}
+                          </Text>
+                          <Text style={{ ...Typography.caption, color: colors.mutedForeground }}>
+                            {lang.label}
+                          </Text>
+                        </View>
+                      </View>
+                      {isSelected && (
+                        <Ionicons name="checkmark-circle" size={22} color={BrandColors.indigo} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </SectionCard>
             </Animated.View>
           )}
@@ -916,6 +990,17 @@ export default function ProfileScreen() {
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ProfileEditor
+        visible={isEditingProfile}
+        onClose={() => setIsEditingProfile(false)}
+        initialFullName={name || (user?.user_metadata?.full_name as string) || ''}
+        initialPhone={phone || (user?.user_metadata?.phone as string) || ''}
+        onProfileUpdated={(updatedName, updatedPhone) => {
+          setName(updatedName);
+          setPhone(updatedPhone);
+        }}
+      />
     </SafeAreaView>
   );
 }
